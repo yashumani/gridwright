@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatIssues, type Issue, type Manifest } from "@gridwright/schema";
-import { loadBundle, type BundleFile, type DataSource } from "@gridwright/engine";
+import { loadBundleFromBlobs, type BundleBlob, type DataSource } from "@gridwright/engine";
 import { Dashboard, injectStyles, styles } from "@gridwright/react";
 import { Builder, builderStyles } from "@gridwright/builder";
 import { appStyles } from "./styles.js";
@@ -8,20 +8,26 @@ import { appStyles } from "./styles.js";
 /**
  * The playground: drop a manifest and its data, get a dashboard.
  *
- * Everything a user supplies here is untrusted — the manifest is validated
- * before anything renders, and its strings reach the DOM only as React text,
- * never as markup.
+ * Data files are streamed rather than read as text. A ten-million-row CSV is
+ * about a gigabyte, and `File.text()` would need the whole thing as one string
+ * before parsing could begin — which is where the tab dies. Only the manifest,
+ * which is small, is read whole.
+ *
+ * Everything a user supplies here is untrusted: the manifest is validated
+ * before anything renders, and its strings reach the DOM only as React text.
  */
 
-type Loaded = { manifest: Manifest; source: DataSource };
+type Loaded = { manifest: Manifest; source: DataSource; text: string };
 
-const MAX_BYTES = 40 * 1024 * 1024;
 const MANIFEST_EXT = /\.(gw\.ya?ml|ya?ml|json)$/i;
 const DATA_EXT = /\.(csv|tsv|txt)$/i;
+/** A ceiling with a message, rather than an unexplained freeze. */
+const MAX_ROWS = 20_000_000;
 
 export function App() {
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [issues, setIssues] = useState<Issue[]>([]);
+  const [busy, setBusy] = useState<string | null>(null);
   const [mode, setMode] = useState<"view" | "build">("view");
   const [theme, setTheme] = useState<"light" | "dark" | "system">("system");
   const [dragging, setDragging] = useState(false);
@@ -42,54 +48,66 @@ export function App() {
     else document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
 
-  const accept = useCallback((files: BundleFile[]) => {
-    const manifestFile = files.find((f) => MANIFEST_EXT.test(f.name));
-    if (!manifestFile) {
-      setIssues([{
-        path: "(files)",
-        message: "no manifest found — include a .gw.yaml, .yaml or .json file",
-      }]);
-      return;
-    }
-    const data = files.filter((f) => f !== manifestFile && DATA_EXT.test(f.name));
-    const result = loadBundle(manifestFile.text, data);
-    if (!result.ok) {
-      setIssues(result.issues);
-      return;
-    }
-    setIssues([]);
-    setLoaded({ manifest: result.manifest, source: result.source });
-  }, []);
-
-  const readFiles = useCallback(
-    async (list: FileList | null) => {
-      if (!list?.length) return;
-      const files: BundleFile[] = [];
-      let total = 0;
-      for (const file of Array.from(list)) {
-        total += file.size;
-        if (total > MAX_BYTES) {
-          setIssues([{
-            path: "(files)",
-            message: `those files total more than ${Math.round(MAX_BYTES / 1024 / 1024)}MB`,
-          }]);
+  const accept = useCallback(
+    async (manifestText: string, data: readonly BundleBlob[], label: string) => {
+      setIssues([]);
+      setBusy(label);
+      try {
+        const result = await loadBundleFromBlobs(manifestText, data, { maxRows: MAX_ROWS });
+        if (!result.ok) {
+          setIssues(result.issues);
           return;
         }
-        files.push({ name: file.name, text: await file.text() });
+        setLoaded({ manifest: result.manifest, source: result.source, text: manifestText });
+      } catch (err) {
+        setIssues([{ path: "(load)", message: (err as Error).message }]);
+      } finally {
+        setBusy(null);
       }
-      accept(files);
+    },
+    [],
+  );
+
+  const openFiles = useCallback(
+    async (list: FileList | null) => {
+      const files = Array.from(list ?? []);
+      if (!files.length) return;
+
+      const manifestFile = files.find((f) => MANIFEST_EXT.test(f.name));
+      if (!manifestFile) {
+        setIssues([{
+          path: "(files)",
+          message: "no manifest found — include a .gw.yaml, .yaml or .json file",
+        }]);
+        return;
+      }
+      // Only the manifest is read whole; the data files stay as streams.
+      const manifestText = await manifestFile.text();
+      const data: BundleBlob[] = files
+        .filter((f) => f !== manifestFile && DATA_EXT.test(f.name))
+        .map((f) => ({ name: f.name, blob: f }));
+
+      const bytes = data.reduce((t, d) => t + d.blob.size, 0);
+      await accept(manifestText, data, `Reading ${describeBytes(bytes)}…`);
     },
     [accept],
   );
 
   const loadExample = useCallback(
-    async (manifest: string, data: readonly string[]) => {
+    async (manifestName: string, dataNames: readonly string[]) => {
       try {
-        const names = [manifest, ...data];
-        const texts = await Promise.all(names.map((n) => fetch(`./${n}`).then((r) => r.text())));
-        accept(names.map((name, i) => ({ name, text: texts[i]! })));
+        setBusy("Loading example…");
+        const manifestText = await fetch(`./${manifestName}`).then((r) => r.text());
+        const data = await Promise.all(
+          dataNames.map(async (name) => ({
+            name,
+            blob: await fetch(`./${name}`).then((r) => r.blob()),
+          })),
+        );
+        await accept(manifestText, data, "Loading example…");
       } catch (err) {
         setIssues([{ path: "(example)", message: (err as Error).message }]);
+        setBusy(null);
       }
     },
     [accept],
@@ -98,7 +116,7 @@ export function App() {
   const body = useMemo(() => {
     if (!loaded) return null;
     return mode === "build" ? (
-      <Builder manifest={loaded.manifest} source={loaded.source} />
+      <Builder manifest={loaded.manifest} manifestText={loaded.text} source={loaded.source} />
     ) : (
       <Dashboard manifest={loaded.manifest} source={loaded.source} />
     );
@@ -112,6 +130,7 @@ export function App() {
           <span>playground</span>
         </div>
         <div className="pg-actions">
+          {busy && <span className="pg-busy" role="status">{busy}</span>}
           {loaded && (
             <div className="pg-seg" role="group" aria-label="Mode">
               {(["view", "build"] as const).map((m) => (
@@ -143,11 +162,15 @@ export function App() {
               type="file"
               multiple
               accept=".yaml,.yml,.json,.csv,.tsv,.txt"
-              onChange={(e) => void readFiles(e.target.files)}
+              onChange={(e) => void openFiles(e.target.files)}
             />
           </label>
           {loaded && (
-            <button type="button" className="pg-button" onClick={() => { setLoaded(null); setIssues([]); }}>
+            <button
+              type="button"
+              className="pg-button"
+              onClick={() => { setLoaded(null); setIssues([]); }}
+            >
               Close
             </button>
           )}
@@ -172,19 +195,20 @@ export function App() {
           onDrop={(e) => {
             e.preventDefault();
             setDragging(false);
-            void readFiles(e.dataTransfer.files);
+            void openFiles(e.dataTransfer.files);
           }}
         >
           <div className="pg-drop-inner">
             <h1>Drop a manifest and its data</h1>
             <p>
               A <code>.gw.yaml</code> manifest plus the CSV files it names. Nothing is uploaded —
-              everything runs in this tab.
+              the data is streamed straight into this tab and never leaves it.
             </p>
             <div className="pg-examples">
               <button
                 type="button"
                 className="pg-button pg-primary"
+                disabled={busy !== null}
                 onClick={() => void loadExample("sales-overview.gw.yaml", ["sales.csv"])}
               >
                 Load flat example
@@ -192,6 +216,7 @@ export function App() {
               <button
                 type="button"
                 className="pg-button"
+                disabled={busy !== null}
                 onClick={() =>
                   void loadExample("orders-star.gw.yaml", ["orders.csv", "customers.csv", "products.csv"])
                 }
@@ -207,6 +232,12 @@ export function App() {
       )}
     </div>
   );
+}
+
+function describeBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
 export { styles };

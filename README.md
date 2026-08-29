@@ -160,6 +160,12 @@ Clicking a mark writes to the filter store, which re-plans and re-queries every 
 including panels that share no dataset with the one clicked, and panels reached only
 through a join.
 
+Editing is comment-preserving. A manifest exported from the visual builder keeps the
+comments and layout of the file it was opened from, because the export patches the original
+YAML document in place rather than re-serialising it. That matters the moment engineers and
+analysts share a file: the first visual save must not silently delete the notes somebody
+wrote to explain a measure.
+
 **A panel is never filtered by its own selection.** Collapsing a bar chart to the one
 bar you just clicked makes a second selection impossible and leaves nothing to render
 as unselected. Every other panel narrows; the source chart keeps all its marks, with
@@ -209,9 +215,31 @@ const registry = defaultRegistry().register({
 ## Data sources
 
 The in-process executor is the default and handles the "upload a file and go" case with no
-backend. It comfortably groups a million rows — two dimensions and four measures compile and
-run cold in about a second, and warm from cache in ~1ms — and hash-joins 400k fact rows to a
-5,000-row dimension table in around half a second.
+backend at all. Data files are **streamed** into columns rather than read as text: a
+ten-million-row CSV is about 350&nbsp;MB, and `File.text()` would need the whole thing as one
+JavaScript string before parsing could begin, which is where a tab dies.
+
+Measured end to end, streaming from disk, five columns, four datasets:
+
+| Rows | File | Parse | First pass | Per cross-filter | Peak memory |
+|---|---|---|---|---|---|
+| 1M | 35 MB | 1.4 s | 0.2 s | ~0.05 s | ~170 MB |
+| 2M | 72 MB | 3 s | ~6 s | **1.0 s** | 267 MB |
+| 5M | 172 MB | 7 s | 1.8 s | **0.2 s** | ~320 MB |
+| 10M | 344 MB | 14 s | 16 s | **4.4 s** | 1.7 GB |
+
+The 2M row is from a real browser upload through the file input; the rest are Node, which
+is the same code on the same path. First-pass cost scales with the number of *distinct
+dimensions* across your panels, not the number of panels, because encodings are cached and
+reused; cross-filtering only ever re-runs filter, group and aggregate.
+
+**Where the honest ceiling is: a few million rows.** Up to ~5M this is a responsive
+dashboard. At 10M it works and the numbers are correct, but you wait half a minute for the
+first render and 1.7&nbsp;GB is close to what a browser tab will tolerate — some machines
+will not make it. Past that, or for anything you want to feel instant at 10M, the
+`DataSource` seam is the answer rather than more tuning here.
+
+`maxRows` on the loader gives you a ceiling with a message instead of an unexplained freeze.
 
 Another backend implements one interface:
 
@@ -260,7 +288,8 @@ discharges the light-mode contrast relief rule.
   does not. That needs an inverted index across the whole model maintained incrementally,
   and it is genuinely hard. If it matters to your users, treat it as a research spike, not a
   checkbox.
-- **Scale past a few million rows in-browser.** The `DataSource` seam is the escape hatch.
+- **Scale much past a few million rows in-browser.** 10M works but is slow and memory-hungry;
+  see the table above. The `DataSource` seam is the escape hatch.
 - **Many-to-many joins, self-joins, and one-to-many traversal.** Refused, not approximated.
 
 ## Development
@@ -268,7 +297,7 @@ discharges the light-mode contrast relief rule.
 ```bash
 pnpm install
 pnpm build        # tsc -b across the workspace
-pnpm test         # 293 tests
+pnpm test         # 334 tests
 pnpm --filter @gridwright/playground dev
 ```
 

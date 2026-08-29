@@ -44,6 +44,12 @@ export interface QueryPlan {
   joins: JoinStep[];
   /** Field name to its source table and column. */
   fieldMap: Record<string, FieldOrigin>;
+  /**
+   * Dimension id to the field it reads, for filters on dimensions this dataset
+   * does not group by. Carrying the grain here is what lets such a filter match
+   * the bucket rather than the raw value.
+   */
+  dimensionFields: Record<string, { field: string; grain?: Grain }>;
   dimensions: PlanDimension[];
   /** Fold raw rows; become the GROUP BY projection. */
   aggregate: PlanMeasure[];

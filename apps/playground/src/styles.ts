@@ -68,6 +68,7 @@ html, body, #root { height: 100%; margin: 0; }
   background: var(--pg-ground); padding: 1px 5px; border-radius: 3px;
 }
 
+.pg-busy { color: var(--pg-faint); font-size: 12.5px; }
 .pg-examples { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 .pg-hint { color: var(--pg-faint); font-size: 12.5px; margin: 14px 0 0 !important; }
 
