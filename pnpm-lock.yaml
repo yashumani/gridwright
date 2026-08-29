@@ -24,6 +24,15 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.1)
 
+  packages/engine:
+    dependencies:
+      '@gridwright/expr':
+        specifier: workspace:*
+        version: link:../expr
+      '@gridwright/schema':
+        specifier: workspace:*
+        version: link:../schema
+
   packages/expr:
     dependencies:
       '@gridwright/schema':
