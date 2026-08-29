@@ -114,9 +114,44 @@ export function typesForTable(manifest: Manifest, table: string): Record<string,
 }
 
 /**
+ * Checks that every column a manifest claims actually exists in the loaded
+ * data, including join keys.
+ *
+ * Worth doing eagerly: without it the first sign of a typo'd column is a panel
+ * that fails at query time, long after the user could connect it to the file
+ * they picked.
+ */
+export function verifyColumns(manifest: Manifest, tables: readonly Table[]): void {
+  const byName = new Map(tables.map((t) => [t.name, t]));
+
+  const check = (ref: string, what: string): void => {
+    const dot = ref.indexOf(".");
+    const table = ref.slice(0, dot);
+    const column = ref.slice(dot + 1);
+    const t = byName.get(table);
+    if (!t) throw new EngineError(`${what} names table "${table}", which was not loaded`);
+    if (!(column in t.columns)) {
+      throw new EngineError(
+        `${what} reads ${ref} but "${table}" has no column "${column}"`,
+        `available: ${Object.keys(t.columns).join(", ")}`,
+      );
+    }
+  };
+
+  for (const f of manifest.model.fields) check(f.from, `field "${f.name}"`);
+  for (const r of manifest.source.relations ?? []) {
+    check(r.left, "relation");
+    check(r.right, "relation");
+  }
+}
+
+/**
  * A manifest names fields by their own alias (`amount`), while the table holds
  * source column names (`amount` too, usually — but not always). This renames
- * source columns onto field names so the executor only ever sees field names.
+ * source columns onto field names.
+ *
+ * Retained for single-table callers that want a pre-projected table; the
+ * executor resolves fields through the plan and does not need it.
  */
 export function projectFields(manifest: Manifest, table: Table): Table {
   const columns: Record<string, Value[]> = Object.create(null);

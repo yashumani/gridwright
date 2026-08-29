@@ -12,9 +12,25 @@ export interface FileRef {
   format?: "csv" | "tsv" | "json";
 }
 
+/**
+ * How two tables connect. `cardinality` is not decoration: it is what lets the
+ * planner tell a safe join from one that fans out the fact grain and silently
+ * double-counts every sum.
+ */
+export type Cardinality = "many-to-one" | "one-to-one";
+
+export interface RelationDef {
+  /** `table.column` on the many side. */
+  left: string;
+  /** `table.column` on the one side. */
+  right: string;
+  cardinality?: Cardinality;
+}
+
 export interface SourceDef {
   kind: "file";
   files: FileRef[];
+  relations?: RelationDef[];
 }
 
 export interface FieldDef {

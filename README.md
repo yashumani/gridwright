@@ -4,9 +4,12 @@ A schema-driven dashboard engine. Write a manifest, get a working React dashboar
 
 ```bash
 pnpm install && pnpm build
-node packages/cli/dist/bin.js validate examples/sales-overview.gw.yaml --data
+node packages/cli/dist/bin.js validate examples/orders-star.gw.yaml --data
 pnpm --filter @gridwright/playground dev
 ```
+
+Two examples ship: `sales-overview.gw.yaml` (one flat file) and
+`orders-star.gw.yaml` (a fact table joined to two dimension tables).
 
 Drop a `.gw.yaml` and its CSV into the playground and the dashboard is there. Nothing is
 uploaded; every query runs in the tab.
@@ -67,6 +70,51 @@ measure(orders)` means arithmetic is defined once and reused. And **every `props
 validated against its own panel's schema**, so a new panel type extends the manifest
 language without touching the core.
 
+## Joins
+
+A dataset can read from several tables. Declare how they connect and the planner
+works out the rest:
+
+```yaml
+source:
+  kind: file
+  files:
+    - { id: orders,    path: ./orders.csv }
+    - { id: customers, path: ./customers.csv }
+    - { id: products,  path: ./products.csv }
+  relations:
+    - { left: orders.customer_id, right: customers.customer_id, cardinality: many-to-one }
+    - { left: orders.product_id,  right: products.product_id,   cardinality: many-to-one }
+```
+
+Fields then name any table (`from: customers.region`), and a dataset mixing them
+compiles to a single grouped query with only the joins it needs.
+
+**`cardinality` is not decoration — it is the correctness mechanism.** Joining a
+fact table to a dimension many-to-one leaves the grain alone, so `sum()` still
+means what it says. Following that edge backwards, one dimension row to many
+facts, multiplies rows and inflates every aggregate downstream. Silently. That is
+the classic BI bug.
+
+So the planner only ever traverses relations in the safe direction. If the tables
+a dataset needs cannot be connected that way, it refuses:
+
+```
+dataset "bad" cannot be joined without multiplying rows
+  Reaching "products" from "customers" means following a one-to-many relation,
+  which repeats every row on the many side and would double-count sums.
+```
+
+Two more choices worth knowing:
+
+- **Joins are LEFT, never INNER.** A fact whose dimension row is missing survives
+  under a null group rather than vanishing from the totals. Losing rows is a
+  wrong answer wearing a smaller number.
+- **Join keys carry their type.** Numeric `1` does not match the string `"1"`.
+
+Not supported: many-to-many, self-joins, and datasets whose tables are connected
+only through a one-to-many hop. Each is refused by name rather than approximated.
+
 ## Expressions
 
 Users need arithmetic. Handing them JavaScript would be remote code execution with an
@@ -109,7 +157,13 @@ That order is deliberate: `runningSum` on a by-month dataset must accumulate in 
 order, which is the only reading anyone expects.
 
 Clicking a mark writes to the filter store, which re-plans and re-queries every panel —
-including panels that share no dataset with the one clicked.
+including panels that share no dataset with the one clicked, and panels reached only
+through a join.
+
+**A panel is never filtered by its own selection.** Collapsing a bar chart to the one
+bar you just clicked makes a second selection impossible and leaves nothing to render
+as unselected. Every other panel narrows; the source chart keeps all its marks, with
+the selected ones highlighted and the rest dimmed.
 
 ## Packages
 
@@ -155,8 +209,9 @@ const registry = defaultRegistry().register({
 ## Data sources
 
 The in-process executor is the default and handles the "upload a file and go" case with no
-backend. It comfortably groups a million rows: two dimensions and four measures compile and
-run cold in about a second, and warm from cache in ~1ms.
+backend. It comfortably groups a million rows — two dimensions and four measures compile and
+run cold in about a second, and warm from cache in ~1ms — and hash-joins 400k fact rows to a
+5,000-row dimension table in around half a second.
 
 Another backend implements one interface:
 
@@ -201,20 +256,19 @@ discharges the light-mode contrast relief rule.
 
 ## Not in v1
 
-- **Joins.** A dataset reads one table. Spanning two is refused by name rather than
-  producing a cross product.
 - **The associative model.** Cross-filtering works; Qlik's grey "excluded values" behaviour
   does not. That needs an inverted index across the whole model maintained incrementally,
   and it is genuinely hard. If it matters to your users, treat it as a research spike, not a
   checkbox.
 - **Scale past a few million rows in-browser.** The `DataSource` seam is the escape hatch.
+- **Many-to-many joins, self-joins, and one-to-many traversal.** Refused, not approximated.
 
 ## Development
 
 ```bash
 pnpm install
 pnpm build        # tsc -b across the workspace
-pnpm test         # 250 tests
+pnpm test         # 293 tests
 pnpm --filter @gridwright/playground dev
 ```
 

@@ -4,9 +4,10 @@ export * from "./memory-source.js";
 export * from "./csv.js";
 export * from "./sql.js";
 export * from "./engine.js";
+export * from "./join.js";
 export * from "./bundle.js";
 
-import { loadDelimited, projectFields, typesForTable } from "./csv.js";
+import { loadDelimited, typesForTable, verifyColumns } from "./csv.js";
 import { MemorySource } from "./memory-source.js";
 import type { Manifest } from "@gridwright/schema";
 import type { Table } from "./types.js";
@@ -25,11 +26,14 @@ export function sourceFromText(manifest: Manifest, text: TableText): MemorySourc
     if (raw === undefined) {
       throw new Error(`no data supplied for table "${file.id}" (${file.path})`);
     }
-    const loaded = loadDelimited(file.id, raw, {
+    // Columns keep their source names: with joins in play the plan resolves
+    // each field to its own table, so renaming here would only hide which
+    // table a column came from.
+    return loadDelimited(file.id, raw, {
       delimiter: file.format === "tsv" ? "\t" : ",",
       types: typesForTable(manifest, file.id),
     });
-    return projectFields(manifest, loaded);
   });
+  verifyColumns(manifest, tables);
   return MemorySource.fromTables(tables);
 }

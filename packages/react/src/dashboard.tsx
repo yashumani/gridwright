@@ -1,5 +1,5 @@
 import { Component, useCallback, useMemo, type ErrorInfo, type ReactNode } from "react";
-import type { Action, Manifest, PanelDef } from "@gridwright/schema";
+import type { Action, Filter, Manifest, PanelDef } from "@gridwright/schema";
 import { formatIssues } from "@gridwright/schema";
 import { Engine, type DataSource, type QueryResult, type Value } from "@gridwright/engine";
 import { PanelRegistry, defaultRegistry, type PanelSpec } from "@gridwright/panels";
@@ -29,17 +29,54 @@ export function Dashboard({
   const engine = useMemo(() => new Engine(manifest, source), [manifest, source]);
   const selections = useSelections(filters);
 
-  // One query pass for the whole dashboard: panels sharing a dataset share a
-  // result, and there is a single loading state instead of a ripple of them.
-  const datasets = useMemo(
-    () => [...new Set(manifest.panels.map((p) => p.dataset))],
+  /**
+   * Dimensions a panel can select on. A panel is never filtered by its own
+   * selection: collapsing a bar chart to the one bar you just clicked makes a
+   * second selection impossible and leaves nothing to show as unselected.
+   * Every other panel still narrows, which is the point of cross-filtering.
+   */
+  const ownDimensions = useCallback(
+    (panel: PanelDef): string[] => {
+      const configured = (manifest.interactions ?? [])
+        .filter((i) => i.on.split(".")[0] === panel.id)
+        .flatMap((i) => i.do.flatMap((a) => (a.action === "filter" ? [a.dimension] : [])));
+      if (configured.length) return configured;
+      return manifest.datasets[panel.dataset]?.dimensions ?? [];
+    },
     [manifest],
   );
+
   const active = useMemo(() => filters.toFilters(), [filters, selections]);
-  const results = useAsync(
-    () => engine.queryAll(datasets, { filters: active }),
-    [engine, datasets, active],
+
+  // One request per distinct (dataset, self-excluded dimensions) pair. Panels
+  // that agree on both share a result, so the common case is still one query
+  // per dataset and there is a single loading state rather than a ripple.
+  const requests = useMemo(() => {
+    const map = new Map<string, { dataset: string; filters: Filter[] }>();
+    for (const panel of manifest.panels) {
+      const own = new Set(ownDimensions(panel));
+      const key = `${panel.dataset}|${[...own].sort().join(",")}`;
+      if (map.has(key)) continue;
+      map.set(key, {
+        dataset: panel.dataset,
+        filters: active.filter((f) => !own.has(f.dimension)),
+      });
+    }
+    return map;
+  }, [manifest, ownDimensions, active]);
+
+  const requestKey = useCallback(
+    (panel: PanelDef) => `${panel.dataset}|${[...new Set(ownDimensions(panel))].sort().join(",")}`,
+    [ownDimensions],
   );
+
+  const results = useAsync(async () => {
+    const entries = [...requests.entries()];
+    const settled = await Promise.all(
+      entries.map(([, r]) => engine.query(r.dataset, { filters: r.filters })),
+    );
+    return Object.fromEntries(entries.map(([key], i) => [key, settled[i]!]));
+  }, [engine, requests]);
 
   const columns = manifest.grid?.columns ?? DEFAULT_COLUMNS;
   const rowHeight = manifest.grid?.rowHeight ?? DEFAULT_ROW_HEIGHT;
@@ -125,7 +162,7 @@ export function Dashboard({
             panel={panel}
             spec={reg.get(panel.type)}
             registry={reg}
-            result={results.data?.[panel.dataset]}
+            result={results.data?.[requestKey(panel)]}
             loading={results.status === "loading" && !results.data}
             selections={selections}
             select={selectFor(panel)}

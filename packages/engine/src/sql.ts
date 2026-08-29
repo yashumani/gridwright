@@ -11,8 +11,16 @@ import { dimKey, measureKey, type QueryPlan } from "./types.js";
  * through `sqlLiteral`.
  */
 
-const grainExpr = (field: string, grain: string) =>
-  `date_trunc(${sqlLiteral(grain)}, ${quoteIdent(field)})`;
+/** `"table"."column"` — qualification is mandatory once a query can join. */
+const qualify = (table: string, column: string): string =>
+  `${quoteIdent(table)}.${quoteIdent(column)}`;
+
+/** Resolves a manifest field name to its qualified column. */
+function fieldRef(plan: QueryPlan, name: string): string {
+  const origin = plan.fieldMap[name];
+  if (!origin) throw new Error(`field "${name}" has no resolved source`);
+  return qualify(origin.table, origin.column);
+}
 
 function filterSql(f: Filter, expr: string): string {
   switch (f.op) {
@@ -45,26 +53,39 @@ function orderList(sorts: readonly Sort[]): string {
 const orderSql = (sorts: readonly Sort[]): string => orderList(sorts);
 
 export function planToSql(plan: QueryPlan): string {
+  const ref = (name: string) => fieldRef(plan, name);
   const dimExpr = (d: QueryPlan["dimensions"][number]) =>
-    d.grain ? grainExpr(d.field, d.grain) : quoteIdent(d.field);
+    d.grain ? `date_trunc(${sqlLiteral(d.grain)}, ${ref(d.field)})` : ref(d.field);
 
   const inner = [
     ...plan.dimensions.map((d) => `${dimExpr(d)} AS ${quoteIdent(dimKey(d.id))}`),
     ...plan.aggregate.map(
-      (m) => `${toSql(m.ast, { field: quoteIdent, measure: (id) => quoteIdent(measureKey(id)) })} AS ${quoteIdent(measureKey(m.id))}`,
+      (m) => `${toSql(m.ast, { field: ref, measure: (id) => quoteIdent(measureKey(id)) })} AS ${quoteIdent(measureKey(m.id))}`,
     ),
   ];
 
   const where = plan.filters
     .map((f) => {
       const d = plan.dimensions.find((x) => x.id === f.dimension);
-      return filterSql(f, d ? dimExpr(d) : quoteIdent(f.dimension));
+      if (d) return filterSql(f, dimExpr(d));
+      // A filter on a dimension this dataset does not group by still bites, via
+      // the field the compiler projected for it.
+      return filterSql(f, plan.fieldMap[f.dimension] ? ref(f.dimension) : quoteIdent(f.dimension));
     })
     .join(" AND ");
+
+  // LEFT, never INNER: a fact row must survive a missing dimension row rather
+  // than disappear from the totals.
+  const joins = plan.joins.map(
+    (j) =>
+      `LEFT JOIN ${quoteIdent(j.table)} ON ` +
+      `${qualify(j.fromTable, j.fromColumn)} = ${qualify(j.table, j.toColumn)}`,
+  );
 
   const lines = [
     `SELECT ${inner.length ? inner.join(", ") : "1"}`,
     `FROM ${quoteIdent(plan.table)}`,
+    ...joins,
   ];
   if (where) lines.push(`WHERE ${where}`);
   if (plan.dimensions.length) {

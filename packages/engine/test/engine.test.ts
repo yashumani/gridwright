@@ -55,13 +55,13 @@ describe("plan compilation", () => {
     expect(plan.postSort).toHaveLength(1);
   });
 
-  it("refuses a dataset spanning two tables", () => {
+  it("refuses a dataset spanning two tables that nothing connects", () => {
     const custom = structuredClone(m);
     custom.source.files.push({ id: "other", path: "./o.csv", format: "csv" });
     custom.model.fields.push({ name: "extra", type: "number", from: "other.extra" });
     custom.model.measures.push({ id: "ex", label: "Extra", expr: "sum(extra)" });
     custom.datasets["by_region"]!.measures.push("ex");
-    expect(() => compileDataset(custom, "by_region")).toThrow(/reads from/);
+    expect(() => compileDataset(custom, "by_region")).toThrow(/are not connected/);
   });
 
   it("hashes equal plans identically and unequal plans differently", () => {
@@ -363,8 +363,8 @@ describe("sql emission", () => {
 
   it("emits a grouped query for a purely aggregate dataset", () => {
     const sql = planToSql(compileDataset(m, "by_channel"));
-    expect(sql).toContain('GROUP BY "channel"');
-    expect(sql).toContain('sum("amount")');
+    expect(sql).toContain('GROUP BY "sales"."channel"');
+    expect(sql).toContain('sum("sales"."amount")');
     expect(sql).not.toContain("WITH grouped");
   });
 
@@ -376,7 +376,7 @@ describe("sql emission", () => {
 
   it("applies grain in both the projection and the group by", () => {
     const sql = planToSql(compileDataset(m, "by_month"));
-    expect(sql).toContain(`date_trunc('month', "order_date")`);
+    expect(sql).toContain(`date_trunc('month', "sales"."order_date")`);
   });
 
   it("parameterises filter values through the literal escaper", () => {
@@ -582,11 +582,19 @@ describe("untrusted manifest input", () => {
     // The two layers are independent on purpose: a caller building a plan by
     // hand must not be able to reach the query text with a raw identifier.
     const plan = compileDataset(manifest(), "by_region");
+    const evil = 'region" ; drop table t; --';
     const tampered = {
       ...plan,
-      dimensions: [{ ...plan.dimensions[0]!, field: 'region" ; drop table t; --' }],
+      dimensions: [{ ...plan.dimensions[0]!, field: evil }],
+      fieldMap: { ...plan.fieldMap, [evil]: { table: "sales", column: evil } },
     };
     expect(() => planToSql(tampered)).toThrow(/unsafe SQL identifier/);
+  });
+
+  it("refuses an unsafe table name too", () => {
+    const plan = compileDataset(manifest(), "by_region");
+    expect(() => planToSql({ ...plan, table: 'sales"; drop table t; --' }))
+      .toThrow(/unsafe SQL identifier/);
   });
 
   it("caps the result at the cell ceiling even when the manifest asks for more", async () => {
