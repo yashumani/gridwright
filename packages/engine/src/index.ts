@@ -4,6 +4,7 @@ export * from "./memory-source.js";
 export * from "./csv.js";
 export * from "./sql.js";
 export * from "./engine.js";
+export * from "./bundle.js";
 
 import { loadDelimited, projectFields, typesForTable } from "./csv.js";
 import { MemorySource } from "./memory-source.js";

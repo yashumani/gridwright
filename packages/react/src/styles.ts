@@ -188,7 +188,7 @@ export const styles = `
 .gw-bar.gw-on .gw-bar-fill { fill: var(--gw-accent); }
 .gw-bar.gw-dim .gw-bar-fill { opacity: 0.32; }
 .gw-bar:focus-visible { outline: 2px solid var(--gw-accent); outline-offset: 1px; }
-.gw-bar-label { fill: var(--gw-ink-soft); font-size: 11.5px; dominant-baseline: middle; }
+.gw-bar-label { fill: var(--gw-ink); font-size: 11.5px; dominant-baseline: middle; }
 .gw-bar-value {
   fill: var(--gw-ink); font-size: 11.5px; font-weight: 600;
   dominant-baseline: middle; font-variant-numeric: tabular-nums;

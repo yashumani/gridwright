@@ -29,6 +29,16 @@ const schema = obj({
   maxBars: opt(num({ integer: true, min: 1, max: 200 })),
 });
 
+/**
+ * Approximate rendered width of a label. There is no way to measure text
+ * without a DOM round-trip, and a constant gutter clips the moment a value
+ * grows a digit — so the gutters are sized from the widest label that will
+ * actually be drawn, using per-glyph averages for the two type styles in use.
+ */
+function estimateWidth(text: string, fontSize: number, bold: boolean): number {
+  return text.length * fontSize * (bold ? 0.62 : 0.56);
+}
+
 /** A rect with only the data-end rounded, so the baseline stays square. */
 function barPath(x: number, y: number, w: number, h: number, r: number, horizontal: boolean): string {
   const radius = Math.max(0, Math.min(r, horizontal ? w : h));
@@ -61,10 +71,23 @@ function Bar({ result, props, size, select, selected, locale }: PanelProps<BarPr
 
   const GAP = 2;             // surface gap between adjacent bars
   const RADIUS = 4;          // rounded data-end
-  const VALUE_GUTTER = showValues ? 64 : 8;
-  const LABEL_GUTTER = horizontal ? Math.min(140, Math.round(width * 0.32)) : 0;
+  const FONT = 11.5;
 
-  const plotW = horizontal ? width - LABEL_GUTTER - VALUE_GUTTER : width;
+  const formatted = raw.slice(0, count).map((v) => formatValue(v, measure.format, locale));
+  const widestValue = Math.max(0, ...formatted.map((t) => estimateWidth(t, FONT, true)));
+  const widestLabel = Math.max(
+    0,
+    ...labels.slice(0, count).map((l) => estimateWidth(String(l ?? "—"), FONT, false)),
+  );
+
+  // Gutters never take more than a third of the panel each, so a very long
+  // label degrades to truncation rather than squeezing the bars to nothing.
+  const VALUE_GUTTER = showValues ? Math.min(Math.ceil(widestValue) + 14, Math.round(width * 0.33)) : 8;
+  const LABEL_GUTTER = horizontal
+    ? Math.min(Math.ceil(widestLabel) + 12, Math.round(width * 0.33))
+    : 0;
+
+  const plotW = horizontal ? Math.max(24, width - LABEL_GUTTER - VALUE_GUTTER) : width;
   const plotH = horizontal ? height : height - 28;
   const band = (horizontal ? plotH : plotW) / count;
   const thickness = Math.max(4, band - GAP);
@@ -120,7 +143,7 @@ function Bar({ result, props, size, select, selected, locale }: PanelProps<BarPr
               <path d={barPath(x, y, w, h, RADIUS, horizontal)} className="gw-bar-fill" />
               {horizontal && (
                 <text x={LABEL_GUTTER - 8} y={y + thickness / 2} className="gw-bar-label" textAnchor="end">
-                  {truncate(String(labels[i] ?? "—"), Math.floor(LABEL_GUTTER / 7))}
+                  {truncate(String(labels[i] ?? "—"), Math.floor((LABEL_GUTTER - 12) / (FONT * 0.56)))}
                 </text>
               )}
               {showValues && (
@@ -130,7 +153,7 @@ function Bar({ result, props, size, select, selected, locale }: PanelProps<BarPr
                   className="gw-bar-value"
                   textAnchor={horizontal ? "start" : "middle"}
                 >
-                  {formatValue(raw[i] ?? null, measure.format, locale)}
+                  {formatted[i]}
                 </text>
               )}
             </g>
@@ -145,7 +168,7 @@ function Bar({ result, props, size, select, selected, locale }: PanelProps<BarPr
               className="gw-bar-label"
               textAnchor="middle"
             >
-              {truncate(String(labels[i] ?? "—"), Math.floor(band / 7))}
+              {truncate(String(labels[i] ?? "—"), Math.floor(band / (FONT * 0.56)))}
             </text>
           ))}
       </svg>
