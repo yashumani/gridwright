@@ -9,13 +9,23 @@
  */
 export type FnStage = "aggregate" | "window" | "scalar";
 
+/**
+ * What an emitter needs beyond its arguments. `windowOrder` is the ORDER BY a
+ * window frame must carry: SQL does not promise that an inner query's ordering
+ * survives into an outer window, so `over ()` on a running total or a lag is
+ * non-deterministic on a real backend even when the subquery was sorted.
+ */
+export interface SqlEmitContext {
+  windowOrder?: string;
+}
+
 export interface FnSpec {
   minArgs: number;
   maxArgs: number;
   stage: FnStage;
   doc: string;
   /** Emits SQL. `args` are already-compiled operand fragments. */
-  sql(args: string[]): string;
+  sql(args: string[], ctx?: SqlEmitContext): string;
 }
 
 const f = (
@@ -23,8 +33,11 @@ const f = (
   maxArgs: number,
   stage: FnStage,
   doc: string,
-  sql: (a: string[]) => string,
+  sql: (a: string[], ctx?: SqlEmitContext) => string,
 ): FnSpec => ({ minArgs, maxArgs, stage, doc, sql });
+
+/** `ORDER BY ...` for a window frame, or empty when the plan declares no sort. */
+const over = (ctx?: SqlEmitContext): string => (ctx?.windowOrder ? `order by ${ctx.windowOrder}` : "");
 
 /** Guards against `x / 0` producing Infinity in one engine and an error in another. */
 const safeDiv = (a: string, b: string) => `(${a}) / nullif(${b}, 0)`;
@@ -43,12 +56,14 @@ export const FUNCTIONS: Readonly<Record<string, FnSpec>> = Object.freeze({
   median: f(1, 1, "aggregate", "50th percentile.", (a) => `median(${a[0]})`),
 
   // ---- window (post-aggregation) ----
-  lag: f(1, 2, "window", "Value n rows earlier in sort order (default 1).", (a) =>
-    `lag(${a[0]}, ${a[1] ?? "1"}) over ()`),
-  lead: f(1, 2, "window", "Value n rows later in sort order (default 1).", (a) =>
-    `lead(${a[0]}, ${a[1] ?? "1"}) over ()`),
-  runningSum: f(1, 1, "window", "Cumulative total in sort order.", (a) =>
-    `sum(${a[0]}) over (rows between unbounded preceding and current row)`),
+  lag: f(1, 2, "window", "Value n rows earlier in sort order (default 1).", (a, ctx) =>
+    `lag(${a[0]}, ${a[1] ?? "1"}) over (${over(ctx)})`),
+  lead: f(1, 2, "window", "Value n rows later in sort order (default 1).", (a, ctx) =>
+    `lead(${a[0]}, ${a[1] ?? "1"}) over (${over(ctx)})`),
+  runningSum: f(1, 1, "window", "Cumulative total in sort order.", (a, ctx) => {
+    const order = over(ctx);
+    return `sum(${a[0]}) over (${order}${order ? " " : ""}rows between unbounded preceding and current row)`;
+  }),
   rank: f(1, 1, "window", "Dense rank, largest first.", (a) =>
     `dense_rank() over (order by ${a[0]} desc)`),
   pctOfTotal: f(1, 1, "window", "Share of the column total.", (a) =>

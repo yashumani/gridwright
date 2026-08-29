@@ -31,7 +31,8 @@ function filterSql(f: Filter, expr: string): string {
   }
 }
 
-function orderSql(sorts: readonly Sort[]): string {
+/** Ordering expression list, without the ORDER BY keywords. */
+function orderList(sorts: readonly Sort[]): string {
   return sorts
     .map((s) => {
       const col = "measure" in s ? measureKey(s.measure) : dimKey(s.dimension);
@@ -40,6 +41,8 @@ function orderSql(sorts: readonly Sort[]): string {
     })
     .join(", ");
 }
+
+const orderSql = (sorts: readonly Sort[]): string => orderList(sorts);
 
 export function planToSql(plan: QueryPlan): string {
   const dimExpr = (d: QueryPlan["dimensions"][number]) =>
@@ -74,8 +77,15 @@ export function planToSql(plan: QueryPlan): string {
     return lines.join("\n");
   }
 
+  // Window frames in the outer pass carry the inner query's ordering
+  // explicitly; a subquery's ORDER BY does not propagate into a window.
+  const windowOrder = plan.preSort.length ? orderList(plan.preSort) : undefined;
   const outer = plan.post.map(
-    (m) => `${toSql(m.ast, { field: quoteIdent, measure: (id) => quoteIdent(measureKey(id)) })} AS ${quoteIdent(measureKey(m.id))}`,
+    (m) => `${toSql(m.ast, {
+      field: quoteIdent,
+      measure: (id) => quoteIdent(measureKey(id)),
+      ...(windowOrder ? { windowOrder } : {}),
+    })} AS ${quoteIdent(measureKey(m.id))}`,
   );
 
   const wrapped = [

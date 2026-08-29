@@ -16,6 +16,11 @@ export interface SqlContext {
   field(name: string): string;
   /** Column reference for an already-computed measure. */
   measure(id: string): string;
+  /**
+   * ORDER BY for window frames, without the keywords. Supplying it is what
+   * makes `runningSum` and `lag` deterministic on a pushdown backend.
+   */
+  windowOrder?: string;
 }
 
 export function quoteIdent(name: string): string {
@@ -71,7 +76,10 @@ export function toSql(node: Node, ctx: SqlContext): string {
     case "call": {
       const spec = FUNCTIONS[node.name];
       if (!spec) throw new Error(`no SQL mapping for unknown function ${node.name}()`);
-      return spec.sql(node.args.map((a) => toSql(a, ctx)));
+      return spec.sql(
+        node.args.map((a) => toSql(a, ctx)),
+        ctx.windowOrder ? { windowOrder: ctx.windowOrder } : undefined,
+      );
     }
   }
 }

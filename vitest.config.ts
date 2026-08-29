@@ -13,6 +13,7 @@ export default defineConfig({
       "@gridwright/panels": pkg("panels"),
       "@gridwright/react": pkg("react"),
       "@gridwright/builder": pkg("builder"),
+      "gridwright": pkg("cli"),
     },
   },
   test: {

@@ -5,7 +5,7 @@ import { parseManifest, type Manifest } from "@gridwright/schema";
 import {
   Engine, EngineError, MemorySource, QueryCache,
   compileDataset, hashPlan, loadDelimited, parseDelimited, planToSql, projectFields,
-  sourceFromText, typesForTable,
+  loadBundle, sourceFromText, typesForTable,
   type QueryResult, type Table, type Value,
 } from "@gridwright/engine";
 
@@ -396,6 +396,24 @@ describe("sql emission", () => {
   it("orders nulls last, matching the executor", () => {
     expect(planToSql(compileDataset(m, "by_channel"))).toContain("NULLS LAST");
   });
+
+  it("gives every window frame its own ORDER BY", () => {
+    // A subquery's ORDER BY does not propagate into an outer window, so
+    // `over ()` here would make a running total non-deterministic on a real
+    // backend even though the in-process executor gets it right.
+    const sql = planToSql(compileDataset(m, "by_month"));
+    expect(sql).not.toContain("over ()");
+    expect(sql).toMatch(/sum\("m_revenue"\) over \(order by "d_month"/);
+    expect(sql).toMatch(/lag\("m_revenue", 1\) over \(order by "d_month"/);
+  });
+
+  it("leaves whole-partition windows unordered", () => {
+    // pctOfTotal spans the partition; an ORDER BY there would change its meaning.
+    const custom = structuredClone(m);
+    custom.datasets["by_region"]!.sort = [];
+    const sql = planToSql(compileDataset(custom, "by_region"));
+    expect(sql).toContain("over ()");
+  });
 });
 
 describe("end to end on the reference manifest", () => {
@@ -472,4 +490,117 @@ describe("performance", () => {
     expect(coldMs).toBeLessThan(20_000);
     console.log(`      1M rows: cold ${coldMs}ms, warm ${warmMs}ms, ${first.totalGroups} groups`);
   }, 60_000);
+});
+
+describe("loading a dropped bundle", () => {
+  const manifestText = readFileSync(dir("../../../examples/sales-overview.gw.yaml"), "utf8");
+  const load = (files: Array<{ name: string; text: string }>) => loadBundle(manifestText, files);
+
+  it("matches a data file to the table by its declared path", () => {
+    const r = load([{ name: "sales.csv", text: salesCsv }]);
+    expect(r.ok, r.ok ? "" : JSON.stringify(r.issues)).toBe(true);
+  });
+
+  it("ignores directories in the declared path", () => {
+    // A dropped File has a bare name; the manifest says "./sales.csv".
+    const r = load([{ name: "/home/me/Downloads/sales.csv", text: salesCsv }]);
+    expect(r.ok).toBe(true);
+  });
+
+  it("matches case-insensitively", () => {
+    expect(load([{ name: "SALES.CSV", text: salesCsv }]).ok).toBe(true);
+  });
+
+  it("accepts a sole unmatched file for a sole table", () => {
+    const r = load([{ name: "export-2024.csv", text: salesCsv }]);
+    expect(r.ok, r.ok ? "" : JSON.stringify(r.issues)).toBe(true);
+  });
+
+  it("names the file it wanted when nothing matches", () => {
+    const r = load([]);
+    expect(r.ok).toBe(false);
+    expect(r.ok || r.issues[0]!.message).toMatch(/no file supplied for table "sales"/);
+  });
+
+  it("reports an invalid manifest instead of throwing", () => {
+    const r = loadBundle("gridwright: 1\nnope: true\n", []);
+    expect(r.ok).toBe(false);
+    expect(r.ok || r.issues.length).toBeGreaterThan(0);
+  });
+
+  it("reports a bad measure expression at load time", () => {
+    const broken = manifestText.replace('expr: "sum(amount)"', 'expr: "sum(amount"');
+    const r = loadBundle(broken, [{ name: "sales.csv", text: salesCsv }]);
+    expect(r.ok).toBe(false);
+    expect(r.ok || r.issues.some((i) => /model\.measures/.test(i.path))).toBe(true);
+  });
+
+  it("returns a ready engine that answers queries", async () => {
+    const r = load([{ name: "sales.csv", text: salesCsv }]);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const result = await r.engine.query("by_region");
+    expect(result.rowCount).toBe(5);
+  });
+
+  it("surfaces a column mismatch with the columns the file has", () => {
+    const r = load([{ name: "sales.csv", text: "order_date,region\n2024-01-01,N\n" }]);
+    expect(r.ok).toBe(false);
+    expect(r.ok || r.issues[0]!.message).toMatch(/has no column/);
+  });
+});
+
+describe("untrusted manifest input", () => {
+  const manifestText = readFileSync(dir("../../../examples/sales-overview.gw.yaml"), "utf8");
+
+  it("keeps markup in a title as data, never as structure", () => {
+    const evil = manifestText.replace("title: Sales overview", 'title: "<img src=x onerror=alert(1)>"');
+    const r = loadBundle(evil, [{ name: "sales.csv", text: salesCsv }]);
+    expect(r.ok).toBe(true);
+    // The string survives verbatim; escaping is the renderer's job and React
+    // does it by construction. What matters here is that it is never parsed.
+    expect(r.ok && r.manifest.title).toBe("<img src=x onerror=alert(1)>");
+  });
+
+  it("refuses a filter value that would break out of a SQL literal", () => {
+    const m = manifest();
+    const plan = compileDataset(m, "by_region", {
+      runtimeFilters: [{ dimension: "region", op: "eq", value: "'; DROP TABLE sales; --" }],
+    });
+    const sql = planToSql(plan);
+    expect(sql).toContain("'''; DROP TABLE sales; --'");
+    expect(sql).not.toMatch(/;\s*DROP TABLE sales;\s*--'?\s*$/);
+  });
+
+  it("refuses an injected identifier at the compiler, before SQL is ever emitted", () => {
+    const m = manifest();
+    m.model.dimensions[0]!.field = 'region" ; drop table t; --';
+    expect(() => compileDataset(m, "by_region")).toThrow(/unknown field/);
+  });
+
+  it("still refuses it at the emitter, for a plan that skipped the compiler", () => {
+    // The two layers are independent on purpose: a caller building a plan by
+    // hand must not be able to reach the query text with a raw identifier.
+    const plan = compileDataset(manifest(), "by_region");
+    const tampered = {
+      ...plan,
+      dimensions: [{ ...plan.dimensions[0]!, field: 'region" ; drop table t; --' }],
+    };
+    expect(() => planToSql(tampered)).toThrow(/unsafe SQL identifier/);
+  });
+
+  it("caps the result at the cell ceiling even when the manifest asks for more", async () => {
+    const wide: Table = {
+      name: "sales", rowCount: 5,
+      columns: {
+        region: ["a", "b", "c", "d", "e"], amount: [1, 2, 3, 4, 5],
+        channel: ["", "", "", "", ""], order_date: Array(5).fill("2024-01-01"), returned: Array(5).fill(false),
+      },
+    };
+    const tm = tinyManifest();
+    tm.datasets["by_region"]!.limit = 100_000;
+    const r = await new Engine(tm, MemorySource.fromTables([wide]), { cache: false }).query("by_region");
+    expect(r.rowCount).toBe(5);
+    expect(r.truncated).toBe(false);
+  });
 });
