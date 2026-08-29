@@ -1,7 +1,9 @@
 import type { Filter, Grain, Sort } from "@gridwright/schema";
+import type { JoinStep } from "./join.js";
 import type { Node, Value } from "@gridwright/expr";
 
 export type { Value };
+export type { JoinStep, JoinPlan } from "./join.js";
 
 /** A source table in columnar form. Columns stay parallel arrays end to end. */
 export interface Table {
@@ -28,9 +30,20 @@ export interface PlanMeasure {
  * The compiled form of a dataset request. Both the in-process executor and the
  * SQL emitter consume this, so a backend swap cannot change query semantics.
  */
+/** Where a manifest field actually lives. */
+export interface FieldOrigin {
+  table: string;
+  column: string;
+}
+
 export interface QueryPlan {
   dataset: string;
+  /** Base table. Joined tables hang off it in `joins`. */
   table: string;
+  /** Applied in order; each step's `fromTable` is already present. */
+  joins: JoinStep[];
+  /** Field name to its source table and column. */
+  fieldMap: Record<string, FieldOrigin>;
   dimensions: PlanDimension[];
   /** Fold raw rows; become the GROUP BY projection. */
   aggregate: PlanMeasure[];

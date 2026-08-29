@@ -31,19 +31,29 @@ const fileRef = obj({
   format: opt(enum_(["csv", "tsv", "json"] as const)),
 });
 
+const tableColumn = () =>
+  str({
+    pattern: /^[A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_ ]*$/,
+    patternHint: 'must be "table.column"',
+    maxLength: 2 * LIMITS.identifierLength + 1,
+  });
+
+const relation = obj({
+  left: tableColumn(),
+  right: tableColumn(),
+  cardinality: opt(enum_(["many-to-one", "one-to-one"] as const)),
+});
+
 const source = obj({
   kind: lit("file"),
   files: arr(fileRef, { min: 1, max: LIMITS.files }),
+  relations: opt(arr(relation, { max: LIMITS.relations })),
 });
 
 const field = obj({
   name: ident(),
   type: enum_(["string", "number", "date", "boolean"] as const),
-  from: str({
-    pattern: /^[A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_ ]*$/,
-    patternHint: 'must be "table.column"',
-    maxLength: 2 * LIMITS.identifierLength + 1,
-  }),
+  from: tableColumn(),
 });
 
 const dimension = obj({

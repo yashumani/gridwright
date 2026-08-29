@@ -151,6 +151,40 @@ describe("cross-filtering", () => {
     await waitFor(() => expect(store.isEmpty()).toBe(true));
   });
 
+  it("does not filter a panel by its own selection", async () => {
+    await mount();
+    const barsBefore = document.querySelectorAll(".gw-bar .gw-bar-fill").length;
+    await act(async () => { fireEvent.click(document.querySelectorAll(".gw-bar")[0]!); });
+    await waitFor(() => expect(document.querySelector(".gw-chip")).toBeTruthy());
+    // Every channel stays on screen, so a second value is still selectable.
+    expect(document.querySelectorAll(".gw-bar .gw-bar-fill")).toHaveLength(barsBefore);
+  });
+
+  it("marks the selected mark and dims the rest", async () => {
+    await mount();
+    await act(async () => { fireEvent.click(document.querySelectorAll(".gw-bar")[0]!); });
+    await waitFor(() => expect(document.querySelector(".gw-bar.gw-on")).toBeTruthy());
+    expect(document.querySelectorAll(".gw-bar.gw-dim").length).toBeGreaterThan(0);
+  });
+
+  it("supports selecting a second value from the same chart", async () => {
+    const { store } = await mount();
+    const bars = () => document.querySelectorAll(".gw-bar");
+    await act(async () => { fireEvent.click(bars()[0]!); });
+    await waitFor(() => expect(store.getSnapshot()["channel"]).toHaveLength(1));
+    await act(async () => { fireEvent.click(bars()[1]!); });
+    await waitFor(() => expect(store.getSnapshot()["channel"]).toHaveLength(2));
+  });
+
+  it("still narrows a panel by a selection made elsewhere", async () => {
+    await mount();
+    const before = document.querySelector(".gw-kpi-value")!.textContent;
+    await act(async () => { fireEvent.click(document.querySelectorAll(".gw-bar")[0]!); });
+    await waitFor(() => {
+      expect(document.querySelector(".gw-kpi-value")!.textContent).not.toBe(before);
+    });
+  });
+
   it("keeps the previous data visible while the next query runs", async () => {
     await mount();
     const before = document.querySelectorAll(".gw-panel").length;

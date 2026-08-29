@@ -33,6 +33,36 @@ export function checkSemantics(m: Manifest, o: SemanticOptions = {}): Issue[] {
     add("source.files", `duplicate file id "${dupe}"`);
   }
 
+  // ---- relations ----
+  const relations = m.source.relations ?? [];
+  relations.forEach((r, i) => {
+    const [leftTable] = r.left.split(".");
+    const [rightTable] = r.right.split(".");
+    if (!tableIds.has(leftTable!)) {
+      add(`source.relations[${i}].left`, `unknown table "${leftTable}"`);
+    }
+    if (!tableIds.has(rightTable!)) {
+      add(`source.relations[${i}].right`, `unknown table "${rightTable}"`);
+    }
+    if (leftTable === rightTable) {
+      add(`source.relations[${i}]`, `a relation cannot join "${leftTable}" to itself`);
+    }
+  });
+  for (const dupe of duplicates(relations.map((r) => {
+    const a = r.left.split(".")[0]!;
+    const b = r.right.split(".")[0]!;
+    return a < b ? `${a}|${b}` : `${b}|${a}`;
+  }))) {
+    add("source.relations", `two relations connect the same pair of tables (${dupe.replace("|", " and ")})`);
+  }
+  if (m.source.files.length > 1 && relations.length === 0) {
+    add(
+      "source.relations",
+      "more than one table is declared but no relations connect them — " +
+      "add a relation, or the planner cannot combine their fields",
+    );
+  }
+
   // ---- fields ----
   const fieldsByName = new Map(m.model.fields.map((f) => [f.name, f]));
   for (const dupe of duplicates(m.model.fields.map((f) => f.name))) {

@@ -29,8 +29,10 @@ jobs:
       - name: Test
         run: pnpm test
 
-      - name: Validate the reference manifest against real data
-        run: node packages/cli/dist/bin.js validate examples/sales-overview.gw.yaml --data
+      - name: Validate the reference manifests against real data
+        run: |
+          node packages/cli/dist/bin.js validate examples/sales-overview.gw.yaml --data
+          node packages/cli/dist/bin.js validate examples/orders-star.gw.yaml --data
 
       - name: Build the playground
         run: pnpm --filter @gridwright/playground build

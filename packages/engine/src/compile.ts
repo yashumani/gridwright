@@ -2,7 +2,8 @@ import {
   LIMITS, type Filter, type Manifest, type Sort,
 } from "@gridwright/schema";
 import { analyzeModel, type ExprAnalysis } from "@gridwright/expr";
-import { EngineError, type PlanDimension, type PlanMeasure, type QueryPlan } from "./types.js";
+import { EngineError, type FieldOrigin, type PlanDimension, type PlanMeasure, type QueryPlan } from "./types.js";
+import { planJoins } from "./join.js";
 
 /**
  * Manifest + dataset name + runtime filters -> one query plan.
@@ -100,20 +101,23 @@ export function compileDataset(
     fields.add(d.field);
   }
 
-  // ---- table resolution ----
+  // ---- table resolution and join planning ----
+  const fieldMap: Record<string, FieldOrigin> = Object.create(null);
   const tables = new Set<string>();
   for (const name of fields) {
     const f = fieldsByName.get(name);
     if (!f) throw new EngineError(`unknown field "${name}"`);
-    tables.add(f.from.split(".")[0]!);
+    const dot = f.from.indexOf(".");
+    const origin: FieldOrigin = { table: f.from.slice(0, dot), column: f.from.slice(dot + 1) };
+    fieldMap[name] = origin;
+    tables.add(origin.table);
   }
-  if (tables.size > 1) {
-    throw new EngineError(
-      `dataset "${datasetName}" reads from ${[...tables].join(" and ")}`,
-      "Gridwright v1 queries a single table per dataset; joins are not supported yet.",
-    );
-  }
-  const table = [...tables][0] ?? manifest.source.files[0]!.id;
+
+  const required = tables.size ? [...tables] : [manifest.source.files[0]!.id];
+  const { base, steps } = planJoins(manifest.source.relations ?? [], required, {
+    fileOrder: manifest.source.files.map((f) => f.id),
+    dataset: datasetName,
+  });
 
   // ---- sort, split by the tier that can resolve it ----
   const postIds = new Set(post.map((m) => m.id));
@@ -127,7 +131,9 @@ export function compileDataset(
 
   return {
     dataset: datasetName,
-    table,
+    table: base,
+    joins: steps,
+    fieldMap,
     dimensions,
     aggregate,
     post,

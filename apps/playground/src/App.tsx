@@ -82,20 +82,18 @@ export function App() {
     [accept],
   );
 
-  const loadExample = useCallback(async () => {
-    try {
-      const [manifest, data] = await Promise.all([
-        fetch("./sales-overview.gw.yaml").then((r) => r.text()),
-        fetch("./sales.csv").then((r) => r.text()),
-      ]);
-      accept([
-        { name: "sales-overview.gw.yaml", text: manifest },
-        { name: "sales.csv", text: data },
-      ]);
-    } catch (err) {
-      setIssues([{ path: "(example)", message: (err as Error).message }]);
-    }
-  }, [accept]);
+  const loadExample = useCallback(
+    async (manifest: string, data: readonly string[]) => {
+      try {
+        const names = [manifest, ...data];
+        const texts = await Promise.all(names.map((n) => fetch(`./${n}`).then((r) => r.text())));
+        accept(names.map((name, i) => ({ name, text: texts[i]! })));
+      } catch (err) {
+        setIssues([{ path: "(example)", message: (err as Error).message }]);
+      }
+    },
+    [accept],
+  );
 
   const body = useMemo(() => {
     if (!loaded) return null;
@@ -183,9 +181,27 @@ export function App() {
               A <code>.gw.yaml</code> manifest plus the CSV files it names. Nothing is uploaded —
               everything runs in this tab.
             </p>
-            <button type="button" className="pg-button pg-primary" onClick={() => void loadExample()}>
-              Load the example
-            </button>
+            <div className="pg-examples">
+              <button
+                type="button"
+                className="pg-button pg-primary"
+                onClick={() => void loadExample("sales-overview.gw.yaml", ["sales.csv"])}
+              >
+                Load flat example
+              </button>
+              <button
+                type="button"
+                className="pg-button"
+                onClick={() =>
+                  void loadExample("orders-star.gw.yaml", ["orders.csv", "customers.csv", "products.csv"])
+                }
+              >
+                Load star schema
+              </button>
+            </div>
+            <p className="pg-hint">
+              The star schema joins a fact table to two dimension tables.
+            </p>
           </div>
         </main>
       )}

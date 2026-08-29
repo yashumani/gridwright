@@ -5,6 +5,7 @@
 export const LIMITS = {
   manifestBytes: 512 * 1024,
   files: 16,
+  relations: 32,
   fields: 512,
   dimensions: 128,
   measures: 256,
