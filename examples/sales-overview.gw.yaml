@@ -1,0 +1,116 @@
+gridwright: 1
+title: Sales overview
+
+source:
+  kind: file
+  files:
+    - { id: sales, path: ./sales.csv, format: csv }
+
+model:
+  fields:
+    - { name: order_date, type: date,    from: sales.order_date }
+    - { name: region,     type: string,  from: sales.region }
+    - { name: channel,    type: string,  from: sales.channel }
+    - { name: amount,     type: number,  from: sales.amount }
+    - { name: returned,   type: boolean, from: sales.returned }
+
+  dimensions:
+    - { id: region,  field: region,     label: Region }
+    - { id: channel, field: channel,    label: Channel }
+    - { id: month,   field: order_date, label: Month, grain: month }
+
+  measures:
+    - { id: revenue,  label: Revenue,   expr: "sum(amount)",  format: "$#,##0" }
+    - { id: orders,   label: Orders,    expr: "count()",      format: "#,##0" }
+    - { id: aov,      label: Avg order, expr: "measure(revenue) / measure(orders)", format: "$#,##0.00" }
+    - { id: returns,  label: Returns,   expr: "countIf(returned)", format: "#,##0" }
+    - { id: rtn_rate, label: Return rate,
+        expr: "measure(returns) / measure(orders)", format: "0.0%" }
+    - { id: rev_share, label: Share of revenue,
+        expr: "pctOfTotal(measure(revenue))", format: "0.0%" }
+    - { id: rev_run,  label: Running revenue,
+        expr: "runningSum(measure(revenue))", format: "$#,##0" }
+    - { id: rev_mom,  label: Revenue MoM,
+        expr: "measure(revenue) / lag(measure(revenue), 1) - 1", format: "0.0%" }
+
+datasets:
+  totals:
+    measures: [revenue, orders, aov, rtn_rate]
+
+  by_region:
+    dimensions: [region]
+    measures: [revenue, orders, aov, rev_share]
+    sort: [{ measure: revenue, dir: desc }]
+    limit: 100
+
+  by_month:
+    dimensions: [month]
+    measures: [revenue, rev_run, rev_mom]
+    sort: [{ dimension: month, dir: asc }]
+
+  by_channel:
+    dimensions: [channel]
+    measures: [revenue, orders]
+    sort: [{ measure: revenue, dir: desc }]
+
+grid: { columns: 12, rowHeight: 76, gap: 12 }
+
+panels:
+  - id: kpi_rev
+    type: kpi
+    dataset: totals
+    layout: { x: 0, y: 0, w: 3, h: 2 }
+    props: { measure: revenue, caption: All channels }
+
+  - id: kpi_orders
+    type: kpi
+    dataset: totals
+    layout: { x: 3, y: 0, w: 3, h: 2 }
+    props: { measure: orders }
+
+  - id: kpi_aov
+    type: kpi
+    dataset: totals
+    layout: { x: 6, y: 0, w: 3, h: 2 }
+    props: { measure: aov }
+
+  - id: kpi_rtn
+    type: kpi
+    dataset: totals
+    layout: { x: 9, y: 0, w: 3, h: 2 }
+    props: { measure: rtn_rate, invertTrend: true }
+
+  - id: trend
+    type: line
+    dataset: by_month
+    title: Revenue by month
+    layout: { x: 0, y: 2, w: 8, h: 4 }
+    props: { x: month, y: [revenue], area: true }
+
+  - id: channels
+    type: bar
+    dataset: by_channel
+    title: Revenue by channel
+    layout: { x: 8, y: 2, w: 4, h: 4 }
+    props: { category: channel, value: revenue }
+
+  - id: regions
+    type: table
+    dataset: by_region
+    title: Regions
+    layout: { x: 0, y: 6, w: 12, h: 5 }
+    props:
+      columns:
+        - { ref: region }
+        - { ref: revenue, align: right }
+        - { ref: orders, align: right }
+        - { ref: aov, align: right }
+        - { ref: rev_share, align: right, bar: true }
+      rules:
+        - { when: "revenue > 250000", style: { weight: bold } }
+
+interactions:
+  - on: regions.rowClick
+    do: [{ action: filter, dimension: region, from: row }]
+  - on: channels.click
+    do: [{ action: filter, dimension: channel, from: value }]
