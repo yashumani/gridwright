@@ -18,5 +18,9 @@ export default defineConfig({
   test: {
     include: ["packages/*/test/**/*.test.ts", "packages/*/test/**/*.test.tsx"],
     environment: "node",
+    setupFiles: ["./vitest.setup.ts"],
+    // Component tests opt into a DOM; everything else stays on node, which is
+    // both faster and a check that the core packages carry no DOM assumptions.
+    environmentMatchGlobs: [["packages/{react,panels,builder}/test/**", "jsdom"]],
   },
 });
