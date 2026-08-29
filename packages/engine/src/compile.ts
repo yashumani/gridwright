@@ -95,10 +95,12 @@ export function compileDataset(
 
   // ---- filters ----
   const filters = [...(ds.filters ?? []), ...(o.runtimeFilters ?? [])];
+  const dimensionFields: QueryPlan["dimensionFields"] = Object.create(null);
   for (const f of filters) {
     const d = dimsById.get(f.dimension);
     if (!d) throw new EngineError(`filter references unknown dimension "${f.dimension}"`);
     fields.add(d.field);
+    dimensionFields[f.dimension] = { field: d.field, ...(d.grain ? { grain: d.grain } : {}) };
   }
 
   // ---- table resolution and join planning ----
@@ -134,6 +136,7 @@ export function compileDataset(
     table: base,
     joins: steps,
     fieldMap,
+    dimensionFields,
     dimensions,
     aggregate,
     post,

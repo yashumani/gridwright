@@ -10,6 +10,12 @@ import {
 
 export interface BuilderProps {
   manifest: Manifest;
+  /**
+   * The YAML this manifest was parsed from. Supplying it makes an export
+   * preserve the original's comments and layout, which is what lets engineers
+   * and analysts share one file.
+   */
+  manifestText?: string;
   source: DataSource;
   registry?: PanelRegistry;
   onChange?: (manifest: Manifest) => void;
@@ -21,9 +27,9 @@ export interface BuilderProps {
  * a live dashboard rather than a mock is the only way the preview can be
  * trusted — with an inspector driven entirely by the selected panel's schema.
  */
-export function Builder({ manifest, source, registry, onChange, locale }: BuilderProps) {
+export function Builder({ manifest, manifestText, source, registry, onChange, locale }: BuilderProps) {
   const reg = useMemo(() => registry ?? defaultRegistry(), [registry]);
-  const [state, dispatch] = useReducer(reduce, manifest, initialState);
+  const [state, dispatch] = useReducer(reduce, manifest, (m) => initialState(m, manifestText));
   const [exported, setExported] = useState<string | null>(null);
   const store = useMemo(() => new FilterStore(), []);
 
@@ -87,7 +93,7 @@ export function Builder({ manifest, source, registry, onChange, locale }: Builde
           <button
             type="button"
             className="gwb-mini gwb-primary"
-            onClick={() => setExported(exportManifest(state.manifest).yaml)}
+            onClick={() => setExported(exportManifest(state.manifest, state.source).yaml)}
           >
             Export
           </button>

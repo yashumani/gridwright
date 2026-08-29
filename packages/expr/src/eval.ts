@@ -103,6 +103,81 @@ export function truncateDate(value: string, grain: string): Value {
   }
 }
 
+/**
+ * A streaming fold, so an aggregate never has to materialise its inputs.
+ *
+ * The array-taking `applyAggregate` below is the readable form and stays for
+ * small groups and tests; at millions of rows, building one array per group per
+ * measure is most of the query time, and this is the path that avoids it.
+ */
+export interface Reducer {
+  push(v: Value): void;
+  result(): Value;
+}
+
+export function makeReducer(name: string): Reducer {
+  switch (name) {
+    case "count": {
+      let n = 0;
+      return { push: (v) => { if (v !== null) n++; }, result: () => n };
+    }
+    case "countIf": {
+      let n = 0;
+      return { push: (v) => { if (truthy(v)) n++; }, result: () => n };
+    }
+    case "countDistinct": {
+      const seen = new Set<string>();
+      return {
+        push: (v) => { if (v !== null) seen.add(`${typeof v}:${String(v)}`); },
+        result: () => seen.size,
+      };
+    }
+    case "sum": {
+      let total = 0, any = false;
+      return {
+        push: (v) => { const x = num(v); if (x !== null) { total += x; any = true; } },
+        result: () => (any ? total : null),
+      };
+    }
+    case "avg": {
+      let total = 0, n = 0;
+      return {
+        push: (v) => { const x = num(v); if (x !== null) { total += x; n++; } },
+        result: () => (n ? total / n : null),
+      };
+    }
+    case "min":
+    case "max": {
+      let best: Value = null;
+      const want = name === "min" ? -1 : 1;
+      return {
+        push: (v) => {
+          if (v === null) return;
+          if (best === null) { best = v; return; }
+          const c = cmp(v, best);
+          if (c !== null && Math.sign(c) === want) best = v;
+        },
+        result: () => best,
+      };
+    }
+    case "median": {
+      // The one aggregate that genuinely needs every value.
+      const buf: number[] = [];
+      return {
+        push: (v) => { const x = num(v); if (x !== null) buf.push(x); },
+        result: () => {
+          if (!buf.length) return null;
+          buf.sort((a, b) => a - b);
+          const mid = buf.length >> 1;
+          return buf.length % 2 ? buf[mid]! : (buf[mid - 1]! + buf[mid]!) / 2;
+        },
+      };
+    }
+    default:
+      throw new Error(`no reducer for aggregate ${name}()`);
+  }
+}
+
 export function applyAggregate(name: string, values: Value[]): Value {
   switch (name) {
     case "count":
@@ -223,6 +298,73 @@ export function evalAggregate(node: Node, rows: readonly Row[]): Value {
         return applyAggregate(node.name, kept);
       }
       return applyScalar(node.name, node.args.map((a) => evalAggregate(a, rows)));
+    }
+  }
+}
+
+/** A row view backed by columns, positioned by index rather than materialised. */
+export interface RowCursor {
+  index: number;
+  row: Row;
+}
+
+/**
+ * Folds a slice of row indices into one value, reading through a cursor.
+ *
+ * This is the hot path: no row objects, no per-group value arrays. The tree
+ * walk mirrors `evalAggregate` exactly, so the two cannot disagree about what
+ * an expression means.
+ */
+export function evalAggregateIndexed(
+  node: Node,
+  cursor: RowCursor,
+  indices: Int32Array | number[],
+  start: number,
+  end: number,
+): Value {
+  switch (node.kind) {
+    case "number": return node.value;
+    case "string": return node.value;
+    case "boolean": return node.value;
+    case "null": return null;
+    case "field":
+      throw new Error(`field "${node.name}" used outside an aggregate`);
+    case "measure":
+      throw new Error("measure() belongs to the post-aggregation tier");
+    case "unary": {
+      const v = evalAggregateIndexed(node.operand, cursor, indices, start, end);
+      if (node.op === "not") return !truthy(v);
+      const n = num(v);
+      return n === null ? null : -n;
+    }
+    case "binary":
+      return applyBinary(
+        node.op,
+        evalAggregateIndexed(node.left, cursor, indices, start, end),
+        evalAggregateIndexed(node.right, cursor, indices, start, end),
+      );
+    case "call": {
+      const spec = FUNCTIONS[node.name];
+      if (!spec) throw new Error(`unknown function ${node.name}()`);
+      if (spec.stage === "aggregate") {
+        const arg = node.args[0];
+        // `count()` with no argument is just the row count.
+        if (!arg) {
+          const reducer = makeReducer(node.name);
+          for (let k = start; k < end; k++) reducer.push(1);
+          return reducer.result();
+        }
+        const reducer = makeReducer(node.name);
+        for (let k = start; k < end; k++) {
+          cursor.index = indices[k]!;
+          reducer.push(evalRow(arg, cursor.row));
+        }
+        return reducer.result();
+      }
+      return applyScalar(
+        node.name,
+        node.args.map((a) => evalAggregateIndexed(a, cursor, indices, start, end)),
+      );
     }
   }
 }
