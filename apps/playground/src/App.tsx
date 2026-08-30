@@ -24,12 +24,26 @@ const DATA_EXT = /\.(csv|tsv|txt)$/i;
 /** A ceiling with a message, rather than an unexplained freeze. */
 const MAX_ROWS = 20_000_000;
 
+/**
+ * A standalone build inlines the example files here, so the page needs no
+ * network at all. When absent, they are fetched as normal.
+ */
+const embedded = (name: string): string | undefined =>
+  (globalThis as { __GW_FILES__?: Record<string, string> }).__GW_FILES__?.[name];
+
 export function App() {
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [mode, setMode] = useState<"view" | "build">("view");
-  const [theme, setTheme] = useState<"light" | "dark" | "system">("system");
+  // A host page may have already stamped a theme; start from that rather than
+  // resetting the viewer's choice the moment this mounts.
+  const [theme, setTheme] = useState<"light" | "dark" | "system">(() => {
+    const stamped = typeof document !== "undefined"
+      ? document.documentElement.getAttribute("data-theme")
+      : null;
+    return stamped === "dark" || stamped === "light" ? stamped : "system";
+  });
   const [dragging, setDragging] = useState(false);
 
   useEffect(() => {
@@ -97,12 +111,18 @@ export function App() {
     async (manifestName: string, dataNames: readonly string[]) => {
       try {
         setBusy("Loading example…");
-        const manifestText = await fetch(`./${manifestName}`).then((r) => r.text());
+        const manifestText =
+          embedded(manifestName) ?? (await fetch(`./${manifestName}`).then((r) => r.text()));
         const data = await Promise.all(
-          dataNames.map(async (name) => ({
-            name,
-            blob: await fetch(`./${name}`).then((r) => r.blob()),
-          })),
+          dataNames.map(async (name) => {
+            const inline = embedded(name);
+            return {
+              name,
+              blob: inline !== undefined
+                ? new Blob([inline])
+                : await fetch(`./${name}`).then((r) => r.blob()),
+            };
+          }),
         );
         await accept(manifestText, data, "Loading example…");
       } catch (err) {
