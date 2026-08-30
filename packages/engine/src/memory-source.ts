@@ -259,6 +259,11 @@ export class MemorySource implements DataSource {
       groupId[i] = g;
     }
 
+    // An aggregate query with no GROUP BY returns exactly one row, even when
+    // nothing matches — that is what makes a KPI read 0 rather than vanish
+    // when a cross-filter excludes every record.
+    if (!dims.length && groupCount === 0) groupCount = 1;
+
     // Counting sort of row indices into per-group runs: contiguous, so an
     // aggregate walks a slice rather than chasing a list of arrays.
     const offsets = new Int32Array(groupCount + 1);

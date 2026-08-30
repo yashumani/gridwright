@@ -2,6 +2,7 @@ import { useState } from "react";
 import { bool, enum_, num, obj, opt, str } from "@gridwright/schema";
 import type { Value } from "@gridwright/engine";
 import { formatValue } from "./format.js";
+import { resultRow } from "./rules.js";
 import {
   columnValues, firstDimension, firstMeasure, isSelected, requireColumn,
   type PanelProps, type PanelSpec,
@@ -121,11 +122,11 @@ function Bar({ result, props, size, select, selected, locale }: PanelProps<BarPr
               className={`gw-bar${on ? " gw-on" : ""}${dim ? " gw-dim" : ""}`}
               onMouseEnter={() => setHover(i)}
               onMouseLeave={() => setHover(null)}
-              onClick={() => select(category.id, labels[i] ?? null)}
+              onClick={() => select(category.id, labels[i] ?? null, resultRow(result, i))}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
-                  select(category.id, labels[i] ?? null);
+                  select(category.id, labels[i] ?? null, resultRow(result, i));
                 }
               }}
               tabIndex={0}

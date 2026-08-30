@@ -103,6 +103,34 @@ describe("rejection corpus", () => {
   });
 });
 
+describe("filter values", () => {
+  // Both executors answer "this dimension is blank"; a manifest has to be able
+  // to write it, in a scalar and inside an `in` list alike.
+  const withFilters = (filters: unknown): string =>
+    refText.replace(
+      "  by_channel:\n    dimensions: [channel]",
+      `  by_channel:\n    filters: ${JSON.stringify(filters)}\n    dimensions: [channel]`,
+    );
+
+  it("accepts a null equality filter", () => {
+    const r = parseManifest(withFilters([{ dimension: "region", op: "eq", value: null }]));
+    expect(r.ok, r.ok ? "" : formatIssues(r.issues)).toBe(true);
+    expect(r.ok && (r.manifest.datasets["by_channel"]!.filters as any)[0].value).toBe(null);
+  });
+
+  it("accepts a null inside an in-list", () => {
+    const r = parseManifest(
+      withFilters([{ dimension: "region", op: "in", values: ["North", null] }]),
+    );
+    expect(r.ok, r.ok ? "" : formatIssues(r.issues)).toBe(true);
+  });
+
+  it("still rejects a value that is neither scalar nor null", () => {
+    const r = parseManifest(withFilters([{ dimension: "region", op: "eq", value: { a: 1 } }]));
+    expect(r.ok).toBe(false);
+  });
+});
+
 describe("input hardening", () => {
   it("rejects a manifest over the size ceiling", () => {
     const r = parseManifest("gridwright: 1\n# " + "x".repeat(600_000));

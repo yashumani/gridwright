@@ -157,6 +157,36 @@ describe("blob loading", () => {
     expect((result.data["m_total"] as number[]).reduce((a, b) => a + b, 0)).toBe(18);
   });
 
+  it("loads a declared json table through the upload path", async () => {
+    const manifest = [
+      "gridwright: 1",
+      "source:",
+      "  kind: file",
+      "  files: [{ id: t, path: ./t.json, format: json }]",
+      "model:",
+      "  fields:",
+      "    - { name: name, type: string, from: t.name }",
+      "    - { name: qty,  type: number, from: t.qty }",
+      "  dimensions: [{ id: name, field: name }]",
+      "  measures: [{ id: total, expr: \"sum(qty)\" }]",
+      "datasets: { by_name: { dimensions: [name], measures: [total] } }",
+      "panels: []",
+    ].join("\n");
+
+    const rows = JSON.stringify([
+      { name: "a", qty: 3 },
+      { name: "b", qty: 4 },
+      { name: "a", qty: 5 },
+    ]);
+    const r = await loadBundleFromBlobs(manifest, [
+      { name: "t.json", blob: new Blob([rows]) },
+    ]);
+    expect(r.ok, r.ok ? "" : JSON.stringify(r.issues)).toBe(true);
+    if (!r.ok) return;
+    const result = await r.engine.query("by_name");
+    expect((result.data["m_total"] as number[]).reduce((a, b) => a + b, 0)).toBe(12);
+  });
+
   it("reports a row-ceiling breach as an issue rather than throwing", async () => {
     const manifest = [
       "gridwright: 1",

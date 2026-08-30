@@ -612,3 +612,129 @@ describe("untrusted manifest input", () => {
     expect(r.truncated).toBe(false);
   });
 });
+
+// Every case below is one a review caught and the suite did not. They are
+// grouped together so it stays obvious what each is guarding.
+describe("regressions", () => {
+  it("returns a totals row even when the filters match nothing", async () => {
+    // An aggregate query with no GROUP BY yields one row in SQL whatever the
+    // WHERE says. Returning none instead makes every KPI vanish the moment a
+    // cross-filter excludes the last record.
+    const r = await tinyEngine().query("totals", {
+      filters: [{ dimension: "region", op: "in", values: ["nowhere"] }],
+    });
+    expect(r.rowCount).toBe(1);
+    expect(col(r, "m_orders")).toEqual([0]);
+    expect(col(r, "m_revenue")).toEqual([null]); // sum of nothing, as in SQL
+  });
+
+  it("returns a totals row for an empty source", async () => {
+    const empty: Table = {
+      name: "sales", rowCount: 0,
+      columns: { region: [], channel: [], order_date: [], amount: [], returned: [] },
+    };
+    const e = new Engine(tinyManifest(), MemorySource.fromTables([empty]), { cache: false });
+    const r = await e.query("totals");
+    expect(r.rowCount).toBe(1);
+    expect(col(r, "m_orders")).toEqual([0]);
+  });
+
+  it("applies a dimension's grain to a filter the dataset does not group by", () => {
+    // `month` is a dimension id, not a column: filtering it has to truncate
+    // order_date. Emitting a bare "month" would name a column nothing has.
+    const plan = compileDataset(tinyManifest(), "by_region", {
+      runtimeFilters: [{ dimension: "month", op: "eq", value: "2024-02-01" }],
+    });
+    const sql = planToSql(plan);
+    const where = sql.slice(sql.indexOf("WHERE"));
+    expect(where).toContain(`date_trunc('month', "sales"."order_date") = '2024-02-01'`);
+    expect(where).not.toMatch(/"month"/);
+  });
+
+  it("restates the display order on the outer query", () => {
+    // ORDER BY inside a CTE does not bind the query that reads it, so a
+    // month-sorted line dataset with a window measure would otherwise come
+    // back in whatever order the backend liked.
+    const sql = planToSql(compileDataset(tinyManifest(), "by_month"));
+    const outer = sql.slice(sql.lastIndexOf("FROM grouped"));
+    expect(outer).toContain(`ORDER BY "d_month" ASC NULLS LAST`);
+  });
+
+  it("keeps a post measure out of the select list that defines what it reads", () => {
+    // `double_aov` reads `aov`, which is itself a post measure. A sibling
+    // alias is not visible to its neighbours, so the two need separate passes.
+    const m = tinyManifest();
+    m.model.measures.push({ id: "double_aov", expr: "measure(aov) * 2" });
+    m.datasets["by_region"]!.measures.push("double_aov");
+
+    const sql = planToSql(compileDataset(m, "by_region"));
+    const cte = sql.slice(sql.indexOf("post_1 AS ("), sql.lastIndexOf("SELECT *,"));
+    const final = sql.slice(sql.lastIndexOf("SELECT *,"));
+
+    expect(cte).toContain(`AS "m_aov"`);
+    expect(final).toContain(`AS "m_double_aov"`);
+    // The dependency is defined one pass earlier, never beside its dependent.
+    expect(final).not.toContain(`AS "m_aov"`);
+    expect(final).toContain(`"m_aov"`);
+  });
+
+  it("computes a post measure that reads another post measure", async () => {
+    const m = tinyManifest();
+    m.model.measures.push({ id: "double_aov", expr: "measure(aov) * 2" });
+    m.datasets["by_region"]!.measures.push("double_aov");
+    const r = await tinyEngine(m).query("by_region");
+    expect(col(r, "m_aov")).toEqual([200, 150, 300]);
+    expect(col(r, "m_double_aov")).toEqual([400, 300, 600]);
+  });
+});
+
+describe("json sources", () => {
+  const jsonManifest = (): Manifest => {
+    const m = tinyManifest();
+    m.source.files = [{ id: "sales", path: "./s.json", format: "json" }];
+    return m;
+  };
+
+  const rows = [
+    { region: "N", channel: "Web",  order_date: "2024-01-05", amount: 100, returned: false },
+    { region: "N", channel: "Shop", order_date: "2024-01-20", amount: 200, returned: true },
+    { region: "S", channel: "Web",  order_date: "2024-02-11", amount: 50,  returned: false },
+  ];
+
+  it("parses a declared json table instead of reading it as csv", async () => {
+    const m = jsonManifest();
+    const source = sourceFromText(m, { sales: JSON.stringify(rows) });
+    const r = await new Engine(m, source, { cache: false }).query("by_region");
+    expect(col(r, "d_region")).toEqual(["N", "S"]);
+    expect(col(r, "m_revenue")).toEqual([300, 50]);
+  });
+
+  it("keeps json's own types rather than restringifying them", async () => {
+    const m = jsonManifest();
+    const source = sourceFromText(m, { sales: JSON.stringify(rows) });
+    const r = await new Engine(m, source, { cache: false }).query("totals");
+    expect(col(r, "m_revenue")).toEqual([350]);
+  });
+
+  it("reads a column the first row declared but a later row omits as blank", async () => {
+    const m = jsonManifest();
+    const partial = [rows[0], { region: "S", order_date: "2024-02-11", amount: 50 }];
+    const source = sourceFromText(m, { sales: JSON.stringify(partial) });
+    const r = await new Engine(m, source, { cache: false }).query("by_region");
+    expect(r.rowCount).toBe(2);
+  });
+
+  it("names the column when a cell holds something a table cannot", () => {
+    const m = jsonManifest();
+    const bad = [{ ...rows[0], region: { nested: true } }];
+    expect(() => sourceFromText(m, { sales: JSON.stringify(bad) }))
+      .toThrow(/non-scalar value in column "region"/);
+  });
+
+  it("says so plainly when the document is not an array of rows", () => {
+    const m = jsonManifest();
+    expect(() => sourceFromText(m, { sales: '{"rows": []}' }))
+      .toThrow(/must be a JSON array of row objects/);
+    expect(() => sourceFromText(m, { sales: "{oops" })).toThrow(/is not valid JSON/);
+  });
+});

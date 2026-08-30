@@ -219,6 +219,12 @@ backend at all. Data files are **streamed** into columns rather than read as tex
 ten-million-row CSV is about 350&nbsp;MB, and `File.text()` would need the whole thing as one
 JavaScript string before parsing could begin, which is where a tab dies.
 
+`format:` on a file is `csv` (the default), `tsv`, or `json`. JSON means a top-level array
+of row objects, where the first object fixes the columns. It is there for the convenient
+extract, not the large one: JSON cannot be resumed at an arbitrary byte, so that path reads
+the document whole and gives up the streaming ceiling below. A ten-million-row export
+belongs in CSV.
+
 Measured end to end, streaming from disk, five columns, four datasets:
 
 | Rows | File | Parse | First pass | Per cross-filter | Peak memory |

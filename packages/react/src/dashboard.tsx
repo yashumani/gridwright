@@ -1,4 +1,4 @@
-import { Component, useCallback, useMemo, type ErrorInfo, type ReactNode } from "react";
+import { Component, useCallback, useEffect, useMemo, useRef, type ErrorInfo, type ReactNode } from "react";
 import type { Action, Filter, Manifest, PanelDef } from "@gridwright/schema";
 import { formatIssues } from "@gridwright/schema";
 import { Engine, type DataSource, type QueryResult, type Value } from "@gridwright/engine";
@@ -20,6 +20,13 @@ export interface DashboardProps {
 const DEFAULT_COLUMNS = 12;
 const DEFAULT_ROW_HEIGHT = 76;
 const DEFAULT_GAP = 12;
+
+/** What a panel click carries: the clicked dimension and value, plus its row. */
+interface Emitted {
+  dimension: string;
+  value: Value;
+  row?: Readonly<Record<string, Value>>;
+}
 
 export function Dashboard({
   manifest, source, registry, store, locale, className, onError,
@@ -83,17 +90,39 @@ export function Dashboard({
   const gap = manifest.grid?.gap ?? DEFAULT_GAP;
 
   const runActions = useCallback(
-    (actions: readonly Action[], emitted: { dimension: string; value: Value }) => {
+    (actions: readonly Action[], emitted: Emitted) => {
       for (const a of actions) {
-        if (a.action === "clearFilters") filters.clear(a.dimension);
-        else filters.toggle(a.dimension, emitted.value);
+        if (a.action === "clearFilters") {
+          filters.clear(a.dimension);
+          continue;
+        }
+        // The clicked value belongs to the dimension the panel emitted, so an
+        // action naming a *different* dimension must read that dimension's own
+        // value out of the same row. Filtering `channel` by a region name is
+        // not a narrower dashboard, it is an empty one.
+        if (a.from === "value") {
+          // Explicitly asked for the clicked value, whatever it names.
+          filters.toggle(a.dimension, emitted.value);
+          continue;
+        }
+        if (emitted.row && a.dimension in emitted.row) {
+          filters.toggle(a.dimension, emitted.row[a.dimension] ?? null);
+          continue;
+        }
+        if (a.dimension === emitted.dimension) {
+          // A panel that emits no row still knows its own dimension's value.
+          filters.toggle(a.dimension, emitted.value);
+          continue;
+        }
+        // The panel cannot supply this dimension: drop the action rather than
+        // filter it by a value belonging to some other column.
       }
     },
     [filters],
   );
 
   const selectFor = useCallback(
-    (panel: PanelDef) => (dimension: string, value: Value) => {
+    (panel: PanelDef) => (dimension: string, value: Value, row?: Readonly<Record<string, Value>>) => {
       const configured = (manifest.interactions ?? []).filter(
         (i) => i.on.split(".")[0] === panel.id,
       );
@@ -104,7 +133,7 @@ export function Dashboard({
         filters.toggle(dimension, value);
         return;
       }
-      for (const i of configured) runActions(i.do, { dimension, value });
+      for (const i of configured) runActions(i.do, { dimension, value, ...(row ? { row } : {}) });
     },
     [manifest, filters, runActions],
   );
@@ -182,7 +211,7 @@ interface PanelHostProps {
   result: QueryResult | undefined;
   loading: boolean;
   selections: Selections;
-  select: (dimension: string, value: Value) => void;
+  select: (dimension: string, value: Value, row?: Readonly<Record<string, Value>>) => void;
   locale?: string;
   onError?: (error: Error) => void;
 }
@@ -246,7 +275,13 @@ function Misconfigured({ message, detail }: { message: string; detail?: string }
 }
 
 function ErrorCard({ title, error, onError }: { title: string; error: Error; onError?: (e: Error) => void }) {
-  onError?.(error);
+  // Reporting from render would re-enter: a host that turns onError into state
+  // re-renders this card, which reports again. Held in a ref so a fresh
+  // callback identity each render does not count as a new error either.
+  const report = useRef(onError);
+  report.current = onError;
+  useEffect(() => { report.current?.(error); }, [error]);
+
   const detail = (error as Error & { detail?: string }).detail;
   return (
     <div className="gw-bad gw-bad-block" role="alert">

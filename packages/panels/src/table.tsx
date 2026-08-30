@@ -121,11 +121,11 @@ function Table({ result, props, select, selected, locale }: PanelProps<TableProp
                 style={weight ? { fontWeight: weight } : undefined}
                 {...(clickable
                   ? {
-                      onClick: () => select(firstDim!.id, dimValue),
+                      onClick: () => select(firstDim!.id, dimValue, row),
                       onKeyDown: (e: React.KeyboardEvent) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
-                          select(firstDim!.id, dimValue);
+                          select(firstDim!.id, dimValue, row);
                         }
                       },
                       tabIndex: 0,

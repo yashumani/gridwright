@@ -3,6 +3,7 @@ import { analyzeExpression } from "@gridwright/expr";
 import { Engine } from "./engine.js";
 import { sourceFromText, type TableText } from "./index.js";
 import { loadBlob, typesForTable, verifyColumns, type LoadOptions } from "./csv.js";
+import { loadJsonBlob } from "./json.js";
 import { MemorySource } from "./memory-source.js";
 import type { DataSource, Table } from "./types.js";
 
@@ -49,7 +50,10 @@ export function matchFiles<T extends { name: string }>(
 
   for (const decl of manifest.source.files) {
     const byPath = remaining.get(normalise(decl.path));
-    const byId = remaining.get(normalise(`${decl.id}.csv`)) ?? remaining.get(normalise(decl.id));
+    const byId =
+      remaining.get(normalise(`${decl.id}.${decl.format ?? "csv"}`)) ??
+      remaining.get(normalise(`${decl.id}.csv`)) ??
+      remaining.get(normalise(decl.id));
     const hit = byPath ?? byId;
     if (hit) {
       matched.set(decl.id, hit);
@@ -149,7 +153,12 @@ export async function loadBundleFromBlobs(
         types: typesForTable(manifest, decl.id),
         ...(o.maxRows !== undefined ? { maxRows: o.maxRows } : {}),
       };
-      tables.push(await loadBlob(decl.id, hit.blob, options));
+      // JSON has no resumable parser, so it takes the read-it-whole path.
+      tables.push(
+        decl.format === "json"
+          ? await loadJsonBlob(decl.id, hit.blob, options)
+          : await loadBlob(decl.id, hit.blob, options),
+      );
     }
     verifyColumns(manifest, tables);
     const source = MemorySource.fromTables(tables);
