@@ -20,8 +20,15 @@ export interface PanelContext {
   title?: string;
   /** Measured content box. Charts draw at real pixels rather than scaling text. */
   size: PanelSize;
-  /** Emits a selection. The host turns it into a filter and re-queries. */
-  select(dimensionId: string, value: Value): void;
+  /**
+   * Emits a selection. The host turns it into a filter and re-queries.
+   *
+   * `row` is the whole clicked row, keyed by column id. An interaction may
+   * target a dimension other than the one clicked, and it needs that
+   * dimension's own value from the same row — filtering `channel` by a region
+   * name would empty the dashboard.
+   */
+  select(dimensionId: string, value: Value, row?: Readonly<Record<string, Value>>): void;
   /** Currently selected values per dimension, for highlighting. */
   selected: Readonly<Record<string, readonly Value[]>>;
   locale?: string;

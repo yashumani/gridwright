@@ -5,9 +5,11 @@ export * from "./csv.js";
 export * from "./sql.js";
 export * from "./engine.js";
 export * from "./join.js";
+export * from "./json.js";
 export * from "./bundle.js";
 
 import { loadDelimited, typesForTable, verifyColumns } from "./csv.js";
+import { loadJson } from "./json.js";
 import { MemorySource } from "./memory-source.js";
 import type { Manifest } from "@gridwright/schema";
 import type { Table } from "./types.js";
@@ -29,9 +31,11 @@ export function sourceFromText(manifest: Manifest, text: TableText): MemorySourc
     // Columns keep their source names: with joins in play the plan resolves
     // each field to its own table, so renaming here would only hide which
     // table a column came from.
+    const types = typesForTable(manifest, file.id);
+    if (file.format === "json") return loadJson(file.id, raw, { types });
     return loadDelimited(file.id, raw, {
       delimiter: file.format === "tsv" ? "\t" : ",",
-      types: typesForTable(manifest, file.id),
+      types,
     });
   });
   verifyColumns(manifest, tables);

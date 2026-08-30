@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach } from "vitest";
-import { act } from "react";
+import { act, useState } from "react";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -124,6 +124,51 @@ describe("cross-filtering", () => {
       expect(Object.keys(store.getSnapshot()).sort()).toEqual(["channel", "region"]);
     });
     expect(store.toFilters()).toHaveLength(2);
+  });
+
+  it("reads the target dimension's own value from the clicked row", async () => {
+    // The panel emits its first dimension, but the interaction names a
+    // different one. Filtering `channel` by a region name is not a narrower
+    // dashboard, it is an empty one.
+    const { manifest, source } = fixture();
+    manifest.datasets["by_region"]!.dimensions = ["region", "channel"];
+    manifest.interactions = [
+      { on: "regions.rowClick", do: [{ action: "filter", dimension: "channel", from: "row" }] },
+    ];
+    manifest.panels = manifest.panels.filter((p) => p.id === "regions");
+    manifest.panels[0]!.props = {
+      columns: [{ ref: "region" }, { ref: "channel" }, { ref: "revenue" }],
+    };
+
+    const store = new FilterStore();
+    render(<Dashboard manifest={manifest} source={source} store={store} />);
+    await waitFor(() => expect(screen.queryByText("Updating…")).not.toBeInTheDocument());
+
+    const table = document.querySelector(".gw-table") as HTMLElement;
+    const row = within(table).getAllByRole("button")[0]!;
+    const cells = row.querySelectorAll("td");
+    const region = cells[0]!.textContent;
+    const channel = cells[1]!.textContent;
+    expect(region).not.toBe(channel);
+
+    await act(async () => { fireEvent.click(row); });
+    await waitFor(() => expect(store.getSnapshot()["channel"]).toBeTruthy());
+    expect(store.getSnapshot()["channel"]).toEqual([channel]);
+  });
+
+  it("drops an action for a dimension the clicked row cannot supply", async () => {
+    // No value the panel emitted belongs to `month`, so no filter is better
+    // than one built from a channel name.
+    const { manifest, source } = fixture();
+    manifest.interactions = [
+      { on: "channels.click", do: [{ action: "filter", dimension: "month", from: "row" }] },
+    ];
+    const store = new FilterStore();
+    render(<Dashboard manifest={manifest} source={source} store={store} />);
+    await waitFor(() => expect(screen.queryByText("Updating…")).not.toBeInTheDocument());
+
+    await act(async () => { fireEvent.click(document.querySelectorAll(".gw-bar")[0]!); });
+    expect(store.isEmpty()).toBe(true);
   });
 
   it("shows a chip per active selection and clears it on click", async () => {
@@ -255,6 +300,36 @@ describe("misconfiguration is contained", () => {
     await waitFor(() => {
       expect(screen.getByText("The dashboard could not load")).toBeTruthy();
     });
+  });
+
+  it("reports that failure once, even when onError re-renders the host", async () => {
+    // Reporting from the render phase re-enters: a host that turns onError
+    // into state re-renders the card, which reports again.
+    const { manifest } = fixture();
+    const broken: DataSource = {
+      name: "broken",
+      capabilities: () => ({ windowFunctions: true, pushdownLimit: false, maxRows: 0 }),
+      introspect: async () => [],
+      execute: async () => { throw new Error("source unavailable"); },
+    };
+
+    let calls = 0;
+    function Host() {
+      const [, setSeen] = useState<Error | null>(null);
+      return (
+        <Dashboard
+          manifest={manifest}
+          source={broken}
+          onError={(e) => { calls++; setSeen(e); }}
+        />
+      );
+    }
+
+    render(<Host />);
+    await waitFor(() => expect(calls).toBeGreaterThan(0));
+    // Settle any renders the callback itself provoked before counting.
+    await act(async () => { await Promise.resolve(); });
+    expect(calls).toBe(1);
   });
 });
 

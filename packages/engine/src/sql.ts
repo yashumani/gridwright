@@ -1,6 +1,6 @@
-import { quoteIdent, sqlLiteral, toSql } from "@gridwright/expr";
+import { quoteIdent, sqlLiteral, toSql, walk, type Node } from "@gridwright/expr";
 import type { Filter, Sort } from "@gridwright/schema";
-import { dimKey, measureKey, type QueryPlan } from "./types.js";
+import { dimKey, measureKey, type PlanMeasure, type QueryPlan } from "./types.js";
 
 /**
  * Plan to SQL, in the same two tiers the in-process executor runs: a grouped
@@ -52,6 +52,51 @@ function orderList(sorts: readonly Sort[]): string {
 
 const orderSql = (sorts: readonly Sort[]): string => orderList(sorts);
 
+/** Drops a repeated sort key, so a restated order does not name a column twice. */
+function dedupeSorts(sorts: readonly Sort[]): Sort[] {
+  const seen = new Set<string>();
+  const out: Sort[] = [];
+  for (const s of sorts) {
+    const key = "measure" in s ? `m:${s.measure}` : `d:${s.dimension}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(s);
+  }
+  return out;
+}
+
+/** Measures an expression references, for tiering the post-aggregate passes. */
+function measureRefs(node: Node): string[] {
+  const out: string[] = [];
+  walk(node, (n) => { if (n.kind === "measure") out.push(n.id); });
+  return out;
+}
+
+/**
+ * Splits post measures into dependency levels.
+ *
+ * One select list cannot hold both `aov` and `double_aov = measure(aov) * 2`:
+ * a sibling alias is not visible to its neighbours in standard SQL, however
+ * neatly the in-process executor walks them in order. Each level therefore
+ * gets its own pass over the one before it.
+ */
+function postLevels(post: readonly PlanMeasure[]): PlanMeasure[][] {
+  const levelOf = new Map<string, number>();
+  const levels: PlanMeasure[][] = [];
+  // `post` is topologically ordered, so a post dependency is always placed
+  // before the measure that reads it. Aggregate references stay at level 0.
+  for (const m of post) {
+    let level = 0;
+    for (const ref of measureRefs(m.ast)) {
+      const at = levelOf.get(ref);
+      if (at !== undefined) level = Math.max(level, at + 1);
+    }
+    levelOf.set(m.id, level);
+    (levels[level] ??= []).push(m);
+  }
+  return levels;
+}
+
 export function planToSql(plan: QueryPlan): string {
   const ref = (name: string) => fieldRef(plan, name);
   const dimExpr = (d: QueryPlan["dimensions"][number]) =>
@@ -69,8 +114,17 @@ export function planToSql(plan: QueryPlan): string {
       const d = plan.dimensions.find((x) => x.id === f.dimension);
       if (d) return filterSql(f, dimExpr(d));
       // A filter on a dimension this dataset does not group by still bites, via
-      // the field the compiler projected for it.
-      return filterSql(f, plan.fieldMap[f.dimension] ? ref(f.dimension) : quoteIdent(f.dimension));
+      // the field the compiler projected for it — and via that dimension's own
+      // grain, since `month` filters a truncated `order_date` rather than some
+      // column that happens to go by the name "month".
+      const origin = plan.dimensionFields?.[f.dimension];
+      if (!origin) throw new Error(`filter on "${f.dimension}" has no resolved field`);
+      return filterSql(
+        f,
+        origin.grain
+          ? `date_trunc(${sqlLiteral(origin.grain)}, ${ref(origin.field)})`
+          : ref(origin.field),
+      );
     })
     .join(" AND ");
 
@@ -101,22 +155,41 @@ export function planToSql(plan: QueryPlan): string {
   // Window frames in the outer pass carry the inner query's ordering
   // explicitly; a subquery's ORDER BY does not propagate into a window.
   const windowOrder = plan.preSort.length ? orderList(plan.preSort) : undefined;
-  const outer = plan.post.map(
-    (m) => `${toSql(m.ast, {
-      field: quoteIdent,
-      measure: (id) => quoteIdent(measureKey(id)),
-      ...(windowOrder ? { windowOrder } : {}),
-    })} AS ${quoteIdent(measureKey(m.id))}`,
-  );
+  const project = (ms: readonly PlanMeasure[]): string =>
+    ms
+      .map(
+        (m) => `${toSql(m.ast, {
+          field: quoteIdent,
+          measure: (id) => quoteIdent(measureKey(id)),
+          ...(windowOrder ? { windowOrder } : {}),
+        })} AS ${quoteIdent(measureKey(m.id))}`,
+      )
+      .join(", ");
+
+  // Every level but the last becomes its own CTE; the last is the final
+  // select, so a plan whose post measures are independent — very much the
+  // common case — still emits a single wrap.
+  const levels = postLevels(plan.post);
+  const ctes = [`grouped AS (\n${lines.map((l) => `  ${l}`).join("\n")}\n)`];
+  let from = "grouped";
+  for (let i = 0; i < levels.length - 1; i++) {
+    const name = `post_${i + 1}`;
+    ctes.push(`${name} AS (\n  SELECT *, ${project(levels[i]!)}\n  FROM ${from}\n)`);
+    from = name;
+  }
 
   const wrapped = [
-    "WITH grouped AS (",
-    lines.map((l) => `  ${l}`).join("\n"),
-    ")",
-    `SELECT *, ${outer.join(", ")}`,
-    "FROM grouped",
+    `WITH ${ctes.join(",\n")}`,
+    `SELECT *, ${project(levels.at(-1)!)}`,
+    `FROM ${from}`,
   ];
-  if (plan.postSort.length) wrapped.push(`ORDER BY ${orderSql(plan.postSort)}`);
+
+  // A CTE's ORDER BY does not bind the query that reads it, so the display
+  // order has to be restated out here. A sort the post tier resolves comes
+  // first and anything resolved earlier is the tiebreaker — the same order the
+  // executor applies them in.
+  const finalSort = dedupeSorts([...plan.postSort, ...plan.preSort]);
+  if (finalSort.length) wrapped.push(`ORDER BY ${orderSql(finalSort)}`);
   if (plan.limit) wrapped.push(`LIMIT ${Math.floor(plan.limit)}`);
   return wrapped.join("\n");
 }

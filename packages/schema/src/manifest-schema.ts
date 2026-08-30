@@ -1,5 +1,5 @@
 import {
-  arr, bool, enum_, json, lit, num, obj, opt, rec, str, union, variant,
+  arr, bool, enum_, json, lit, nul, num, obj, opt, rec, str, union, variant,
   type Validator,
 } from "./validate.js";
 import { IDENTIFIER, IDENTIFIER_HINT, LIMITS, isReservedName } from "./limits.js";
@@ -23,7 +23,10 @@ const ident = (): Validator<string> => {
 
 const label = () => str({ maxLength: LIMITS.labelLength });
 
-const scalar = () => union([str(), num(), bool()] as const);
+// Null belongs here: a blank cell groups under its own key, so "region is
+// blank" is a filter a manifest must be able to write, and both executors
+// already answer it.
+const scalar = () => union([str(), num(), bool(), nul()] as const);
 
 const fileRef = obj({
   id: ident(),
