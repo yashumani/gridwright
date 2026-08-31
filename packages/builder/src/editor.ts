@@ -1,6 +1,10 @@
 import { isMap, isSeq, parseDocument, stringify, type Document } from "yaml";
-import type { Manifest, PanelDef } from "@gridwright/schema";
+import type {
+  DatasetDef, Issue, Manifest, ModelDef, PanelDef, RelationDef,
+} from "@gridwright/schema";
 import { validateManifest } from "@gridwright/schema";
+import { analyzeExpression } from "@gridwright/expr";
+import { compileModel } from "@gridwright/engine";
 
 /**
  * Manifest editing as pure functions over an immutable document, with an undo
@@ -27,7 +31,22 @@ export type EditorAction =
   | { type: "resizePanel"; id: string; w: number; h: number }
   | { type: "replace"; manifest: Manifest }
   | { type: "undo" }
-  | { type: "redo" };
+  | { type: "redo" }
+  // ---- the model layer ----
+  // Additions and edits hand over the whole slice: the form already computed
+  // it, and a reducer case per attribute would be a lot of code saying nothing.
+  // Removals and renames get their own actions, because those are the ones
+  // with consequences elsewhere in the manifest.
+  | { type: "setModel"; model: ModelDef }
+  | { type: "removeField"; name: string }
+  | { type: "renameDimension"; from: string; to: string }
+  | { type: "removeDimension"; id: string }
+  | { type: "renameMeasure"; from: string; to: string }
+  | { type: "removeMeasure"; id: string }
+  | { type: "setDatasets"; datasets: Record<string, DatasetDef> }
+  | { type: "renameDataset"; from: string; to: string }
+  | { type: "removeDataset"; name: string }
+  | { type: "setRelations"; relations: RelationDef[] };
 
 const MAX_HISTORY = 50;
 
@@ -45,6 +64,137 @@ function commit(state: EditorState, next: Manifest, selected = state.selected): 
     future: [],
     ...(state.source ? { source: state.source } : {}),
   };
+}
+
+/**
+ * Cascades for the model layer.
+ *
+ * The rule that decides all of them: a reference held as an *id in a list* is
+ * structure, and structure is the editor's to keep consistent. A reference
+ * living inside an expression is somebody's formula, and rewriting that is a
+ * guess, not a cascade — those are left alone and named by the validator
+ * instead. `measure(revenue)` therefore survives a rename of `revenue` as a
+ * visible error rather than being quietly rewritten into something the author
+ * never wrote.
+ */
+
+const mapValues = <T>(o: Record<string, T>, f: (v: T, k: string) => T): Record<string, T> =>
+  Object.fromEntries(Object.entries(o).map(([k, v]) => [k, f(v, k)]));
+
+/** Drops interactions left with nothing to do; the schema requires at least one. */
+function withInteractions(m: Manifest, next: Manifest["interactions"]): Manifest {
+  if (!m.interactions) return m;
+  const kept = (next ?? []).filter((i) => i.do.length > 0);
+  return { ...m, interactions: kept };
+}
+
+function removeDimension(m: Manifest, id: string): Manifest {
+  const dimensions = m.model.dimensions.filter((d) => d.id !== id);
+  if (dimensions.length === m.model.dimensions.length) return m;
+
+  const datasets = mapValues(m.datasets, (ds) => ({
+    ...ds,
+    ...(ds.dimensions ? { dimensions: ds.dimensions.filter((x) => x !== id) } : {}),
+    ...(ds.filters ? { filters: ds.filters.filter((f) => f.dimension !== id) } : {}),
+    ...(ds.sort ? { sort: ds.sort.filter((s) => !("dimension" in s && s.dimension === id)) } : {}),
+  }));
+
+  const next: Manifest = { ...m, model: { ...m.model, dimensions }, datasets };
+  return withInteractions(
+    next,
+    (m.interactions ?? []).map((i) => ({
+      ...i,
+      do: i.do.filter((a) => !(a.action === "filter" && a.dimension === id)),
+    })),
+  );
+}
+
+function removeMeasure(m: Manifest, id: string): Manifest {
+  const measures = m.model.measures.filter((x) => x.id !== id);
+  if (measures.length === m.model.measures.length) return m;
+
+  const datasets = mapValues(m.datasets, (ds) => ({
+    ...ds,
+    measures: ds.measures.filter((x) => x !== id),
+    ...(ds.sort ? { sort: ds.sort.filter((s) => !("measure" in s && s.measure === id)) } : {}),
+  }));
+  return { ...m, model: { ...m.model, measures }, datasets };
+}
+
+function removeField(m: Manifest, name: string): Manifest {
+  const fields = m.model.fields.filter((f) => f.name !== name);
+  if (fields.length === m.model.fields.length) return m;
+  // A dimension is a named view of one field; without the field it means
+  // nothing, so it goes too — and that carries on into the datasets.
+  const orphans = m.model.dimensions.filter((d) => d.field === name).map((d) => d.id);
+  let next: Manifest = { ...m, model: { ...m.model, fields } };
+  for (const id of orphans) next = removeDimension(next, id);
+  return next;
+}
+
+function removeDataset(m: Manifest, name: string): Manifest {
+  if (!(name in m.datasets)) return m;
+  const datasets = { ...m.datasets };
+  delete datasets[name];
+  // A panel bound to a dataset that no longer exists has nothing to draw, so
+  // it follows — the same rule removePanel already applies to interactions.
+  const gone = new Set(m.panels.filter((p) => p.dataset === name).map((p) => p.id));
+  const next: Manifest = { ...m, datasets, panels: m.panels.filter((p) => !gone.has(p.id)) };
+  return withInteractions(
+    next,
+    (m.interactions ?? []).filter((i) => !gone.has(i.on.split(".")[0]!)),
+  );
+}
+
+function renameDimension(m: Manifest, from: string, to: string): Manifest {
+  if (from === to || m.model.dimensions.some((d) => d.id === to)) return m;
+  const dimensions = m.model.dimensions.map((d) => (d.id === from ? { ...d, id: to } : d));
+  if (!dimensions.some((d) => d.id === to)) return m;
+
+  const datasets = mapValues(m.datasets, (ds) => ({
+    ...ds,
+    ...(ds.dimensions ? { dimensions: ds.dimensions.map((x) => (x === from ? to : x)) } : {}),
+    ...(ds.filters ? { filters: ds.filters.map((f) => (f.dimension === from ? { ...f, dimension: to } : f)) } : {}),
+    ...(ds.sort
+      ? { sort: ds.sort.map((s) => ("dimension" in s && s.dimension === from ? { ...s, dimension: to } : s)) }
+      : {}),
+  }));
+
+  const next: Manifest = { ...m, model: { ...m.model, dimensions }, datasets };
+  return withInteractions(
+    next,
+    (m.interactions ?? []).map((i) => ({
+      ...i,
+      do: i.do.map((a) =>
+        a.dimension === from ? ({ ...a, dimension: to } as typeof a) : a,
+      ),
+    })),
+  );
+}
+
+function renameMeasure(m: Manifest, from: string, to: string): Manifest {
+  if (from === to || m.model.measures.some((x) => x.id === to)) return m;
+  const measures = m.model.measures.map((x) => (x.id === from ? { ...x, id: to } : x));
+  if (!measures.some((x) => x.id === to)) return m;
+
+  const datasets = mapValues(m.datasets, (ds) => ({
+    ...ds,
+    measures: ds.measures.map((x) => (x === from ? to : x)),
+    ...(ds.sort
+      ? { sort: ds.sort.map((s) => ("measure" in s && s.measure === from ? { ...s, measure: to } : s)) }
+      : {}),
+  }));
+  return { ...m, model: { ...m.model, measures }, datasets };
+}
+
+function renameDataset(m: Manifest, from: string, to: string): Manifest {
+  if (from === to || !(from in m.datasets) || to in m.datasets) return m;
+  // Rebuilt in order rather than deleted and re-added, so a rename does not
+  // shuffle the dataset that follows it to the bottom of the exported file.
+  const datasets: Record<string, DatasetDef> = {};
+  for (const [k, v] of Object.entries(m.datasets)) datasets[k === from ? to : k] = v;
+  const panels = m.panels.map((p) => (p.dataset === from ? { ...p, dataset: to } : p));
+  return { ...m, datasets, panels };
 }
 
 export function reduce(state: EditorState, action: EditorAction): EditorState {
@@ -93,6 +243,42 @@ export function reduce(state: EditorState, action: EditorAction): EditorState {
 
     case "replace":
       return commit(state, action.manifest, null);
+
+    case "setModel":
+      return commit(state, { ...manifest, model: action.model });
+
+    case "setDatasets":
+      return commit(state, { ...manifest, datasets: action.datasets });
+
+    case "setRelations": {
+      const { relations: _drop, ...rest } = manifest.source;
+      const source = action.relations.length
+        ? { ...manifest.source, relations: action.relations }
+        : rest;
+      return commit(state, { ...manifest, source });
+    }
+
+    case "removeField":
+    case "removeDimension":
+    case "removeMeasure":
+    case "removeDataset":
+    case "renameDimension":
+    case "renameMeasure":
+    case "renameDataset": {
+      let next: Manifest;
+      if (action.type === "removeField") next = removeField(manifest, action.name);
+      else if (action.type === "removeDimension") next = removeDimension(manifest, action.id);
+      else if (action.type === "removeMeasure") next = removeMeasure(manifest, action.id);
+      else if (action.type === "removeDataset") next = removeDataset(manifest, action.name);
+      else if (action.type === "renameDimension") next = renameDimension(manifest, action.from, action.to);
+      else if (action.type === "renameMeasure") next = renameMeasure(manifest, action.from, action.to);
+      else next = renameDataset(manifest, action.from, action.to);
+      // A no-op stays off the undo stack: nothing to take back.
+      if (next === manifest) return state;
+      // A selected panel may have gone with its dataset.
+      const selected = next.panels.some((p) => p.id === state.selected) ? state.selected : null;
+      return commit(state, next, selected);
+    }
 
     case "undo": {
       const previous = state.past.at(-1);
@@ -252,6 +438,44 @@ export function toYaml(manifest: Manifest, original?: string): string {
   return stringify(ordered(manifest), { lineWidth: 100, singleQuote: false });
 }
 
+/**
+ * Whether a manifest is safe to hand to the renderer.
+ *
+ * This exists because `new Engine()` analyses the whole measure model in its
+ * constructor, synchronously, during render. A half-typed expression — and
+ * every measure passes through several while it is being typed — would
+ * otherwise take the builder down with it. So the model editor checks first
+ * and previews the last manifest that passed.
+ *
+ * Structural and referential validation catches most of it; compiling the
+ * model catches what a per-measure check cannot see, notably a dependency
+ * cycle between two measures that are each individually fine.
+ */
+export interface Health {
+  ok: boolean;
+  issues: Issue[];
+}
+
+export function checkManifest(manifest: Manifest): Health {
+  // Validation reads plain data, and a manifest under edit is plain data with
+  // undefined holes in it; the round trip drops them exactly as an export does.
+  const check = validateManifest(JSON.parse(JSON.stringify(manifest)) as unknown, {
+    checkExpression: (expr) => analyzeExpression(expr).issues,
+  });
+  if (!check.ok) return { ok: false, issues: check.issues };
+
+  try {
+    compileModel(check.manifest);
+  } catch (err) {
+    const e = err as Error & { detail?: string };
+    return {
+      ok: false,
+      issues: [{ path: "model.measures", message: e.detail ? `${e.message}: ${e.detail}` : e.message }],
+    };
+  }
+  return { ok: true, issues: [] };
+}
+
 export interface ExportResult {
   yaml: string;
   ok: boolean;
@@ -261,10 +485,10 @@ export interface ExportResult {
 /** Exported manifests must still validate; this is the round-trip guarantee. */
 export function exportManifest(manifest: Manifest, original?: string): ExportResult {
   const yaml = toYaml(manifest, original);
-  const check = validateManifest(JSON.parse(JSON.stringify(manifest)));
+  const check = checkManifest(manifest);
   return {
     yaml,
     ok: check.ok,
-    issues: check.ok ? [] : check.issues.map((i) => `${i.path}: ${i.message}`),
+    issues: check.issues.map((i) => `${i.path}: ${i.message}`),
   };
 }

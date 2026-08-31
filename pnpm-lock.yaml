@@ -80,6 +80,9 @@ importers:
       '@gridwright/engine':
         specifier: workspace:*
         version: link:../engine
+      '@gridwright/expr':
+        specifier: workspace:*
+        version: link:../expr
       '@gridwright/panels':
         specifier: workspace:*
         version: link:../panels

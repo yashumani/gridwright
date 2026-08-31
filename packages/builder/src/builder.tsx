@@ -1,11 +1,12 @@
-import { useMemo, useReducer, useState } from "react";
+import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { Manifest, PanelDef } from "@gridwright/schema";
 import type { DataSource } from "@gridwright/engine";
 import { PanelRegistry, defaultRegistry } from "@gridwright/panels";
 import { Dashboard, FilterStore } from "@gridwright/react";
 import { PropertyForm, type JsonSchema } from "./property-form.js";
+import { ModelEditor } from "./model-form.js";
 import {
-  exportManifest, initialState, nextPanelId, placePanel, reduce,
+  checkManifest, exportManifest, initialState, nextPanelId, placePanel, reduce,
 } from "./editor.js";
 
 export interface BuilderProps {
@@ -31,7 +32,40 @@ export function Builder({ manifest, manifestText, source, registry, onChange, lo
   const reg = useMemo(() => registry ?? defaultRegistry(), [registry]);
   const [state, dispatch] = useReducer(reduce, manifest, (m) => initialState(m, manifestText));
   const [exported, setExported] = useState<string | null>(null);
+  const [tab, setTab] = useState<"panels" | "model">("panels");
   const store = useMemo(() => new FilterStore(), []);
+
+  /**
+   * The preview renders the last manifest that compiled, not the one being
+   * edited.
+   *
+   * `new Engine()` analyses the whole measure model in its constructor, during
+   * render — so a half-typed expression, which every expression is for a
+   * moment, would throw straight through the builder and take the editor down
+   * with the dashboard. Holding the last good one back means the form stays
+   * usable while the numbers behind it are briefly nonsense, and the preview
+   * catches up the instant it makes sense again.
+   */
+  const health = useMemo(() => checkManifest(state.manifest), [state.manifest]);
+  const lastGood = useRef(manifest);
+  if (health.ok) lastGood.current = state.manifest;
+  const preview = health.ok ? state.manifest : lastGood.current;
+
+  /**
+   * Real column names per table, so `from:` is a pick rather than a spelling
+   * test. Introspection is the source's own business and may be async.
+   */
+  const [sourceColumns, setSourceColumns] = useState<Record<string, string[]>>({});
+  useEffect(() => {
+    let live = true;
+    const tables = manifest.source.files.map((f) => f.id);
+    Promise.all(
+      tables.map(async (t) => [t, await source.introspect(t).catch(() => [])] as const),
+    ).then((pairs) => {
+      if (live) setSourceColumns(Object.fromEntries(pairs));
+    });
+    return () => { live = false; };
+  }, [source, manifest]);
 
   const apply = (action: Parameters<typeof reduce>[1]) => {
     const next = reduce(state, action);
@@ -103,7 +137,7 @@ export function Builder({ manifest, manifestText, source, registry, onChange, lo
       <div className="gwb-body">
         <main className="gwb-preview">
           <Dashboard
-            manifest={state.manifest}
+            manifest={preview}
             source={source}
             registry={reg}
             store={store}
@@ -111,7 +145,41 @@ export function Builder({ manifest, manifestText, source, registry, onChange, lo
           />
         </main>
 
-        <aside className="gwb-inspector" aria-label="Panel inspector">
+        <aside className="gwb-inspector" aria-label="Inspector">
+          <div className="gwb-tabs" role="tablist">
+            {(["panels", "model"] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                role="tab"
+                aria-selected={tab === t}
+                className={`gwb-tab${tab === t ? " gwb-on" : ""}`}
+                onClick={() => setTab(t)}
+              >
+                {t === "panels" ? "Panels" : "Model"}
+              </button>
+            ))}
+          </div>
+
+          {/* What is wrong, where. Shown in both tabs: a model edit is the
+              usual way to break a panel, and the two are edited apart. */}
+          {!health.ok && (
+            <div className="gwb-issues" role="alert">
+              <strong>{health.issues.length === 1 ? "1 problem" : `${health.issues.length} problems`}</strong>
+              <ul>
+                {health.issues.slice(0, 6).map((i, n) => (
+                  <li key={n}><code>{i.path || "(root)"}</code> {i.message}</li>
+                ))}
+              </ul>
+              {health.issues.length > 6 && <p>and {health.issues.length - 6} more.</p>}
+              <p className="gwb-hint">The preview is showing the last version that ran.</p>
+            </div>
+          )}
+
+          {tab === "model" ? (
+            <ModelEditor manifest={state.manifest} apply={apply} columns={sourceColumns} />
+          ) : (
+          <>
           <h2 className="gwb-heading">Panels</h2>
           <ul className="gwb-list">
             {state.manifest.panels.map((p) => (
@@ -217,6 +285,8 @@ export function Builder({ manifest, manifestText, source, registry, onChange, lo
                 <p className="gwb-hint">No editor for panel type “{selected.type}”.</p>
               )}
             </>
+          )}
+          </>
           )}
         </aside>
       </div>

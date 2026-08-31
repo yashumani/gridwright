@@ -166,6 +166,24 @@ YAML document in place rather than re-serialising it. That matters the moment en
 analysts share a file: the first visual save must not silently delete the notes somebody
 wrote to explain a measure.
 
+**The whole manifest is editable, not just the panels.** The builder has two tabs: panels,
+and the model behind them — fields, dimensions, measures, datasets and relations. Arranging
+charts on a model somebody else wrote is a different job from deciding what the numbers
+mean, and if only the first is visual then every new measure still needs an engineer.
+Expressions answer as you type, telling you which tier they landed in or exactly what is
+wrong with them; `from:` picks a real column read out of the loaded file; grain is offered
+only on a date.
+
+Two rules keep that safe. **Removals and renames cascade through structure but never through
+expressions.** Deleting a dimension takes it out of every dataset, filter, sort and
+interaction that names it, because those are ids in lists and keeping them consistent is
+the editor's job. `measure(revenue)` inside somebody's formula is not — rewriting that is a
+guess, so a rename leaves it alone and the validator names it instead. And **the preview
+renders the last manifest that compiled.** `new Engine()` analyses the whole measure model
+in its constructor, during render, so a half-typed expression — which every expression is
+for a moment — would otherwise throw straight through the editor. Holding the last good one
+back means the form stays usable while the numbers behind it are briefly nonsense.
+
 **A panel is never filtered by its own selection.** Collapsing a bar chart to the one
 bar you just clicked makes a second selection impossible and leaves nothing to render
 as unselected. Every other panel narrows; the source chart keeps all its marks, with
@@ -180,7 +198,7 @@ the selected ones highlighted and the rest dimmed.
 | `@gridwright/engine` | Plan compiler, `DataSource` seam, in-process executor, cache, loaders |
 | `@gridwright/panels` | KPI, table, bar, line — each with its own props schema |
 | `@gridwright/react` | `<Dashboard>`, grid layout, filter store, stylesheet |
-| `@gridwright/builder` | Schema-generated property form, editing reducer, YAML export |
+| `@gridwright/builder` | Model and panel editors, schema-generated property form, YAML export |
 | `gridwright` | CLI: `validate`, `explain`, `functions`, `panels`, `schema` |
 
 Dependencies only ever point down that list.
