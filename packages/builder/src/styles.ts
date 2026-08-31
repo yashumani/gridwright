@@ -88,6 +88,68 @@ export const builderStyles = `
 
 .gwb-hint { color: var(--gwb-faint); font-size: 12.5px; }
 
+/* ---- inspector tabs ---- */
+.gwb-tabs { display: flex; gap: 4px; margin-bottom: 12px; }
+.gwb-tab {
+  flex: 1; padding: 6px 10px; font: inherit; font-size: 12.5px; cursor: pointer;
+  color: var(--gwb-faint); background: none;
+  border: 1px solid var(--gwb-rule); border-radius: 6px;
+}
+.gwb-tab:hover { color: var(--gwb-ink); }
+.gwb-tab.gwb-on {
+  color: var(--gwb-accent); background: var(--gwb-accent-bg); border-color: var(--gwb-accent);
+  font-weight: 600;
+}
+.gwb-tab:focus-visible { outline: 2px solid var(--gwb-accent); outline-offset: 1px; }
+
+/* ---- validation ---- */
+.gwb-issues {
+  border: 1px solid var(--gwb-danger); border-radius: 6px;
+  padding: 8px 10px; margin-bottom: 12px; font-size: 12px;
+}
+.gwb-issues strong { color: var(--gwb-danger); display: block; margin-bottom: 4px; }
+.gwb-issues ul { margin: 0; padding-left: 16px; display: flex; flex-direction: column; gap: 3px; }
+.gwb-issues code { font-family: ui-monospace, monospace; font-size: 11px; color: var(--gwb-faint); }
+.gwb-issues p { margin: 6px 0 0; }
+
+/* ---- model editor ---- */
+.gwb-section { border-bottom: 1px solid var(--gwb-rule); padding: 8px 0; }
+.gwb-section > summary {
+  cursor: pointer; font-size: 11.5px; font-weight: 650;
+  letter-spacing: 0.05em; text-transform: uppercase; color: var(--gwb-faint);
+  display: flex; align-items: center; gap: 8px; list-style-position: inside;
+}
+.gwb-section > summary:focus-visible { outline: 2px solid var(--gwb-accent); outline-offset: 2px; }
+.gwb-section[open] > summary { margin-bottom: 10px; color: var(--gwb-ink); }
+.gwb-count {
+  font-size: 10px; letter-spacing: 0; color: var(--gwb-faint);
+  border: 1px solid var(--gwb-rule); border-radius: 8px; padding: 0 6px;
+}
+
+/* Eight measures in a row need more air between them than the property form's
+   nested groups do, or the list reads as one wall of inputs. */
+.gwb-model .gwb-item { margin-bottom: 16px; padding-bottom: 4px; }
+.gwb-model .gwb-item:last-of-type { margin-bottom: 10px; }
+
+.gwb-pair { display: flex; gap: 6px; align-items: center; }
+.gwb-pair > .gwb-input { flex: 1 1 0; min-width: 0; }
+.gwb-pair > .gwb-mini { flex: none; }
+
+.gwb-expr {
+  font-family: ui-monospace, monospace; font-size: 12px; line-height: 1.45;
+  resize: vertical; display: block;
+}
+
+.gwb-checks {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-wrap: wrap; gap: 2px 10px;
+}
+.gwb-check { display: flex; align-items: center; gap: 5px; font-size: 12.5px; cursor: pointer; }
+
+/* An expression answers as it is typed: what it resolved to, or what is wrong. */
+.gwb-issue { margin: 2px 0 8px; font-size: 12px; color: var(--gwb-danger); }
+.gwb-ok { margin: 2px 0 8px; font-size: 12px; color: var(--gwb-faint); }
+
 .gwb-export {
   position: absolute; inset: 10% 12%; display: flex; flex-direction: column;
   background: var(--gwb-surface); border: 1px solid var(--gwb-rule);
