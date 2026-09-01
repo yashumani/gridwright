@@ -1,30 +1,10 @@
 # Gridwright
 
-A schema-driven dashboard engine. Write a manifest, get a working React dashboard — no code.
+**A schema-driven dashboard engine.** Write a manifest, get a working React
+dashboard — cross-filtering, joins and all — without writing a component.
 
-```bash
-pnpm install && pnpm build
-node packages/cli/dist/bin.js validate examples/orders-star.gw.yaml --data
-pnpm --filter @gridwright/playground dev
-```
-
-Two examples ship: `sales-overview.gw.yaml` (one flat file) and
-`orders-star.gw.yaml` (a fact table joined to two dimension tables).
-
-Drop a `.gw.yaml` and its CSV into the playground and the dashboard is there. Nothing is
-uploaded; every query runs in the tab.
-
-## Why
-
-Dashboards are configuration, not code. Every BI platform has proven it: a chart's whole
-definition — dimensions, measures, formatting, click behaviour — is a data structure, and
-the config UI is generated from a schema rather than hand-written. Gridwright is that model
-on an engine we own: no license dependency, no server to install, and a manifest that is
-portable anywhere.
-
-## The manifest
-
-One file describes the data, the arithmetic, the layout, and what a click does.
+[![CI](https://github.com/yashumani/gridwright/actions/workflows/ci.yml/badge.svg)](https://github.com/yashumani/gridwright/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 ```yaml
 gridwright: 1
@@ -32,19 +12,14 @@ title: Sales overview
 
 source:
   kind: file
-  files:
-    - { id: sales, path: ./sales.csv, format: csv }
+  files: [{ id: sales, path: ./sales.csv }]
 
 model:
   fields:
-    - { name: order_date, type: date,   from: sales.order_date }
-    - { name: region,     type: string, from: sales.region }
-    - { name: amount,     type: number, from: sales.amount }
-
+    - { name: region, type: string, from: sales.region }
+    - { name: amount, type: number, from: sales.amount }
   dimensions:
-    - { id: region, field: region,     label: Region }
-    - { id: month,  field: order_date, label: Month, grain: month }
-
+    - { id: region, field: region, label: Region }
   measures:
     - { id: revenue, label: Revenue, expr: "sum(amount)", format: "$#,##0" }
     - { id: orders,  label: Orders,  expr: "count()" }
@@ -59,151 +34,78 @@ datasets:
 panels:
   - { id: tbl, type: table, dataset: by_region,
       layout: { x: 0, y: 0, w: 12, h: 6 },
-      props: { columns: [{ ref: region }, { ref: revenue }] } }
-
-interactions:
-  - { on: tbl.rowClick, do: [{ action: filter, dimension: region, from: row }] }
+      props: { columns: [{ ref: region }, { ref: revenue }, { ref: aov }] } }
 ```
 
-Two properties matter more than the syntax. **Measures compose** — `measure(revenue) /
-measure(orders)` means arithmetic is defined once and reused. And **every `props` block is
-validated against its own panel's schema**, so a new panel type extends the manifest
-language without touching the core.
+That is a dashboard. Drop it and its CSV into the playground and it is running —
+nothing is uploaded, every query executes in the tab.
 
-## Joins
-
-A dataset can read from several tables. Declare how they connect and the planner
-works out the rest:
-
-```yaml
-source:
-  kind: file
-  files:
-    - { id: orders,    path: ./orders.csv }
-    - { id: customers, path: ./customers.csv }
-    - { id: products,  path: ./products.csv }
-  relations:
-    - { left: orders.customer_id, right: customers.customer_id, cardinality: many-to-one }
-    - { left: orders.product_id,  right: products.product_id,   cardinality: many-to-one }
+```bash
+pnpm install && pnpm build
+pnpm --filter @gridwright/playground dev
 ```
 
-Fields then name any table (`from: customers.region`), and a dataset mixing them
-compiles to a single grouped query with only the joins it needs.
+## Why
 
-**`cardinality` is not decoration — it is the correctness mechanism.** Joining a
-fact table to a dimension many-to-one leaves the grain alone, so `sum()` still
-means what it says. Following that edge backwards, one dimension row to many
-facts, multiplies rows and inflates every aggregate downstream. Silently. That is
-the classic BI bug.
+Dashboards are configuration, not code. Every BI platform has proven it: a
+chart's whole definition — dimensions, measures, formatting, click behaviour —
+is a data structure, and the config UI is generated from a schema rather than
+hand-written.
 
-So the planner only ever traverses relations in the safe direction. If the tables
-a dataset needs cannot be connected that way, it refuses:
+Gridwright is that model on an engine you own. No licence dependency, no server
+to install, and a manifest that is portable anywhere.
 
-```
-dataset "bad" cannot be joined without multiplying rows
-  Reaching "products" from "customers" means following a one-to-many relation,
-  which repeats every row on the many side and would double-count sums.
-```
+## What makes it work
 
-Two more choices worth knowing:
+**Measures compose.** `measure(revenue) / measure(orders)` defines arithmetic
+once and reuses it. Expressions are a small typed language — parsed to an AST,
+compiled to SQL or evaluated in a sandbox. No `eval`, no `Function`, and no
+member-access node in the grammar, so an expression has no route to a host
+object. → [Expressions](docs/expressions.md)
 
-- **Joins are LEFT, never INNER.** A fact whose dimension row is missing survives
-  under a null group rather than vanishing from the totals. Losing rows is a
-  wrong answer wearing a smaller number.
-- **Join keys carry their type.** Numeric `1` does not match the string `"1"`.
+**Panels ship a schema for their own props.** The renderer validates manifests
+against it and the builder generates its editing form from it, so a new panel
+type extends the manifest language without touching the core and nobody
+hand-writes a config UI. → [Panels](docs/panels.md)
 
-Not supported: many-to-many, self-joins, and datasets whose tables are connected
-only through a one-to-many hop. Each is refused by name rather than approximated.
+**Cardinality is the join correctness mechanism.** Fact→dimension many-to-one
+keeps the grain, so `sum()` still means what it says. Following that edge
+backwards multiplies rows and inflates every aggregate downstream, silently —
+so the planner traverses only in the safe direction and refuses anything else by
+name. Joins are LEFT, never INNER: a fact with a missing dimension row surfaces
+under a null group rather than vanishing from the totals. → [Joins](docs/joins.md)
 
-## Expressions
+**The whole manifest is editable visually**, not just the panels — fields,
+dimensions, measures, datasets and relations, with expressions validating as you
+type. Export keeps the comments of the file it was opened from, so an engineer's
+YAML and an analyst's edits can share one file. → [Architecture](docs/architecture.md#the-builder)
 
-Users need arithmetic. Handing them JavaScript would be remote code execution with an
-unsupportable surface attached, so expressions are a small typed language: parsed to an
-AST, compiled to SQL, evaluated in a sandbox. No `eval`, no `Function`, and no
-member-access node in the grammar — an expression has no route to a host object.
+**Files stream into columns.** A 350 MB CSV never exists as one JavaScript
+string. Measured: 5M rows group in 1.8 s and cross-filter in 0.2 s. The honest
+ceiling is a few million rows in a browser tab, and the numbers are in the docs
+rather than implied. → [Data sources](docs/data-sources.md#measured-scale)
 
-| Stage | Functions |
+## Documentation
+
+| | |
 |---|---|
-| Aggregate | `sum` `count` `countDistinct` `countIf` `avg` `min` `max` `median` |
-| Window | `lag` `lead` `runningSum` `rank` `pctOfTotal` |
-| Scalar | `if` `coalesce` `nullif` `round` `abs` `floor` `ceil` `sqrt` `dateTrunc` `dateDiff` `concat` `lower` `upper` `len` |
-| Composition | `measure(id)` |
+| [Getting started](docs/getting-started.md) | Your first dashboard, then embedding one. |
+| [The manifest](docs/manifest.md) | Every key, with its type, default and limit. |
+| [Expressions](docs/expressions.md) | The two tiers and the function catalogue. |
+| [Joins](docs/joins.md) | Relations, cardinality, and what is refused. |
+| [Panels](docs/panels.md) | What ships, the colour rules, and adding your own. |
+| [Data sources](docs/data-sources.md) | Formats, measured scale, and pushdown adapters. |
+| [Architecture](docs/architecture.md) | How a query runs and what each package owns. |
 
-Every expression belongs to exactly one **tier**. Aggregates fold raw rows and become the
-`GROUP BY` query; `measure()` composition and window functions run over the grouped result.
-Mixing them is a validation error that carries the fix:
+## Install
 
-```
-sum(amount) / measure(orders)
-  → an expression cannot mix raw aggregates with measure() references —
-    move the aggregate into its own measure and reference that instead
-```
-
-Run `gridwright functions` for the catalogue with arities.
-
-## How a query runs
-
-```
-manifest ──parse──▶ validate ──plan──▶ compile ──SQL──▶ source ──▶ panels
-                                          ▲                          │
-                                          └──── filter store ◀───────┘
-                                        re-plans WHERE, re-queries all
+```bash
+pnpm add @gridwright/react @gridwright/engine @gridwright/panels
+pnpm add -D gridwright        # the CLI
 ```
 
-A dataset plus the active filters compiles to one plan. The executor groups on the
-*dimension* value with grain already applied — so a filter on a month dimension matches the
-bucket, not the raw date — computes the aggregate tier, sorts, then computes the post tier.
-That order is deliberate: `runningSum` on a by-month dataset must accumulate in month
-order, which is the only reading anyone expects.
-
-Clicking a mark writes to the filter store, which re-plans and re-queries every panel —
-including panels that share no dataset with the one clicked, and panels reached only
-through a join.
-
-Editing is comment-preserving. A manifest exported from the visual builder keeps the
-comments and layout of the file it was opened from, because the export patches the original
-YAML document in place rather than re-serialising it. That matters the moment engineers and
-analysts share a file: the first visual save must not silently delete the notes somebody
-wrote to explain a measure.
-
-**The whole manifest is editable, not just the panels.** The builder has two tabs: panels,
-and the model behind them — fields, dimensions, measures, datasets and relations. Arranging
-charts on a model somebody else wrote is a different job from deciding what the numbers
-mean, and if only the first is visual then every new measure still needs an engineer.
-Expressions answer as you type, telling you which tier they landed in or exactly what is
-wrong with them; `from:` picks a real column read out of the loaded file; grain is offered
-only on a date.
-
-Two rules keep that safe. **Removals and renames cascade through structure but never through
-expressions.** Deleting a dimension takes it out of every dataset, filter, sort and
-interaction that names it, because those are ids in lists and keeping them consistent is
-the editor's job. `measure(revenue)` inside somebody's formula is not — rewriting that is a
-guess, so a rename leaves it alone and the validator names it instead. And **the preview
-renders the last manifest that compiled.** `new Engine()` analyses the whole measure model
-in its constructor, during render, so a half-typed expression — which every expression is
-for a moment — would otherwise throw straight through the editor. Holding the last good one
-back means the form stays usable while the numbers behind it are briefly nonsense.
-
-**A panel is never filtered by its own selection.** Collapsing a bar chart to the one
-bar you just clicked makes a second selection impossible and leaves nothing to render
-as unselected. Every other panel narrows; the source chart keeps all its marks, with
-the selected ones highlighted and the rest dimmed.
-
-## Packages
-
-| Package | Owns |
-|---|---|
-| `@gridwright/schema` | Manifest types, validator, JSON Schema, migrations |
-| `@gridwright/expr` | Parser, AST, stage analysis, SQL compiler, sandboxed evaluator |
-| `@gridwright/engine` | Plan compiler, `DataSource` seam, in-process executor, cache, loaders |
-| `@gridwright/panels` | KPI, table, bar, line — each with its own props schema |
-| `@gridwright/react` | `<Dashboard>`, grid layout, filter store, stylesheet |
-| `@gridwright/builder` | Model and panel editors, schema-generated property form, YAML export |
-| `gridwright` | CLI: `validate`, `explain`, `functions`, `panels`, `schema` |
-
-Dependencies only ever point down that list.
-
-## Embedding
+> **Not on npm yet.** The packages are prepared for publishing but the names are
+> not claimed. Until then, use the repository directly.
 
 ```tsx
 import { loadBundle } from "@gridwright/engine";
@@ -214,116 +116,33 @@ const r = loadBundle(manifestText, [{ name: "sales.csv", text: csv }]);
 if (r.ok) return <Dashboard manifest={r.manifest} source={r.source} />;
 ```
 
-Register your own panel type and it gains manifest validation and a builder form for free:
+## Status
 
-```tsx
-import { defaultRegistry } from "@gridwright/panels";
-import { obj, str } from "@gridwright/schema";
+**Pre-1.0, and honest about it.** 384 tests, two worked examples, and a
+[changelog](CHANGELOG.md) that says what you can rely on. What is deliberately
+not here:
 
-const registry = defaultRegistry().register({
-  type: "gauge",
-  label: "Gauge",
-  description: "A single measure against a target.",
-  schema: obj({ measure: str(), target: str() }),
-  defaults: (result) => ({ measure: result.columns[0]!.id, target: "" }),
-  Component: MyGauge,
-});
-```
+- **The associative model.** Cross-filtering works; Qlik's grey "excluded
+  values" behaviour does not. That needs an inverted index across the whole
+  model maintained incrementally — a research spike, not a checkbox.
+- **A pushdown adapter.** The `DataSource` seam is real and the SQL emitter is
+  tested, but `MemorySource` is still the only implementation.
+- **Many-to-many joins, self-joins, one-to-many traversal.** Refused by name
+  rather than approximated.
+- **Scale far past a few million rows in-browser.** See the measured table.
 
-## Data sources
+**It has never met a real dataset.** Three synthetic schemas so far. If you
+point it at a production extract and it breaks, that is the most useful bug
+report this project can get.
 
-The in-process executor is the default and handles the "upload a file and go" case with no
-backend at all. Data files are **streamed** into columns rather than read as text: a
-ten-million-row CSV is about 350&nbsp;MB, and `File.text()` would need the whole thing as one
-JavaScript string before parsing could begin, which is where a tab dies.
+## Contributing
 
-`format:` on a file is `csv` (the default), `tsv`, or `json`. JSON means a top-level array
-of row objects, where the first object fixes the columns. It is there for the convenient
-extract, not the large one: JSON cannot be resumed at an arbitrary byte, so that path reads
-the document whole and gives up the streaming ceiling below. A ten-million-row export
-belongs in CSV.
+Issues and pull requests welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for
+setup, the verification bar and conventions, and
+[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
-Measured end to end, streaming from disk, five columns, four datasets:
+Found a security problem? Not in a public issue — see [SECURITY.md](SECURITY.md).
 
-| Rows | File | Parse | First pass | Per cross-filter | Peak memory |
-|---|---|---|---|---|---|
-| 1M | 35 MB | 1.4 s | 0.2 s | ~0.05 s | ~170 MB |
-| 2M | 72 MB | 3 s | ~6 s | **1.0 s** | 267 MB |
-| 5M | 172 MB | 7 s | 1.8 s | **0.2 s** | ~320 MB |
-| 10M | 344 MB | 14 s | 16 s | **4.4 s** | 1.7 GB |
+## Licence
 
-The 2M row is from a real browser upload through the file input; the rest are Node, which
-is the same code on the same path. First-pass cost scales with the number of *distinct
-dimensions* across your panels, not the number of panels, because encodings are cached and
-reused; cross-filtering only ever re-runs filter, group and aggregate.
-
-**Where the honest ceiling is: a few million rows.** Up to ~5M this is a responsive
-dashboard. At 10M it works and the numbers are correct, but you wait half a minute for the
-first render and 1.7&nbsp;GB is close to what a browser tab will tolerate — some machines
-will not make it. Past that, or for anything you want to feel instant at 10M, the
-`DataSource` seam is the answer rather than more tuning here.
-
-`maxRows` on the loader gives you a ceiling with a message instead of an unexplained freeze.
-
-Another backend implements one interface:
-
-```ts
-interface DataSource {
-  capabilities(): SourceCapabilities;
-  introspect(table: string): Promise<string[]>;
-  execute(plan: QueryPlan): Promise<QueryResult>;
-}
-```
-
-`planToSql` already emits the two-tier query, so a pushdown adapter is mostly wiring.
-`gridwright explain <manifest>` prints exactly what it would send.
-
-## Security
-
-The manifest is untrusted input, and is treated that way from the first commit.
-
-- **Strict validation.** Unknown keys are rejected, not ignored. Every resource has a
-  ceiling with a specific message.
-- **Reserved names.** `__proto__`, `constructor` and `prototype` are refused as identifiers
-  and as map keys. Both `JSON.parse` and the YAML parser materialise `__proto__` as a real
-  own property, so this is a live hazard rather than a theoretical one.
-- **Bounded parsing.** Parser recursion is capped during the parse, not after — parenthesised
-  groups collapse to their inner node, so an AST depth check never sees them.
-- **Parameterised queries.** Identifiers go through a strict pattern check and values through
-  a literal escaper. The plan compiler and the SQL emitter reject injected identifiers
-  independently.
-- **Escaped output.** Labels and titles reach the DOM as React text, never as markup.
-
-If a warehouse backend is added, authenticate per user rather than with a shared service
-account, or row-level security silently stops applying.
-
-## Colour
-
-Series colours are a validated categorical palette, assigned in fixed order and never
-cycled; a ninth series folds to "Other" rather than inventing a hue. Dark mode is selected
-from the palette's dark column against the dark surface, not flipped. The brand verdigris
-was measured against the chroma floor, failed it — it reads gray in a chart — and is
-confined to UI chrome. Bars carry direct value labels and a table view exists, which is what
-discharges the light-mode contrast relief rule.
-
-## Not in v1
-
-- **The associative model.** Cross-filtering works; Qlik's grey "excluded values" behaviour
-  does not. That needs an inverted index across the whole model maintained incrementally,
-  and it is genuinely hard. If it matters to your users, treat it as a research spike, not a
-  checkbox.
-- **Scale much past a few million rows in-browser.** 10M works but is slow and memory-hungry;
-  see the table above. The `DataSource` seam is the escape hatch.
-- **Many-to-many joins, self-joins, and one-to-many traversal.** Refused, not approximated.
-
-## Development
-
-```bash
-pnpm install
-pnpm build        # tsc -b across the workspace
-pnpm test         # 334 tests
-pnpm --filter @gridwright/playground dev
-```
-
-Tests run on node by default; component tests opt into jsdom, which doubles as a check that
-the core packages carry no DOM assumptions.
+MIT © [yashumani](https://github.com/yashumani)
