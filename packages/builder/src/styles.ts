@@ -163,6 +163,60 @@ export const builderStyles = `
 .gwb-issue { margin: 2px 0 8px; font-size: 12px; color: var(--gwb-danger); }
 .gwb-ok { margin: 2px 0 8px; font-size: 12px; color: var(--gwb-faint); }
 
+/* ---- brand colours ---- */
+
+.gwb-swatchrow {
+  display: grid; grid-template-columns: 30px 1fr auto auto; gap: 8px;
+  align-items: center; margin-bottom: 8px;
+}
+.gwb-swatch {
+  width: 30px; height: 26px; padding: 0; border: 1px solid var(--gwb-rule);
+  border-radius: 5px; background: none; cursor: pointer;
+}
+/* The native swatch inset leaves a border inside a border. */
+.gwb-swatch::-webkit-color-swatch-wrapper { padding: 2px; }
+.gwb-swatch::-webkit-color-swatch { border: 0; border-radius: 3px; }
+.gwb-swatch::-moz-color-swatch { border: 0; border-radius: 3px; }
+.gwb-hex { font-family: ui-monospace, monospace; text-transform: lowercase; }
+.gwb-brandrow { grid-template-columns: 30px 1fr auto; }
+
+.gwb-verdict { font-size: 11px; font-weight: 650; }
+.gwb-verdict-pass { color: var(--gwb-accent); }
+.gwb-verdict-warn { color: #9a6700; }
+.gwb-verdict-fail { color: var(--gwb-danger); }
+:root[data-theme="dark"] .gwb-verdict-warn { color: #d4a017; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .gwb-verdict-warn { color: #d4a017; }
+}
+
+/* The explanation belongs under the colour it is about, across the full row. */
+.gwb-verdict-note {
+  grid-column: 1 / -1; margin: 2px 0 8px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+}
+.gwb-dot {
+  display: inline-block; width: 11px; height: 11px; border-radius: 50%;
+  border: 1px solid var(--gwb-rule); flex: none;
+}
+.gwb-pairs { margin-top: 10px; }
+.gwb-paste { resize: vertical; font-family: ui-monospace, monospace; min-height: 56px; }
+
+.gwb-presets { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.gwb-preset {
+  display: flex; align-items: center; gap: 10px; text-align: left;
+  padding: 7px 9px; border: 1px solid var(--gwb-rule); border-radius: 6px;
+  background: var(--gwb-surface); color: var(--gwb-ink); cursor: pointer;
+  font: inherit;
+}
+.gwb-preset:hover { border-color: var(--gwb-accent); }
+.gwb-preset:focus-visible { outline: 2px solid var(--gwb-accent); outline-offset: 1px; }
+.gwb-preset-swatches { display: flex; flex: none; border-radius: 3px; overflow: hidden; }
+.gwb-preset-swatches span { width: 13px; height: 15px; }
+
+.gwb-modes { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.gwb-ramp { display: flex; border-radius: 4px; overflow: hidden; margin-top: 3px; }
+.gwb-ramp span { flex: 1; height: 22px; }
+
 /* ---- direct manipulation ---- */
 
 /* The chrome sits over the panel but lets every click through, so a bar still

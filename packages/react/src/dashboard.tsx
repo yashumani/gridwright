@@ -1,8 +1,8 @@
-import { Component, useCallback, useEffect, useMemo, useRef, type ErrorInfo, type ReactNode } from "react";
+import { Component, useCallback, useEffect, useId, useMemo, useRef, type ErrorInfo, type ReactNode } from "react";
 import type { Action, Filter, Manifest, PanelDef } from "@gridwright/schema";
 import { formatIssues } from "@gridwright/schema";
 import { Engine, type DataSource, type QueryResult, type Value } from "@gridwright/engine";
-import { PanelRegistry, defaultRegistry, type PanelSpec } from "@gridwright/panels";
+import { PanelRegistry, defaultRegistry, seriesCss, type PanelSpec } from "@gridwright/panels";
 import { FilterStore, describeSelections, type Selections } from "./filter-store.js";
 import { useAsync, useMeasure, useSelections } from "./hooks.js";
 
@@ -69,6 +69,20 @@ export function Dashboard({
   );
 
   const active = useMemo(() => filters.toFilters(), [filters, selections]);
+
+  /**
+   * The manifest's own series colours, scoped to this dashboard.
+   *
+   * Scoped rather than global so two dashboards on one page keep their own
+   * palettes, and so the builder's preview repaints without touching anything
+   * else. `useId` gives the scope; its value carries colons, which are not legal
+   * unescaped in an attribute selector, so it is reduced to word characters.
+   */
+  const themeScope = useId().replace(/[^A-Za-z0-9_-]/g, "");
+  const themeCss = useMemo(
+    () => seriesCss(manifest.theme?.colors, themeScope),
+    [manifest.theme, themeScope],
+  );
 
   // One request per distinct (dataset, self-excluded dimensions) pair. Panels
   // that agree on both share a result, so the common case is still one query
@@ -156,7 +170,14 @@ export function Dashboard({
   const chips = describeSelections(manifest, selections);
 
   return (
-    <div className={`gw-root${className ? ` ${className}` : ""}`} data-gridwright="1">
+    <div
+      className={`gw-root${className ? ` ${className}` : ""}`}
+      data-gridwright="1"
+      {...(themeCss ? { "data-gw-theme": themeScope } : {})}
+    >
+      {/* Built entirely from hex colours this component re-validated; nothing
+          from the manifest reaches the stylesheet as text. */}
+      {themeCss && <style>{themeCss}</style>}
       {manifest.title && <h1 className="gw-title">{manifest.title}</h1>}
 
       <div className="gw-filterbar" role="region" aria-label="Active filters">

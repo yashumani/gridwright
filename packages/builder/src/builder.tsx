@@ -5,6 +5,7 @@ import { PanelRegistry, defaultRegistry, type PanelSpec } from "@gridwright/pane
 import { Dashboard, FilterStore } from "@gridwright/react";
 import { PropertyForm, type JsonSchema, type RefOption } from "./property-form.js";
 import { ModelEditor } from "./model-form.js";
+import { ThemeEditor } from "./theme-form.js";
 import { DropGhost, PanelChrome, useDrag } from "./drag.js";
 import { compact, gridColumns, resizeTo, resolveCollisions, type Rect } from "./layout.js";
 import {
@@ -72,7 +73,7 @@ export function Builder({ manifest, manifestText, source, registry, onChange, lo
   const reg = useMemo(() => registry ?? defaultRegistry(), [registry]);
   const [state, dispatch] = useReducer(reduce, manifest, (m) => initialState(m, manifestText));
   const [exported, setExported] = useState<string | null>(null);
-  const [tab, setTab] = useState<"panels" | "model">("panels");
+  const [tab, setTab] = useState<"panels" | "model" | "colours">("panels");
   const store = useMemo(() => new FilterStore(), []);
 
   /**
@@ -268,7 +269,7 @@ export function Builder({ manifest, manifestText, source, registry, onChange, lo
 
         <aside className="gwb-inspector" aria-label="Inspector">
           <div className="gwb-tabs" role="tablist">
-            {(["panels", "model"] as const).map((t) => (
+            {(["panels", "model", "colours"] as const).map((t) => (
               <button
                 key={t}
                 type="button"
@@ -277,7 +278,7 @@ export function Builder({ manifest, manifestText, source, registry, onChange, lo
                 className={`gwb-tab${tab === t ? " gwb-on" : ""}`}
                 onClick={() => setTab(t)}
               >
-                {t === "panels" ? "Panels" : "Model"}
+                {t === "panels" ? "Panels" : t === "model" ? "Model" : "Colours"}
               </button>
             ))}
           </div>
@@ -299,6 +300,11 @@ export function Builder({ manifest, manifestText, source, registry, onChange, lo
 
           {tab === "model" ? (
             <ModelEditor manifest={state.manifest} apply={apply} columns={sourceColumns} />
+          ) : tab === "colours" ? (
+            <ThemeEditor
+              manifest={state.manifest}
+              apply={(theme) => apply({ type: "setTheme", theme })}
+            />
           ) : (
           <>
           <h2 className="gwb-heading">Panels</h2>
