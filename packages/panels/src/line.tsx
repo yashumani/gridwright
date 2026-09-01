@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { arr, bool, obj, opt, str } from "@gridwright/schema";
+import { arr, bool, described, obj, opt, str } from "@gridwright/schema";
 import type { ColumnMeta } from "@gridwright/engine";
 import { formatCompact, formatValue } from "./format.js";
 import { foldSeries, seriesVar } from "./theme.js";
@@ -23,10 +23,10 @@ export interface LineProps {
 }
 
 const schema = obj({
-  x: str({ minLength: 1 }),
-  y: arr(str({ minLength: 1 }), { min: 1, max: 8 }),
-  area: opt(bool()),
-  markers: opt(bool()),
+  x: described(str({ minLength: 1 }), { title: "Along the bottom" }),
+  y: described(arr(str({ minLength: 1 }), { min: 1, max: 8 }), { title: "Numbers to plot" }),
+  area: described(opt(bool()), { title: "Fill under the line" }),
+  markers: described(opt(bool()), { title: "Show a dot per point" }),
 });
 
 const PAD = { top: 14, right: 16, bottom: 26, left: 52 };
@@ -180,6 +180,7 @@ export const linePanel: PanelSpec<LineProps> = {
     x: firstDimension(result)?.id ?? "",
     y: [firstMeasure(result)?.id ?? ""].filter(Boolean),
   }),
+  primary: ["x", "y"],
   Component: Line,
   minSize: { w: 4, h: 3 },
 };

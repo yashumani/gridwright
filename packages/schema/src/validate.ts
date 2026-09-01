@@ -42,6 +42,23 @@ export function opt<T>(v: Validator<T>): Validator<T | undefined> {
   };
 }
 
+/**
+ * Attaches human-facing text to a validator. Checking is untouched.
+ *
+ * `title` and `description` are JSON Schema's own keywords, so this shows up in
+ * the emitted schema for editors and external tooling as well as in the form the
+ * builder generates from it — which is the point of one definition with two
+ * outputs. Without it a generated label is the property name with its camel case
+ * split, and "Show Values" or "Max Bars" is a variable name wearing a hat.
+ */
+export function described<T>(v: Validator<T>, text: { title?: string; description?: string }): Validator<T> {
+  return {
+    check: (value, path, out) => v.check(value, path, out),
+    jsonSchema: () => ({ ...v.jsonSchema(), ...text }),
+    ...(v.isOptional ? { isOptional: true as const } : {}),
+  };
+}
+
 export interface StrOpts {
   minLength?: number;
   maxLength?: number;

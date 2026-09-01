@@ -262,19 +262,98 @@ describe("schema-driven property form", () => {
     expect(seen.at(-1)).toEqual([]);
   });
 
-  it("offers dataset columns wherever a field names a reference", () => {
+  it("makes a field that names a column a choice, not a spelling test", () => {
+    // This used to be a datalist on a free-text input: a suggestion rather than
+    // a choice, easy to miss, and offering raw ids. Someone who has not read the
+    // manifest cannot know the number they want is spelled `rtn_rate`.
     render(
       <PropertyForm
         schema={{ type: "object", properties: { measure: { type: "string" } } }}
         value={{}}
-        suggestions={{ refs: ["revenue", "orders"] }}
+        suggestions={{
+          refs: [
+            { id: "region", label: "Region", kind: "dimension" },
+            { id: "rtn_rate", label: "Return rate", kind: "measure" },
+          ],
+        }}
         onChange={() => {}}
       />,
     );
-    const input = screen.getByLabelText("Measure");
-    const list = document.getElementById(input.getAttribute("list")!)!;
-    expect([...list.querySelectorAll("option")].map((o) => o.getAttribute("value")))
-      .toEqual(["revenue", "orders"]);
+    const select = screen.getByLabelText("Measure") as HTMLSelectElement;
+    expect(select.tagName).toBe("SELECT");
+    // A field that wants a number is not offered things to group by. Half the
+    // list being wrong is what makes a picker feel like a guess.
+    expect([...select.querySelectorAll("optgroup")].map((g) => g.label)).toEqual(["Numbers"]);
+    // Labels are what you read; ids are what gets written.
+    expect([...select.querySelectorAll("optgroup option")].map((o) => o.textContent))
+      .toEqual(["Return rate"]);
+    expect([...select.querySelectorAll("optgroup option")].map((o) => o.getAttribute("value")))
+      .toEqual(["rtn_rate"]);
+  });
+
+  it("offers both halves where a field takes either", () => {
+    // A table column may be a dimension or a measure, so `ref` narrows to
+    // neither and the groups tell them apart.
+    render(
+      <PropertyForm
+        schema={{ type: "object", properties: { ref: { type: "string" } } }}
+        value={{}}
+        suggestions={{
+          refs: [
+            { id: "region", label: "Region", kind: "dimension" },
+            { id: "revenue", label: "Revenue", kind: "measure" },
+          ],
+        }}
+        onChange={() => {}}
+      />,
+    );
+    expect([...screen.getByLabelText("Ref").querySelectorAll("optgroup")].map((g) => g.label))
+      .toEqual(["Group by", "Numbers"]);
+  });
+
+  it("falls back to the whole list rather than offering nothing", () => {
+    // A dataset with no dimensions still has to let you pick something; an
+    // empty select is a dead end that explains nothing.
+    render(
+      <PropertyForm
+        schema={{ type: "object", properties: { category: { type: "string" } } }}
+        value={{}}
+        suggestions={{ refs: [{ id: "revenue", label: "Revenue", kind: "measure" }] }}
+        onChange={() => {}}
+      />,
+    );
+    expect([...screen.getByLabelText("Category").querySelectorAll("optgroup option")]
+      .map((o) => o.textContent)).toEqual(["Revenue"]);
+  });
+
+  it("keeps a hand-written reference the dataset does not have, and says so", () => {
+    // Silently dropping to blank would lose what the author wrote and give no
+    // clue why — the usual way a typo turns into a mystery.
+    render(
+      <PropertyForm
+        schema={{ type: "object", properties: { measure: { type: "string" } } }}
+        value={{ measure: "revenu" }}
+        suggestions={{ refs: [{ id: "revenue", label: "Revenue", kind: "measure" }] }}
+        onChange={() => {}}
+      />,
+    );
+    const select = screen.getByLabelText("Measure") as HTMLSelectElement;
+    expect(select.value).toBe("revenu");
+    expect(screen.getByText(/revenu — not in this dataset/)).toBeTruthy();
+  });
+
+  it("renders only the properties it was asked for, in that order", () => {
+    const schema: JsonSchema = {
+      type: "object",
+      properties: { a: { type: "string" }, b: { type: "string" }, c: { type: "string" } },
+    };
+    const { rerender } = render(
+      <PropertyForm schema={schema} value={{}} only={["c", "a"]} onChange={() => {}} />,
+    );
+    expect([...document.querySelectorAll(".gwb-label")].map((l) => l.textContent)).toEqual(["C", "A"]);
+
+    rerender(<PropertyForm schema={schema} value={{}} except={["c", "a"]} onChange={() => {}} />);
+    expect([...document.querySelectorAll(".gwb-label")].map((l) => l.textContent)).toEqual(["B"]);
   });
 
   it("builds a blank value that satisfies the schema's required keys", () => {
@@ -340,11 +419,24 @@ describe("the builder shell", () => {
     expect(document.querySelector(".gwb-listitem")!.lastElementChild!.textContent).toBe("KPI");
   });
 
-  it("shows the selected panel's own settings form", async () => {
+  it("leads with what the selected panel draws, and folds the rest away", async () => {
     await mountBuilder();
     await act(async () => { fireEvent.click(document.querySelectorAll(".gwb-listitem")[0]!); });
-    expect(screen.getByText("KPI settings")).toBeTruthy();
-    expect(screen.getByLabelText("Measure")).toBeTruthy();
+
+    // A KPI asks one question. It is asked first, in words rather than in the
+    // property's name, as a pick from the measures this dataset has.
+    const measure = screen.getByLabelText("Number to show") as HTMLSelectElement;
+    expect([...measure.querySelectorAll("optgroup option")].map((o) => o.textContent))
+      .toEqual(["Revenue", "Orders", "Avg order", "Return rate"]);
+
+    // Everything else — including the layout numbers, now that dragging exists —
+    // is behind one disclosure rather than competing with it.
+    const more = screen.getByText("More settings").closest("details") as HTMLDetailsElement;
+    expect(more.open).toBe(false);
+    expect(more.textContent).toMatch(/Columns wide/);
+    expect(more.textContent).toMatch(/Reads from/);
+    // And the primary prop is not repeated inside it.
+    expect(more.querySelector("#" + CSS.escape(measure.id))).toBeNull();
   });
 
   it("edits a title and reports the new manifest", async () => {

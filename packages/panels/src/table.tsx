@@ -176,6 +176,7 @@ export const tablePanel: PanelSpec<TableProps> = {
   description: "Rows of dimensions and measures, with optional in-cell bars and formatting rules.",
   schema,
   defaults: (result) => ({ columns: result.columns.map((c) => ({ ref: c.id })) }),
+  primary: ["columns"],
   Component: Table,
   minSize: { w: 4, h: 3 },
 };
