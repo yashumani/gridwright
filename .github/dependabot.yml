@@ -1,0 +1,24 @@
+version: 2
+updates:
+  # Pinned action SHAs only stay safe if something keeps them current; this is
+  # the other half of that decision.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "ci"
+
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+    groups:
+      # One PR for the routine noise, so review attention goes to the ones that
+      # actually change behaviour.
+      dev-minor:
+        dependency-type: development
+        update-types: ["minor", "patch"]

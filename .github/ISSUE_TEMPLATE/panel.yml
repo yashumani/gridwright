@@ -1,0 +1,53 @@
+name: Panel type proposal
+description: A chart Gridwright should ship.
+labels: ["enhancement", "panel"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        v1 ships KPI, table, bar and line. Adding one needs no plumbing —
+        see [adding a panel type](https://github.com/yashumani/gridwright/blob/main/CONTRIBUTING.md#adding-a-panel-type).
+        This template exists to settle the design before anyone writes SVG.
+
+  - type: input
+    id: name
+    attributes:
+      label: What it is
+      placeholder: "Scatter — two measures against each other, one point per dimension value"
+    validations:
+      required: true
+
+  - type: textarea
+    id: question
+    attributes:
+      label: What question does it answer that an existing panel cannot?
+      description: >
+        The bar chart covers magnitude by category and the line covers change
+        over an ordered dimension. What does this one show that neither does?
+    validations:
+      required: true
+
+  - type: textarea
+    id: shape
+    attributes:
+      label: The result shape it needs
+      description: How many dimensions, how many measures, and any ordering it assumes.
+    validations:
+      required: true
+
+  - type: textarea
+    id: props
+    attributes:
+      label: Its props
+      description: Sketch the schema. This becomes both the validator and the builder's form.
+      render: yaml
+
+  - type: checkboxes
+    id: rules
+    attributes:
+      label: Design rules it will follow
+      options:
+        - label: Identity is never colour alone — legend, direct labels, or both
+        - label: One y-axis, or a documented reason there is no other way
+        - label: Handles an empty result and a truncated one
+        - label: Emits selections with the clicked row, so interactions can retarget
