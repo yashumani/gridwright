@@ -5,7 +5,7 @@ import { parseManifest, type Manifest } from "@gridwright/schema";
 import {
   Engine, EngineError, MemorySource, QueryCache,
   compileDataset, hashPlan, loadDelimited, parseDelimited, planToSql, projectFields,
-  loadBundle, sourceFromText, typesForTable,
+  loadBundle, planToSqlParams, sourceFromText, typesForTable,
   type QueryResult, type Table, type Value,
 } from "@gridwright/engine";
 
@@ -736,5 +736,66 @@ describe("json sources", () => {
     expect(() => sourceFromText(m, { sales: '{"rows": []}' }))
       .toThrow(/must be a JSON array of row objects/);
     expect(() => sourceFromText(m, { sales: "{oops" })).toThrow(/is not valid JSON/);
+  });
+});
+
+describe("bound parameters", () => {
+  // planToSql escapes for ANSI, which is right for Postgres, DuckDB and
+  // SQLite and wrong for a backend that also honours backslash escapes.
+  // Binding is what makes the adapter seam safe on every backend.
+  const m = manifest();
+
+  it("replaces every filter value with a placeholder", () => {
+    const plan = compileDataset(m, "by_channel", {
+      runtimeFilters: [{ dimension: "region", op: "in", values: ["North", "South"] }],
+    });
+    const { sql, params } = planToSqlParams(plan);
+    expect(sql).toContain("IN (?, ?)");
+    expect(sql).not.toContain("North");
+    expect(params).toEqual(["North", "South"]);
+  });
+
+  it("binds a value that ANSI escaping would not contain on MySQL", () => {
+    // A trailing backslash: `'north\'` leaves the string open where backslash
+    // is an escape character, and everything after it is read as SQL.
+    const evil = "north\\";
+    const plan = compileDataset(m, "by_channel", {
+      runtimeFilters: [{ dimension: "region", op: "eq", value: evil }],
+    });
+    expect(planToSql(plan)).toContain(`'north\\'`);
+
+    const { sql, params } = planToSqlParams(plan);
+    expect(sql).toContain(`= ?`);
+    expect(sql).not.toContain("north");
+    expect(params).toEqual([evil]);
+  });
+
+  it("binds constants written inside a measure expression too", () => {
+    const custom = structuredClone(m);
+    custom.model.measures.push({ id: "scaled", expr: "sum(amount) * 1000" });
+    custom.datasets["by_channel"]!.measures.push("scaled");
+    const { sql, params } = planToSqlParams(compileDataset(custom, "by_channel"));
+    expect(params).toContain(1000);
+    expect(sql).not.toMatch(/\b1000\b/);
+  });
+
+  it("keeps NULL a keyword rather than binding it", () => {
+    // A bound NULL compares as unknown; `IS NULL` is the only form that works.
+    const plan = compileDataset(m, "by_channel", {
+      runtimeFilters: [{ dimension: "region", op: "eq", value: null }],
+    });
+    const { sql, params } = planToSqlParams(plan);
+    expect(sql).toContain("IS NULL");
+    expect(params).toEqual([]);
+  });
+
+  it("emits the same query shape as the readable form", () => {
+    const plan = compileDataset(m, "by_month");
+    const bound = planToSqlParams(plan).sql;
+    const readable = planToSql(plan);
+    // Same structure; only the constants differ.
+    expect(bound.split("\n").length).toBe(readable.split("\n").length);
+    expect(bound).toContain("WITH grouped AS (");
+    expect(bound).toContain("GROUP BY");
   });
 });

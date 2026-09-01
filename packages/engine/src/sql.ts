@@ -1,5 +1,5 @@
 import { quoteIdent, sqlLiteral, toSql, walk, type Node } from "@gridwright/expr";
-import type { Filter, Sort } from "@gridwright/schema";
+import type { Filter, Scalar, Sort } from "@gridwright/schema";
 import { dimKey, measureKey, type PlanMeasure, type QueryPlan } from "./types.js";
 
 /**
@@ -22,20 +22,24 @@ function fieldRef(plan: QueryPlan, name: string): string {
   return qualify(origin.table, origin.column);
 }
 
-function filterSql(f: Filter, expr: string): string {
+/** How a constant reaches the query: inline, or bound and replaced by a placeholder. */
+type Emit = (v: Scalar) => string;
+
+function filterSql(f: Filter, expr: string, lit: Emit): string {
   switch (f.op) {
     case "in":
       return f.values.length
-        ? `${expr} IN (${f.values.map((v) => sqlLiteral(v)).join(", ")})`
+        ? `${expr} IN (${f.values.map((v) => lit(v)).join(", ")})`
         : "FALSE";
     case "between":
-      return `${expr} BETWEEN ${sqlLiteral(f.from)} AND ${sqlLiteral(f.to)}`;
-    case "eq": return f.value === null ? `${expr} IS NULL` : `${expr} = ${sqlLiteral(f.value)}`;
-    case "ne": return f.value === null ? `${expr} IS NOT NULL` : `${expr} <> ${sqlLiteral(f.value)}`;
-    case "gt": return `${expr} > ${sqlLiteral(f.value)}`;
-    case "gte": return `${expr} >= ${sqlLiteral(f.value)}`;
-    case "lt": return `${expr} < ${sqlLiteral(f.value)}`;
-    case "lte": return `${expr} <= ${sqlLiteral(f.value)}`;
+      return `${expr} BETWEEN ${lit(f.from)} AND ${lit(f.to)}`;
+    // NULL comparison is a keyword form; a bound NULL would compare as unknown.
+    case "eq": return f.value === null ? `${expr} IS NULL` : `${expr} = ${lit(f.value)}`;
+    case "ne": return f.value === null ? `${expr} IS NOT NULL` : `${expr} <> ${lit(f.value)}`;
+    case "gt": return `${expr} > ${lit(f.value)}`;
+    case "gte": return `${expr} >= ${lit(f.value)}`;
+    case "lt": return `${expr} < ${lit(f.value)}`;
+    case "lte": return `${expr} <= ${lit(f.value)}`;
   }
 }
 
@@ -97,22 +101,59 @@ function postLevels(post: readonly PlanMeasure[]): PlanMeasure[][] {
   return levels;
 }
 
+/**
+ * A query with its constants bound out of the text.
+ *
+ * This is the form an adapter should execute. `planToSql` interpolates values
+ * with ANSI escaping, which is correct for Postgres, DuckDB and SQLite but not
+ * for a backend that also honours backslash escapes — MySQL and MariaDB do, by
+ * default. Binding sidesteps the whole question: no manifest string ever
+ * becomes SQL text.
+ */
+export interface ParameterizedSql {
+  /** Placeholders are `?`, in `params` order. Rewrite them if your driver wants $1. */
+  sql: string;
+  params: Scalar[];
+}
+
+/** The query an adapter should run: constants bound, never interpolated. */
+export function planToSqlParams(plan: QueryPlan): ParameterizedSql {
+  const params: Scalar[] = [];
+  const sql = emit(plan, (v) => {
+    params.push(v);
+    return "?";
+  });
+  return { sql, params };
+}
+
+/** The query as readable text, for `gridwright explain` and for display. */
 export function planToSql(plan: QueryPlan): string {
+  return emit(plan, sqlLiteral);
+}
+
+function emit(plan: QueryPlan, lit: Emit): string {
   const ref = (name: string) => fieldRef(plan, name);
   const dimExpr = (d: QueryPlan["dimensions"][number]) =>
+    // A grain is a fixed keyword from the schema's own enum, never free text,
+    // so it stays inline: binding it would make the query non-cacheable for
+    // nothing.
     d.grain ? `date_trunc(${sqlLiteral(d.grain)}, ${ref(d.field)})` : ref(d.field);
 
   const inner = [
     ...plan.dimensions.map((d) => `${dimExpr(d)} AS ${quoteIdent(dimKey(d.id))}`),
     ...plan.aggregate.map(
-      (m) => `${toSql(m.ast, { field: ref, measure: (id) => quoteIdent(measureKey(id)) })} AS ${quoteIdent(measureKey(m.id))}`,
+      (m) => `${toSql(m.ast, {
+        field: ref,
+        measure: (id) => quoteIdent(measureKey(id)),
+        literal: lit,
+      })} AS ${quoteIdent(measureKey(m.id))}`,
     ),
   ];
 
   const where = plan.filters
     .map((f) => {
       const d = plan.dimensions.find((x) => x.id === f.dimension);
-      if (d) return filterSql(f, dimExpr(d));
+      if (d) return filterSql(f, dimExpr(d), lit);
       // A filter on a dimension this dataset does not group by still bites, via
       // the field the compiler projected for it — and via that dimension's own
       // grain, since `month` filters a truncated `order_date` rather than some
@@ -124,6 +165,7 @@ export function planToSql(plan: QueryPlan): string {
         origin.grain
           ? `date_trunc(${sqlLiteral(origin.grain)}, ${ref(origin.field)})`
           : ref(origin.field),
+        lit,
       );
     })
     .join(" AND ");
@@ -161,6 +203,7 @@ export function planToSql(plan: QueryPlan): string {
         (m) => `${toSql(m.ast, {
           field: quoteIdent,
           measure: (id) => quoteIdent(measureKey(id)),
+          literal: lit,
           ...(windowOrder ? { windowOrder } : {}),
         })} AS ${quoteIdent(measureKey(m.id))}`,
       )

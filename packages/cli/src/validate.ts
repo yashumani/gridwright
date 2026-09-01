@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import {
   formatIssues, parseManifest, type Issue, type Manifest,
 } from "@gridwright/schema";
@@ -24,6 +24,27 @@ export interface ValidationReport {
 export interface ValidateFileOptions {
   /** Load the data files and run every dataset. Off for a pure lint. */
   withData?: boolean;
+}
+
+/**
+ * Resolves a declared data file against the manifest's own directory, and
+ * refuses to leave it.
+ *
+ * A manifest is untrusted input — the whole project is built on that — so
+ * `path: ../../../../etc/passwd` must not turn into a file read just because
+ * someone ran `validate --data` on a manifest they did not write. It would not
+ * be a quiet read either: the loader reports the columns it found, and the
+ * first line of whatever it opened *is* that list.
+ */
+export function resolveDataPath(base: string, declared: string): string {
+  const full = resolve(base, declared);
+  const rel = relative(base, full);
+  if (isAbsolute(declared) || isAbsolute(rel) || rel === ".." || rel.startsWith(`..${sep}`)) {
+    throw new Error(
+      "a data file must sit beside the manifest; this path leaves that directory",
+    );
+  }
+  return full;
 }
 
 export async function validateFile(
@@ -58,7 +79,7 @@ export async function validateFile(
   const text2: TableText = {};
   for (const file of manifest.source.files) {
     try {
-      text2[file.id] = await readFile(resolve(base, file.path), "utf8");
+      text2[file.id] = await readFile(resolveDataPath(base, file.path), "utf8");
     } catch (err) {
       issues.push({
         path: `source.files`,

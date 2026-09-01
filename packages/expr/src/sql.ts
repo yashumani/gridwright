@@ -21,6 +21,12 @@ export interface SqlContext {
    * makes `runningSum` and `lag` deterministic on a pushdown backend.
    */
   windowOrder?: string;
+  /**
+   * Emits a constant. Defaults to an inline ANSI literal; an adapter that
+   * binds parameters supplies a placeholder instead and collects the value.
+   * See the note on `sqlLiteral` for why binding is the safer default.
+   */
+  literal?(v: string | number | boolean | null): string;
 }
 
 export function quoteIdent(name: string): string {
@@ -30,6 +36,19 @@ export function quoteIdent(name: string): string {
   return `"${name}"`;
 }
 
+/**
+ * An inline SQL constant, escaped for ANSI SQL — Postgres, DuckDB, SQLite,
+ * Snowflake, BigQuery.
+ *
+ * Doubling the quote is the whole of ANSI's escaping, and it is *not* enough
+ * for a backend that also treats backslash as an escape character. MySQL and
+ * MariaDB do that by default: there, the value `\` closes nothing and the
+ * text after it is read as SQL. Rather than pick an escaping that is wrong for
+ * one family or the other, `planToSqlParams` binds values as parameters and
+ * never interpolates them at all. Prefer it for anything that will actually
+ * execute; this function is for display, `gridwright explain`, and backends
+ * you know follow ANSI.
+ */
 export function sqlLiteral(v: string | number | boolean | null): string {
   if (v === null) return "NULL";
   if (typeof v === "number") {
@@ -49,12 +68,13 @@ const BINARY_SQL: Record<string, string> = {
 export function toSql(node: Node, ctx: SqlContext): string {
   switch (node.kind) {
     case "number":
-      return sqlLiteral(node.value);
+      return (ctx.literal ?? sqlLiteral)(node.value);
     case "string":
-      return sqlLiteral(node.value);
+      return (ctx.literal ?? sqlLiteral)(node.value);
     case "boolean":
-      return sqlLiteral(node.value);
+      return (ctx.literal ?? sqlLiteral)(node.value);
     case "null":
+      // NULL is a keyword, not a value: binding it would compare as unknown.
       return "NULL";
     case "field":
       return ctx.field(node.name);
