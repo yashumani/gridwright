@@ -99,14 +99,18 @@ result.
 
 ## Repository settings this policy depends on
 
-Two of these need switching on in **Settings → Security** before they work, and
-both are free on a public repository:
+Both are free on a public repository, and both need switching on in
+**Settings → Security**:
 
 - **Private vulnerability reporting** — the reporting link at the top of this
   file only opens once it is enabled.
-- **Dependency graph** — CodeQL and the dependency-review check both wait on it.
-  Their workflows skip rather than fail while the repository is private, so
-  they turn themselves on the day it goes public.
+- **Dependency graph** — without it the dependency-review check stops with
+  "Dependency review is not supported on this repository" rather than checking
+  anything. Code scanning (CodeQL) is separate and needs no extra setting on a
+  public repository.
+
+Both workflows skip themselves on a private fork, so cloning this somewhere
+private does not hand you two checks that cannot pass.
 
 ## Supported versions
 

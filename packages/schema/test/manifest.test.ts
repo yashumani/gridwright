@@ -131,6 +131,40 @@ describe("filter values", () => {
   });
 });
 
+describe("relations", () => {
+  const twice = (a: string, b: string): string => [
+    "gridwright: 1",
+    "source:",
+    "  kind: file",
+    "  files: [{ id: orders, path: ./o.csv }, { id: customers, path: ./c.csv }]",
+    "  relations:",
+    `    - { left: ${a}, right: ${b}, cardinality: many-to-one }`,
+    `    - { left: ${a}, right: ${b}, cardinality: many-to-one }`,
+    "model:",
+    "  fields: [{ name: amount, type: number, from: orders.amount }]",
+    "  dimensions: []",
+    "  measures: [{ id: total, expr: \"sum(amount)\" }]",
+    "datasets: { totals: { measures: [total] } }",
+    "panels: []",
+  ].join("\n");
+
+  it("names both tables when two relations connect the same pair", () => {
+    const r = parseManifest(twice("orders.customer_id", "customers.customer_id"));
+    expect(r.ok).toBe(false);
+    const messages = r.ok ? [] : r.issues.map((i) => i.message);
+    expect(messages.join("\n")).toContain("(customers and orders)");
+  });
+
+  it("names the pair the same way whichever side is declared first", () => {
+    // The report is order-independent, so the two declarations dedupe rather
+    // than being reported as two different pairs.
+    const flipped = parseManifest(twice("customers.customer_id", "orders.customer_id"));
+    const messages = flipped.ok ? [] : flipped.issues.map((i) => i.message);
+    expect(messages.filter((m) => m.includes("same pair of tables"))).toHaveLength(1);
+    expect(messages.join("\n")).toContain("(customers and orders)");
+  });
+});
+
 describe("input hardening", () => {
   it("rejects a manifest over the size ceiling", () => {
     const r = parseManifest("gridwright: 1\n# " + "x".repeat(600_000));
