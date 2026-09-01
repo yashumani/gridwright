@@ -29,6 +29,16 @@ documented types, and the internals of every package below `@gridwright/react`.
 
 ### Added
 
+- **A dashboard from a bare CSV.** Drop a spreadsheet with no manifest and
+  `inferManifest` writes one: it sniffs each column's type, picks the columns
+  worth grouping by and the ones worth adding up, and lays out KPIs, a trend, bar
+  charts and a detail table. Every guess is conservative and stated in words
+  above the dashboard — an id column is not summed, a near-unique column is not
+  charted, a bare year is not a date. **View manifest** shows the file it wrote,
+  and saving it beside the data reopens the dashboard exactly as it was. See
+  [Getting started](docs/getting-started.md#starting-from-a-csv-with-no-manifest-at-all).
+- **The playground opens on the outcome**, not on a file picker: what you get,
+  how to get it, and the two worked examples underneath.
 - **Model editing in the builder.** The inspector now has two tabs: panels, and
   the model behind them — fields, dimensions, measures, datasets (including
   their filters and sort) and relations. Expressions validate as you type,
@@ -46,8 +56,24 @@ documented types, and the internals of every package below `@gridwright/react`.
   Dependabot, and a gated release workflow publishing with provenance.
 - Documentation split out of the README into [`docs/`](docs/).
 
+### Changed
+
+- **The builder names an untitled panel by what it draws.** A list reading
+  `kpi_rev`, `kpi_rtn`, `detail` is legible to whoever wrote the manifest and to
+  nobody else — and for an inferred manifest, to nobody at all.
+- **The Model tab opens on dimensions and measures**, with fields collapsed —
+  the fields came out of the file and are already right, and eight identical
+  Name/Type/From blocks buried the two sections that matter. It also now says
+  what each of the three is, in one sentence.
+- The manifest and export dialogs close on **Escape** and dim what is behind
+  them, and the playground's "Close" is now "Start over" — two buttons reading
+  Close, one dismissing a dialog and one discarding the dashboard, is a trap.
+
 ### Fixed
 
+- **The standalone build had no `<meta charset>`.** Opened over `file://` there
+  is no header to say what the bytes mean, so the browser fell back to a legacy
+  encoding and every em-dash, ellipsis and `×` in the app rendered as mojibake.
 - **Arbitrary file read through a manifest.** `gridwright validate --data`
   resolved each declared data path with no containment, so
   `path: ../../../../etc/passwd` was a file read — and not a quiet one, since

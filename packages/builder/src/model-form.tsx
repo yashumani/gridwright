@@ -191,8 +191,18 @@ export function ModelEditor({ manifest, apply, columns }: ModelEditorProps) {
 
   return (
     <div className="gwb-model">
+      <p className="gwb-hint gwb-modelnote">
+        This is where the numbers come from. <strong>Fields</strong> are the columns
+        in your file; <strong>dimensions</strong> are the ones you can group by;
+        <strong> measures</strong> are what gets calculated. Panels above only
+        display what is defined here.
+      </p>
+
       {/* ---- fields ---- */}
-      <details className="gwb-section" open>
+      {/* Fields closed, dimensions and measures open. The fields were read out
+          of the file and are already right; opening on eight identical blocks
+          of Name/Type/From buries the two sections the note just said matter. */}
+      <details className="gwb-section">
         <summary>Fields <span className="gwb-count">{fields.length}</span></summary>
 
         {fields.map((f, i) => (
@@ -249,7 +259,7 @@ export function ModelEditor({ manifest, apply, columns }: ModelEditorProps) {
       </details>
 
       {/* ---- dimensions ---- */}
-      <details className="gwb-section">
+      <details className="gwb-section" open>
         <summary>Dimensions <span className="gwb-count">{dimensions.length}</span></summary>
 
         {dimensions.map((d, i) => {
@@ -336,7 +346,7 @@ export function ModelEditor({ manifest, apply, columns }: ModelEditorProps) {
       </details>
 
       {/* ---- measures ---- */}
-      <details className="gwb-section">
+      <details className="gwb-section" open>
         <summary>Measures <span className="gwb-count">{measures.length}</span></summary>
 
         {measures.map((m, i) => (

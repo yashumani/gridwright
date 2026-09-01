@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { Manifest, PanelDef } from "@gridwright/schema";
 import type { DataSource } from "@gridwright/engine";
-import { PanelRegistry, defaultRegistry } from "@gridwright/panels";
+import { PanelRegistry, defaultRegistry, type PanelSpec } from "@gridwright/panels";
 import { Dashboard, FilterStore } from "@gridwright/react";
 import { PropertyForm, type JsonSchema } from "./property-form.js";
 import { ModelEditor } from "./model-form.js";
@@ -21,6 +21,39 @@ export interface BuilderProps {
   registry?: PanelRegistry;
   onChange?: (manifest: Manifest) => void;
   locale?: string;
+}
+
+/**
+ * A name for a panel that has no title of its own.
+ *
+ * Falling back to the id shows a list of `kpi_total_amount`, `bars_region`,
+ * `detail` — legible to whoever wrote the manifest and to nobody else, which
+ * for a generated manifest is nobody at all. The panel already says what it
+ * draws in its props, so read the ids it references and answer with their
+ * labels. The scan is generic rather than a switch on panel type, so a panel
+ * type this file has never heard of still gets a readable name.
+ */
+function describePanel(panel: PanelDef, manifest: Manifest, spec?: PanelSpec): string {
+  const labels = new Map<string, string>();
+  for (const d of manifest.model.dimensions) labels.set(d.id, d.label ?? d.id);
+  for (const m of manifest.model.measures) labels.set(m.id, m.label ?? m.id);
+
+  const found: string[] = [];
+  const scan = (v: unknown, depth: number): void => {
+    if (found.length >= 3 || depth > 4) return;
+    if (typeof v === "string") {
+      const label = labels.get(v);
+      if (label && !found.includes(label)) found.push(label);
+    } else if (Array.isArray(v)) {
+      for (const item of v) scan(item, depth + 1);
+    } else if (v && typeof v === "object") {
+      for (const item of Object.values(v)) scan(item, depth + 1);
+    }
+  };
+  scan(panel.props ?? {}, 0);
+
+  // Nothing recognisable — the panel's own type reads better than its id.
+  return found.length ? found.join(" · ") : spec?.label ?? panel.type;
 }
 
 /**
@@ -85,6 +118,15 @@ export function Builder({ manifest, manifestText, source, registry, onChange, lo
   }, [selected, state.manifest]);
 
   const columns = state.manifest.grid?.columns ?? 12;
+
+  // Escape closes the export dialog. It covers the editor, so there has to be
+  // a way out that is not hunting for the button.
+  useEffect(() => {
+    if (exported === null) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setExported(null); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [exported]);
 
   return (
     <div className="gwb-root">
@@ -191,18 +233,24 @@ export function Builder({ manifest, manifestText, source, registry, onChange, lo
                   aria-pressed={p.id === state.selected}
                 >
                   <span className="gwb-listtype">{p.type}</span>
-                  <span>{p.title ?? p.id}</span>
+                  <span>{p.title ?? describePanel(p, state.manifest, reg.get(p.type))}</span>
                 </button>
               </li>
             ))}
           </ul>
 
-          {!selected && <p className="gwb-hint">Select a panel to edit it.</p>}
+          {!selected && (
+            <p className="gwb-hint">
+              Pick a panel to change what it shows. The fields it can draw from —
+              what you can group by, and what gets measured — live under{" "}
+              <strong>Model</strong>.
+            </p>
+          )}
 
           {selected && (
             <>
               <h2 className="gwb-heading">
-                {selected.title ?? selected.id}
+                {selected.title ?? describePanel(selected, state.manifest, spec)}
                 <button
                   type="button"
                   className="gwb-mini gwb-danger"
@@ -292,7 +340,10 @@ export function Builder({ manifest, manifestText, source, registry, onChange, lo
       </div>
 
       {exported !== null && (
-        <div className="gwb-export" role="dialog" aria-label="Exported manifest">
+        <div className="gwb-scrim" onClick={() => setExported(null)} />
+      )}
+      {exported !== null && (
+        <div className="gwb-export" role="dialog" aria-modal="true" aria-label="Exported manifest">
           <header>
             <strong>Manifest</strong>
             <button type="button" className="gwb-mini" onClick={() => setExported(null)}>Close</button>

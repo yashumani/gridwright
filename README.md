@@ -6,6 +6,26 @@ dashboard — cross-filtering, joins and all — without writing a component.
 [![CI](https://github.com/yashumani/gridwright/actions/workflows/ci.yml/badge.svg)](https://github.com/yashumani/gridwright/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
+## Start with a CSV, not a manifest
+
+Open the playground and drop a spreadsheet on it. Gridwright reads the columns,
+works out which ones group and which ones add up, and builds a dashboard you can
+click through — then shows you the manifest it wrote, which you can edit, save
+and reopen. No account, no install, and nothing is uploaded: every byte is read
+and every query runs inside the tab.
+
+```bash
+pnpm install && pnpm build
+pnpm --filter @gridwright/playground dev     # then drag a .csv onto the page
+```
+
+Guesses are conservative and stated rather than hidden. A column that identifies
+a row is not summed; a column with a distinct value per row is not turned into a
+chart of one bar each; a bare year is not read as a date. Anything it got wrong
+is one edit away in **Build**.
+
+## Or write the manifest yourself
+
 ```yaml
 gridwright: 1
 title: Sales overview
@@ -37,13 +57,8 @@ panels:
       props: { columns: [{ ref: region }, { ref: revenue }, { ref: aov }] } }
 ```
 
-That is a dashboard. Drop it and its CSV into the playground and it is running —
-nothing is uploaded, every query executes in the tab.
-
-```bash
-pnpm install && pnpm build
-pnpm --filter @gridwright/playground dev
-```
+That is a dashboard. Drop it and its CSV into the playground together and it is
+running.
 
 ## Why
 
@@ -118,7 +133,7 @@ if (r.ok) return <Dashboard manifest={r.manifest} source={r.source} />;
 
 ## Status
 
-**Pre-1.0, and honest about it.** 384 tests, two worked examples, and a
+**Pre-1.0, and honest about it.** 401 tests, two worked examples, and a
 [changelog](CHANGELOG.md) that says what you can rely on. What is deliberately
 not here:
 

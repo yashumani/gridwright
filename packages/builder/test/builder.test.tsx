@@ -304,6 +304,28 @@ describe("the builder shell", () => {
     expect(document.querySelector(".gwb-listitem.gwb-on")).toBeTruthy();
   });
 
+  it("names an untitled panel by what it draws, not by its id", async () => {
+    // Four of the reference panels carry no title, so the list falls back.
+    // Falling back to `kpi_rtn` tells a newcomer nothing; the measure it shows
+    // has a label already, and that is the thing they recognise.
+    await mountBuilder();
+    const names = [...document.querySelectorAll(".gwb-listitem")].map(
+      (el) => el.lastElementChild!.textContent,
+    );
+    expect(names.slice(0, 4)).toEqual(["Revenue", "Orders", "Avg order", "Return rate"]);
+    expect(names.join()).not.toMatch(/kpi_/);
+    // A titled panel still wins.
+    expect(names).toContain("Revenue by month");
+  });
+
+  it("falls back to the panel type when nothing it draws is recognisable", async () => {
+    const m = manifest();
+    m.panels = [{ id: "p1", type: "kpi", dataset: "totals", layout: { x: 0, y: 0, w: 3, h: 2 }, props: {} }];
+    render(<Builder manifest={m} source={source()} />);
+    await waitFor(() => expect(screen.queryByText("Updating…")).not.toBeInTheDocument());
+    expect(document.querySelector(".gwb-listitem")!.lastElementChild!.textContent).toBe("KPI");
+  });
+
   it("shows the selected panel's own settings form", async () => {
     await mountBuilder();
     await act(async () => { fireEvent.click(document.querySelectorAll(".gwb-listitem")[0]!); });
@@ -320,6 +342,14 @@ describe("the builder shell", () => {
       fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Revenue" } });
     });
     expect(seen.at(-1)!.panels[0]!.title).toBe("Revenue");
+  });
+
+  it("closes the export dialog on Escape", async () => {
+    await mountBuilder();
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Export" })); });
+    expect(screen.getByRole("dialog", { name: /exported manifest/i })).toBeTruthy();
+    await act(async () => { fireEvent.keyDown(window, { key: "Escape" }); });
+    expect(screen.queryByRole("dialog", { name: /exported manifest/i })).toBeNull();
   });
 
   it("adds a panel from the toolbar", async () => {
