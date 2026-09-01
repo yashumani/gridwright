@@ -86,7 +86,8 @@ export const builderStyles = `
 .gwb-primary { background: var(--gwb-accent); border-color: var(--gwb-accent); color: #fff; }
 .gwb-danger { color: var(--gwb-danger); }
 
-.gwb-hint { color: var(--gwb-faint); font-size: 12.5px; }
+.gwb-hint { color: var(--gwb-faint); font-size: 12.5px; line-height: 1.5; }
+.gwb-hint strong { color: var(--gwb-ink); font-weight: 600; }
 
 /* ---- inspector tabs ---- */
 .gwb-tabs { display: flex; gap: 4px; margin-bottom: 12px; }
@@ -131,6 +132,8 @@ export const builderStyles = `
 .gwb-model .gwb-item { margin-bottom: 16px; padding-bottom: 4px; }
 .gwb-model .gwb-item:last-of-type { margin-bottom: 10px; }
 
+.gwb-modelnote { margin: 0 0 14px; }
+
 .gwb-pair { display: flex; gap: 6px; align-items: center; }
 .gwb-pair > .gwb-input { flex: 1 1 0; min-width: 0; }
 .gwb-pair > .gwb-mini { flex: none; }
@@ -150,6 +153,7 @@ export const builderStyles = `
 .gwb-issue { margin: 2px 0 8px; font-size: 12px; color: var(--gwb-danger); }
 .gwb-ok { margin: 2px 0 8px; font-size: 12px; color: var(--gwb-faint); }
 
+.gwb-scrim { position: absolute; inset: 0; z-index: 19; background: rgb(0 0 0 / 0.32); }
 .gwb-export {
   position: absolute; inset: 10% 12%; display: flex; flex-direction: column;
   background: var(--gwb-surface); border: 1px solid var(--gwb-rule);

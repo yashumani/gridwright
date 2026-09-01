@@ -398,6 +398,17 @@ describe("registry", () => {
 });
 
 describe("value formatting", () => {
+  it("treats # after the point as an optional decimal, as Excel does", () => {
+    // `0.##` used to fall through into the suffix and print a literal "##"
+    // beside the number, which is how an inferred manifest first showed
+    // "4,282,970.##" on a KPI.
+    expect(formatValue(5, "#,##0.##")).toBe("5");
+    expect(formatValue(5.25, "#,##0.##")).toBe("5.25");
+    expect(formatValue(4282970.5, "#,##0.##")).toBe("4,282,970.5");
+    // A zero still pins the place, so money keeps its cents.
+    expect(formatValue(5, "$#,##0.00")).toBe("$5.00");
+  });
+
   it("applies Excel-style patterns", () => {
     expect(formatValue(1234567, "$#,##0", "en-US")).toBe("$1,234,567");
     expect(formatValue(0.0834, "0.0%", "en-US")).toBe("8.3%");

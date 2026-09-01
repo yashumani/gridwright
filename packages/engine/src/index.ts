@@ -6,6 +6,7 @@ export * from "./sql.js";
 export * from "./engine.js";
 export * from "./join.js";
 export * from "./json.js";
+export * from "./infer.js";
 export * from "./bundle.js";
 
 import { loadDelimited, typesForTable, verifyColumns } from "./csv.js";
