@@ -133,7 +133,7 @@ if (r.ok) return <Dashboard manifest={r.manifest} source={r.source} />;
 
 ## Status
 
-**Pre-1.0, and honest about it.** 401 tests, two worked examples, and a
+**Pre-1.0, and honest about it.** 402 tests, two worked examples, and a
 [changelog](CHANGELOG.md) that says what you can rely on. What is deliberately
 not here:
 
