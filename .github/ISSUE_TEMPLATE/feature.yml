@@ -1,0 +1,43 @@
+name: Feature or change
+description: Something Gridwright should do that it does not.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The [README](https://github.com/yashumani/gridwright#readme) lists what
+        is deliberately not in v1 and why. If your request is one of those, say
+        so — it is still worth hearing, and knowing it matters to someone
+        changes the priority.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: >
+        What are you trying to do, and where does Gridwright stop you? Describe
+        the dashboard you wanted, not the API you think you need.
+    validations:
+      required: true
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: What you are doing instead
+      description: Even "nothing, I gave up" is useful — it tells us the cost.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part
+      options:
+        - Manifest format
+        - Expression language
+        - A panel type
+        - The builder
+        - The engine or a data source
+        - The CLI
+        - Docs
+        - Not sure
+    validations:
+      required: true

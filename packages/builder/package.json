@@ -1,12 +1,43 @@
 {
   "name": "@gridwright/builder",
   "version": "0.1.0",
+  "description": "Visual editor for Gridwright manifests \u2014 model and panels \u2014 with comment-preserving YAML export.",
   "license": "MIT",
+  "author": "yashumani (https://github.com/yashumani)",
+  "homepage": "https://github.com/yashumani/gridwright#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yashumani/gridwright.git",
+    "directory": "packages/builder"
+  },
+  "bugs": "https://github.com/yashumani/gridwright/issues",
+  "keywords": [
+    "editor",
+    "builder",
+    "yaml",
+    "no-code",
+    "react",
+    "dashboard",
+    "analytics",
+    "declarative",
+    "manifest",
+    "gridwright"
+  ],
   "type": "module",
+  "sideEffects": false,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
-  "files": ["dist"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
   "dependencies": {
     "@gridwright/schema": "workspace:*",
     "@gridwright/expr": "workspace:*",
@@ -15,5 +46,14 @@
     "@gridwright/react": "workspace:*",
     "yaml": "^2.6.1"
   },
-  "peerDependencies": { "react": ">=18", "react-dom": ">=18" }
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  }
 }
