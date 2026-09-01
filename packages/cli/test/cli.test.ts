@@ -3,7 +3,7 @@ import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { runCli, validateFile } from "gridwright";
+import { resolveDataPath, runCli, validateFile } from "gridwright";
 
 const EXAMPLES = fileURLToPath(new URL("../../../examples/", import.meta.url));
 const REF = join(EXAMPLES, "sales-overview.gw.yaml");
@@ -172,5 +172,49 @@ describe("validateFile as a library call", () => {
     expect(report.ok).toBe(true);
     expect(report.datasets.map((d) => d.name)).toContain("by_region");
     expect(report.manifest?.model.measures.length).toBeGreaterThan(0);
+  });
+});
+
+describe("a manifest cannot read outside its own directory", () => {
+  // The manifest is untrusted input, so `--data` must not turn a declared
+  // path into an arbitrary file read. It would not even be a quiet one: the
+  // loader reports the columns it found, and the first line of whatever it
+  // opened is that list.
+  it("refuses to climb out with ..", () => {
+    expect(() => resolveDataPath("/srv/dash", "../../../../etc/passwd"))
+      .toThrow(/leaves that directory/);
+    expect(() => resolveDataPath("/srv/dash", "../secrets.csv"))
+      .toThrow(/leaves that directory/);
+  });
+
+  it("refuses an absolute path", () => {
+    expect(() => resolveDataPath("/srv/dash", "/etc/passwd")).toThrow(/leaves that directory/);
+  });
+
+  it("still allows a sibling file and a subdirectory", () => {
+    expect(resolveDataPath("/srv/dash", "./sales.csv")).toBe("/srv/dash/sales.csv");
+    expect(resolveDataPath("/srv/dash", "data/sales.csv")).toBe("/srv/dash/data/sales.csv");
+    // Climbing out and back in lands inside, so it is allowed.
+    expect(resolveDataPath("/srv/dash", "sub/../sales.csv")).toBe("/srv/dash/sales.csv");
+  });
+
+  it("reports the refusal as an issue rather than throwing at the caller", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "gridwright-"));
+    const manifest = [
+      "gridwright: 1",
+      "source: { kind: file, files: [{ id: t, path: ../../../../etc/passwd }] }",
+      "model:",
+      "  fields: [{ name: qty, type: number, from: t.qty }]",
+      "  dimensions: []",
+      "  measures: [{ id: total, expr: \"sum(qty)\" }]",
+      "datasets: { totals: { measures: [total] } }",
+      "panels: []",
+    ].join("\n");
+    const file = join(dir, "evil.gw.yaml");
+    await writeFile(file, manifest, "utf8");
+
+    const report = await validateFile(file, { withData: true });
+    expect(report.ok).toBe(false);
+    expect(report.issues.map((i) => i.message).join("\n")).toMatch(/leaves that directory/);
   });
 });
