@@ -11,6 +11,11 @@ permissions:
 jobs:
   review:
     runs-on: ubuntu-latest
+    # Dependency review reads the dependency graph, which GitHub provides free
+    # on public repositories and only with Advanced Security on private ones.
+    # Skipping rather than failing means this turns itself on the day the
+    # repository goes public, instead of being a red check until then.
+    if: github.event.repository.visibility == 'public'
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
