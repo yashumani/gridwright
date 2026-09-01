@@ -1,6 +1,7 @@
 export * from "./registry.js";
 export * from "./format.js";
 export * from "./theme.js";
+export * from "./palette.js";
 export * from "./rules.js";
 export { kpiPanel, type KpiProps } from "./kpi.js";
 export { tablePanel, type TableProps, type TableColumn, type TableRule } from "./table.js";
