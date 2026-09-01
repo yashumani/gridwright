@@ -153,6 +153,79 @@ export const builderStyles = `
 .gwb-issue { margin: 2px 0 8px; font-size: 12px; color: var(--gwb-danger); }
 .gwb-ok { margin: 2px 0 8px; font-size: 12px; color: var(--gwb-faint); }
 
+/* ---- direct manipulation ---- */
+
+/* The chrome sits over the panel but lets every click through, so a bar still
+   cross-filters while you are editing. Only the grip and the eight handles take
+   the pointer, and they are the only things that need it. */
+.gwb-chrome { position: absolute; inset: 0; pointer-events: none; border-radius: 8px; }
+.gwb-chrome::after {
+  content: ""; position: absolute; inset: 0; border-radius: 8px;
+  border: 2px solid transparent; transition: border-color 120ms ease;
+}
+.gw-panel:hover .gwb-chrome::after { border-color: var(--gwb-rule); }
+.gwb-chrome.gwb-on::after { border-color: var(--gwb-accent); }
+
+.gwb-grip {
+  position: absolute; top: 0; left: 0; right: 0; height: 18px;
+  pointer-events: auto; cursor: grab; touch-action: none;
+  display: flex; align-items: center; justify-content: center;
+  border: 0; background: transparent; padding: 0;
+  opacity: 0; transition: opacity 120ms ease;
+  border-radius: 8px 8px 0 0;
+}
+.gw-panel:hover .gwb-grip, .gwb-chrome.gwb-on .gwb-grip { opacity: 1; }
+.gwb-grip:focus-visible { opacity: 1; outline: 2px solid var(--gwb-accent); outline-offset: -2px; }
+.gwb-grip:active { cursor: grabbing; }
+.gwb-grip-dots {
+  width: 26px; height: 4px; border-radius: 2px;
+  background: var(--gwb-faint); opacity: 0.55;
+  /* Two rows of dots, drawn rather than shipped as an image. */
+  background-image: radial-gradient(circle, var(--gwb-surface) 0.8px, transparent 0.9px);
+  background-size: 4px 4px;
+}
+
+.gwb-handle {
+  position: absolute; pointer-events: auto; touch-action: none;
+  border: 0; padding: 0; background: transparent;
+  opacity: 0; transition: opacity 120ms ease;
+}
+.gw-panel:hover .gwb-handle, .gwb-chrome.gwb-on .gwb-handle { opacity: 1; }
+
+/* Edges take a thin strip; corners take a square that sits on top of both. */
+.gwb-handle-n, .gwb-handle-s { left: 10px; right: 10px; height: 8px; cursor: ns-resize; }
+.gwb-handle-e, .gwb-handle-w { top: 10px; bottom: 10px; width: 8px; cursor: ew-resize; }
+.gwb-handle-n { top: 0; }
+.gwb-handle-s { bottom: 0; }
+.gwb-handle-e { right: 0; }
+.gwb-handle-w { left: 0; }
+
+.gwb-handle-ne, .gwb-handle-nw, .gwb-handle-se, .gwb-handle-sw { width: 14px; height: 14px; }
+.gwb-handle-nw { top: 0; left: 0; cursor: nwse-resize; }
+.gwb-handle-ne { top: 0; right: 0; cursor: nesw-resize; }
+.gwb-handle-sw { bottom: 0; left: 0; cursor: nesw-resize; }
+.gwb-handle-se { bottom: 0; right: 0; cursor: nwse-resize; }
+
+/* Only the corners are drawn. Eight visible pips around every panel is a lot of
+   furniture for a dashboard you are also trying to read. */
+.gwb-handle-ne::after, .gwb-handle-nw::after,
+.gwb-handle-se::after, .gwb-handle-sw::after {
+  content: ""; position: absolute; inset: 3px;
+  background: var(--gwb-surface); border: 1.5px solid var(--gwb-accent); border-radius: 2px;
+}
+
+/* The panel under the pointer steps back so the ghost is the thing you read. */
+.gwb-gesturing .gw-panel { opacity: 0.55; transition: opacity 80ms ease; }
+.gwb-gesturing .gw-panel * { pointer-events: none; }
+
+.gwb-ghost {
+  border: 2px dashed var(--gwb-accent); border-radius: 8px;
+  background: var(--gwb-accent-bg); opacity: 0.9;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 600; color: var(--gwb-accent);
+  font-variant-numeric: tabular-nums; pointer-events: none;
+}
+
 .gwb-scrim { position: absolute; inset: 0; z-index: 19; background: rgb(0 0 0 / 0.32); }
 .gwb-export {
   position: absolute; inset: 10% 12%; display: flex; flex-direction: column;

@@ -109,6 +109,7 @@ export const styles = `
 .gw-grid { display: grid; }
 
 .gw-panel {
+  position: relative;
   background: var(--gw-surface);
   border: 1px solid var(--gw-rule);
   border-radius: 8px;

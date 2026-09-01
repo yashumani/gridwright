@@ -15,6 +15,21 @@ export interface DashboardProps {
   locale?: string;
   className?: string;
   onError?: (error: Error) => void;
+  /**
+   * Rendered inside every panel's box, on top of its content.
+   *
+   * This is the seam the builder hangs its drag chrome on. It lives here rather
+   * than in an overlay the builder positions itself because the panel's box is
+   * the only place the grid's geometry is known exactly — a mirrored overlay has
+   * to re-measure and can drift by a pixel, and a drag handle that is a pixel
+   * off the thing it drags is worse than none. Absent, it costs nothing.
+   */
+  panelOverlay?: (panel: PanelDef) => ReactNode;
+  /**
+   * Rendered as a further child of the grid itself, so the builder can place a
+   * drop ghost at a cell no panel occupies yet.
+   */
+  gridOverlay?: ReactNode;
 }
 
 const DEFAULT_COLUMNS = 12;
@@ -29,7 +44,7 @@ interface Emitted {
 }
 
 export function Dashboard({
-  manifest, source, registry, store, locale, className, onError,
+  manifest, source, registry, store, locale, className, onError, panelOverlay, gridOverlay,
 }: DashboardProps) {
   const reg = useMemo(() => registry ?? defaultRegistry(), [registry]);
   const filters = useMemo(() => store ?? new FilterStore(), [store]);
@@ -197,8 +212,10 @@ export function Dashboard({
             select={selectFor(panel)}
             {...(locale ? { locale } : {})}
             {...(onError ? { onError } : {})}
+            {...(panelOverlay ? { overlay: panelOverlay(panel) } : {})}
           />
         ))}
+        {gridOverlay}
       </div>
     </div>
   );
@@ -214,10 +231,11 @@ interface PanelHostProps {
   select: (dimension: string, value: Value, row?: Readonly<Record<string, Value>>) => void;
   locale?: string;
   onError?: (error: Error) => void;
+  overlay?: ReactNode;
 }
 
 function PanelHost({
-  panel, spec, registry, result, loading, selections, select, locale, onError,
+  panel, spec, registry, result, loading, selections, select, locale, onError, overlay,
 }: PanelHostProps) {
   const [ref, size] = useMeasure<HTMLDivElement>();
 
@@ -256,11 +274,17 @@ function PanelHost({
   }
 
   return (
-    <section className="gw-panel" style={style} aria-label={panel.title ?? panel.id}>
+    <section
+      className="gw-panel"
+      style={style}
+      aria-label={panel.title ?? panel.id}
+      data-panel={panel.id}
+    >
       {panel.title && <h2 className="gw-panel-title">{panel.title}</h2>}
       <div className="gw-panel-body" ref={ref}>
         {body}
       </div>
+      {overlay}
     </section>
   );
 }
