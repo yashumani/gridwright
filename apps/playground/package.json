@@ -15,8 +15,8 @@
     "@gridwright/panels": "workspace:*",
     "@gridwright/react": "workspace:*",
     "@gridwright/builder": "workspace:*",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "yaml": "^2.6.1"
   }
 }
