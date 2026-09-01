@@ -1,5 +1,5 @@
 import type { Issue } from "./validate.js";
-import type { Manifest } from "./types.js";
+import type { Manifest, RelationDef } from "./types.js";
 
 /**
  * Referential integrity, run after the structural pass. Everything here is a
@@ -48,12 +48,26 @@ export function checkSemantics(m: Manifest, o: SemanticOptions = {}): Issue[] {
       add(`source.relations[${i}]`, `a relation cannot join "${leftTable}" to itself`);
     }
   });
-  for (const dupe of duplicates(relations.map((r) => {
+  // The pair travels as a pair rather than packed into a delimited string and
+  // split back out for the message. Table ids cannot contain "|", so the round
+  // trip happened to be safe — but a message that has to decode its own lookup
+  // key is one more thing that can quietly be wrong, and it read as an
+  // escaping bug to anyone (and anything) scanning for one.
+  const pairOf = (r: RelationDef): readonly [string, string] => {
     const a = r.left.split(".")[0]!;
     const b = r.right.split(".")[0]!;
-    return a < b ? `${a}|${b}` : `${b}|${a}`;
-  }))) {
-    add("source.relations", `two relations connect the same pair of tables (${dupe.replace("|", " and ")})`);
+    return a < b ? [a, b] : [b, a];
+  };
+  const seenPairs = new Set<string>();
+  const duplicatePairs = new Map<string, readonly [string, string]>();
+  for (const r of relations) {
+    const pair = pairOf(r);
+    const key = JSON.stringify(pair);
+    if (seenPairs.has(key)) duplicatePairs.set(key, pair);
+    else seenPairs.add(key);
+  }
+  for (const [a, b] of duplicatePairs.values()) {
+    add("source.relations", `two relations connect the same pair of tables (${a} and ${b})`);
   }
   if (m.source.files.length > 1 && relations.length === 0) {
     add(
