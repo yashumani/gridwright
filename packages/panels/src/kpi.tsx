@@ -1,4 +1,4 @@
-import { bool, obj, opt, str } from "@gridwright/schema";
+import { bool, described, obj, opt, str } from "@gridwright/schema";
 import { formatValue } from "./format.js";
 import { columnValues, firstMeasure, requireColumn, type PanelProps, type PanelSpec } from "./registry.js";
 
@@ -16,10 +16,10 @@ export interface KpiProps {
 }
 
 const schema = obj({
-  measure: str({ minLength: 1 }),
-  caption: opt(str({ maxLength: 120 })),
-  delta: opt(str({ minLength: 1 })),
-  invertTrend: opt(bool()),
+  measure: described(str({ minLength: 1 }), { title: "Number to show" }),
+  caption: described(opt(str({ maxLength: 120 })), { title: "Caption" }),
+  delta: described(opt(str({ minLength: 1 })), { title: "Change indicator" }),
+  invertTrend: described(opt(bool()), { title: "Down is good" }),
 });
 
 function Kpi({ result, props, locale }: PanelProps<KpiProps>) {
@@ -64,6 +64,7 @@ export const kpiPanel: PanelSpec<KpiProps> = {
   description: "A single headline number, with an optional change indicator.",
   schema,
   defaults: (result) => ({ measure: firstMeasure(result)?.id ?? "" }),
+  primary: ["measure"],
   Component: Kpi,
   minSize: { w: 2, h: 2 },
 };

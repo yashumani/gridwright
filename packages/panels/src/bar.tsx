@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { bool, enum_, num, obj, opt, str } from "@gridwright/schema";
+import { bool, described, enum_, num, obj, opt, str } from "@gridwright/schema";
 import type { Value } from "@gridwright/engine";
 import { formatValue } from "./format.js";
 import { resultRow } from "./rules.js";
@@ -23,11 +23,11 @@ export interface BarProps {
 }
 
 const schema = obj({
-  category: str({ minLength: 1 }),
-  value: str({ minLength: 1 }),
-  orientation: opt(enum_(["horizontal", "vertical"] as const)),
-  showValues: opt(bool()),
-  maxBars: opt(num({ integer: true, min: 1, max: 200 })),
+  category: described(str({ minLength: 1 }), { title: "Group by" }),
+  value: described(str({ minLength: 1 }), { title: "Number to show" }),
+  orientation: described(opt(enum_(["horizontal", "vertical"] as const)), { title: "Bar direction" }),
+  showValues: described(opt(bool()), { title: "Show the numbers" }),
+  maxBars: described(opt(num({ integer: true, min: 1, max: 200 })), { title: "Most bars to show" }),
 });
 
 /**
@@ -200,6 +200,7 @@ export const barPanel: PanelSpec<BarProps> = {
     category: firstDimension(result)?.id ?? "",
     value: firstMeasure(result)?.id ?? "",
   }),
+  primary: ["category", "value"],
   Component: Bar,
   minSize: { w: 3, h: 3 },
 };

@@ -27,9 +27,16 @@ export interface JsonSchema {
   description?: string;
 }
 
+/** A column the selected panel may draw, as a person would recognise it. */
+export interface RefOption {
+  id: string;
+  label: string;
+  kind: "dimension" | "measure";
+}
+
 export interface FieldSuggestions {
-  /** Column ids offered wherever a schema expects a reference. */
-  refs?: readonly string[];
+  /** Columns offered wherever a schema expects a reference. */
+  refs?: readonly RefOption[];
 }
 
 export interface PropertyFormProps {
@@ -39,16 +46,35 @@ export interface PropertyFormProps {
   suggestions?: FieldSuggestions;
   label?: string;
   path?: string;
+  /**
+   * Property names to render, in this order. Everything else in the schema is
+   * skipped — the caller renders it in a second pass behind a disclosure.
+   *
+   * A bar chart has five settings and two of them decide what it draws. Showing
+   * all five as equals is the difference between "pick a category and a number"
+   * and a form somebody has to read twice.
+   */
+  only?: readonly string[];
+  /** Render everything except these. The other half of the same split. */
+  except?: readonly string[];
 }
 
 const humanise = (key: string): string =>
   key.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/[_-]+/g, " ").replace(/^./, (c) => c.toUpperCase());
 
-/** Keys whose value names a dataset column, so the control can offer a list. */
-const REF_KEYS = new Set(["measure", "value", "delta", "ref", "x", "category", "dimension"]);
+/**
+ * Keys whose value names a dataset column, and which half of the model each one
+ * wants. A bar chart's category is something to group by, never a number —
+ * offering both makes the picker twice as long and half of it wrong.
+ */
+const REF_KEYS: Record<string, "dimension" | "measure" | "any"> = {
+  measure: "measure", value: "measure", delta: "measure", y: "measure",
+  x: "dimension", category: "dimension", dimension: "dimension",
+  ref: "any",
+};
 
 export function PropertyForm({
-  schema, value, onChange, suggestions, label, path = "",
+  schema, value, onChange, suggestions, label, path = "", only, except,
 }: PropertyFormProps): ReactNode {
   const id = useId();
   const type = Array.isArray(schema.type) ? schema.type[0] : schema.type;
@@ -64,7 +90,7 @@ export function PropertyForm({
           value={String(value ?? "")}
           onChange={(e) => onChange(e.target.value || undefined)}
         >
-          <option value="">—</option>
+          <option value="">Default</option>
           {schema.enum.map((o) => (
             <option key={String(o)} value={String(o)}>{String(o)}</option>
           ))}
@@ -76,7 +102,19 @@ export function PropertyForm({
   switch (type) {
     case "object": {
       const record = (value ?? {}) as Record<string, unknown>;
-      const entries = Object.entries(schema.properties ?? {});
+      let entries = Object.entries(schema.properties ?? {});
+      // The split applies to this object's own keys only, so a nested object
+      // still renders whole — "only: [columns]" means that column list entire,
+      // not its first field.
+      if (only) {
+        const rank = new Map(only.map((k, i) => [k, i]));
+        entries = entries
+          .filter(([k]) => rank.has(k))
+          .sort((a, b) => rank.get(a[0])! - rank.get(b[0])!);
+      } else if (except) {
+        entries = entries.filter(([k]) => !except.includes(k));
+      }
+      if (!entries.length) return null;
       const body = entries.map(([key, child]) => (
         <PropertyForm
           key={key}
@@ -182,25 +220,61 @@ export function PropertyForm({
       );
 
     case "string": {
-      // A field that names a column gets the dataset's columns as a datalist,
-      // which is the difference between guessing an id and picking one.
-      const refs = REF_KEYS.has(leafKey) ? suggestions?.refs : undefined;
-      const listId = refs ? `${id}-refs` : undefined;
+      // A field that names a column picks from the columns the panel's dataset
+      // actually has, by their labels.
+      //
+      // This was a datalist on a free-text input, which is a suggestion rather
+      // than a choice: the list is easy to miss, anything at all can be typed,
+      // and what it offered were raw ids. Someone who has not read the manifest
+      // has no way to know that the number they want is spelled `rtn_rate`.
+      const wants = REF_KEYS[leafKey];
+      const all = wants ? suggestions?.refs : undefined;
+      // Narrow to what the field accepts, but never to nothing: a dataset with
+      // no dimensions still has to let you pick something, and an empty select
+      // is a dead end with no explanation.
+      const narrowed = wants && wants !== "any" ? all?.filter((r) => r.kind === wants) : all;
+      const refs = narrowed?.length ? narrowed : all;
+      if (refs?.length) {
+        const current = value === undefined || value === null ? "" : String(value);
+        const known = refs.some((r) => r.id === current);
+        const dims = refs.filter((r) => r.kind === "dimension");
+        const measures = refs.filter((r) => r.kind === "measure");
+        return (
+          <Row label={label} htmlFor={id}>
+            <select
+              id={id}
+              className="gwb-input"
+              value={current}
+              onChange={(e) => onChange(e.target.value || undefined)}
+            >
+              <option value="">Choose one…</option>
+              {/* A value written by hand that this dataset does not have stays
+                  selectable and is named as the problem, rather than silently
+                  resetting to blank and losing what the author wrote. */}
+              {current && !known && <option value={current}>{current} — not in this dataset</option>}
+              {dims.length > 0 && (
+                <optgroup label="Group by">
+                  {dims.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
+                </optgroup>
+              )}
+              {measures.length > 0 && (
+                <optgroup label="Numbers">
+                  {measures.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
+                </optgroup>
+              )}
+            </select>
+          </Row>
+        );
+      }
       return (
         <Row label={label} htmlFor={id}>
           <input
             id={id}
             className="gwb-input"
             type="text"
-            list={listId}
             value={value === undefined || value === null ? "" : String(value)}
             onChange={(e) => onChange(e.target.value || undefined)}
           />
-          {refs && (
-            <datalist id={listId}>
-              {refs.map((r) => <option key={r} value={r} />)}
-            </datalist>
-          )}
         </Row>
       );
     }

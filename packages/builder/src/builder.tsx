@@ -3,7 +3,7 @@ import type { Manifest, PanelDef } from "@gridwright/schema";
 import type { DataSource } from "@gridwright/engine";
 import { PanelRegistry, defaultRegistry, type PanelSpec } from "@gridwright/panels";
 import { Dashboard, FilterStore } from "@gridwright/react";
-import { PropertyForm, type JsonSchema } from "./property-form.js";
+import { PropertyForm, type JsonSchema, type RefOption } from "./property-form.js";
 import { ModelEditor } from "./model-form.js";
 import { DropGhost, PanelChrome, useDrag } from "./drag.js";
 import { compact, gridColumns, resizeTo, resolveCollisions, type Rect } from "./layout.js";
@@ -63,6 +63,11 @@ function describePanel(panel: PanelDef, manifest: Manifest, spec?: PanelSpec): s
  * a live dashboard rather than a mock is the only way the preview can be
  * trusted — with an inspector driven entirely by the selected panel's schema.
  */
+/** The four layout numbers, named for what they mean rather than for the axis. */
+const LAYOUT_KEYS = [
+  ["x", "From column"], ["y", "From row"], ["w", "Columns wide"], ["h", "Rows tall"],
+] as const;
+
 export function Builder({ manifest, manifestText, source, registry, onChange, locale }: BuilderProps) {
   const reg = useMemo(() => registry ?? defaultRegistry(), [registry]);
   const [state, dispatch] = useReducer(reduce, manifest, (m) => initialState(m, manifestText));
@@ -111,12 +116,22 @@ export function Builder({ manifest, manifestText, source, registry, onChange, lo
   const selected = state.manifest.panels.find((p) => p.id === state.selected);
   const spec = selected ? reg.get(selected.type) : undefined;
 
-  // Column ids the selected panel can reference, read straight from the
-  // manifest — no query needed to populate the pickers.
-  const refs = useMemo(() => {
+  // What the selected panel can draw, read straight from the manifest — no
+  // query needed to populate the pickers. Labels come along, because `rtn_rate`
+  // is not something anyone can be expected to guess.
+  const refs = useMemo((): RefOption[] => {
     if (!selected) return [];
     const ds = state.manifest.datasets[selected.dataset];
-    return [...(ds?.dimensions ?? []), ...(ds?.measures ?? [])];
+    const label = (id: string, from: { id: string; label?: string }[]): string =>
+      from.find((m) => m.id === id)?.label ?? id;
+    return [
+      ...(ds?.dimensions ?? []).map((id) => ({
+        id, label: label(id, state.manifest.model.dimensions), kind: "dimension" as const,
+      })),
+      ...(ds?.measures ?? []).map((id) => ({
+        id, label: label(id, state.manifest.model.measures), kind: "measure" as const,
+      })),
+    ];
   }, [selected, state.manifest]);
 
   const columns = gridColumns(state.manifest);
@@ -324,75 +339,98 @@ export function Builder({ manifest, manifestText, source, registry, onChange, lo
                 </button>
               </h2>
 
-              <div className="gwb-row">
-                <label className="gwb-label" htmlFor="gwb-title">Title</label>
-                <div className="gwb-control">
-                  <input
-                    id="gwb-title"
-                    className="gwb-input"
-                    value={selected.title ?? ""}
-                    onChange={(e) =>
-                      apply({ type: "updatePanel", id: selected.id, patch: { title: e.target.value || undefined } })
-                    }
-                  />
-                </div>
-              </div>
+              {/* What the panel draws comes first, because it is the question
+                  the panel is asking. Everything below it is presentation. */}
+              {spec ? (
+                <>
+                  {spec.primary?.length ? (
+                    <PropertyForm
+                      schema={spec.schema.jsonSchema() as JsonSchema}
+                      value={selected.props ?? {}}
+                      suggestions={{ refs }}
+                      only={spec.primary}
+                      onChange={(next) =>
+                        apply({ type: "updateProps", id: selected.id, props: (next ?? {}) as Record<string, unknown> })
+                      }
+                    />
+                  ) : null}
 
-              <div className="gwb-row">
-                <label className="gwb-label" htmlFor="gwb-dataset">Dataset</label>
-                <div className="gwb-control">
-                  <select
-                    id="gwb-dataset"
-                    className="gwb-input"
-                    value={selected.dataset}
-                    onChange={(e) =>
-                      apply({ type: "updatePanel", id: selected.id, patch: { dataset: e.target.value } })
-                    }
-                  >
-                    {Object.keys(state.manifest.datasets).map((d) => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <fieldset className="gwb-fieldset">
-                <legend>Layout</legend>
-                {(["x", "y", "w", "h"] as const).map((k) => (
-                  <div className="gwb-row" key={k}>
-                    <label className="gwb-label" htmlFor={`gwb-${k}`}>{k.toUpperCase()}</label>
+                  <div className="gwb-row">
+                    <label className="gwb-label" htmlFor="gwb-title">Title</label>
                     <div className="gwb-control">
                       <input
-                        id={`gwb-${k}`}
+                        id="gwb-title"
                         className="gwb-input"
-                        type="number"
-                        min={k === "w" || k === "h" ? 1 : 0}
-                        max={k === "x" || k === "w" ? columns : undefined}
-                        value={selected.layout[k]}
-                        onChange={(e) => {
-                          const n = Number(e.target.value);
-                          if (!Number.isFinite(n)) return;
-                          const layout = { ...selected.layout, [k]: Math.trunc(n) };
-                          apply({ type: "updatePanel", id: selected.id, patch: { layout } });
-                        }}
+                        placeholder={describePanel(selected, state.manifest, spec)}
+                        value={selected.title ?? ""}
+                        onChange={(e) =>
+                          apply({ type: "updatePanel", id: selected.id, patch: { title: e.target.value || undefined } })
+                        }
                       />
                     </div>
                   </div>
-                ))}
-              </fieldset>
 
-              {spec ? (
-                <fieldset className="gwb-fieldset">
-                  <legend>{spec.label} settings</legend>
-                  <PropertyForm
-                    schema={spec.schema.jsonSchema() as JsonSchema}
-                    value={selected.props ?? {}}
-                    suggestions={{ refs }}
-                    onChange={(next) =>
-                      apply({ type: "updateProps", id: selected.id, props: (next ?? {}) as Record<string, unknown> })
-                    }
-                  />
-                </fieldset>
+                  <details className="gwb-section">
+                    <summary>More settings</summary>
+
+                    <PropertyForm
+                      schema={spec.schema.jsonSchema() as JsonSchema}
+                      value={selected.props ?? {}}
+                      suggestions={{ refs }}
+                      {...(spec.primary?.length ? { except: spec.primary } : {})}
+                      onChange={(next) =>
+                        apply({ type: "updateProps", id: selected.id, props: (next ?? {}) as Record<string, unknown> })
+                      }
+                    />
+
+                    <div className="gwb-row">
+                      <label className="gwb-label" htmlFor="gwb-dataset">Reads from</label>
+                      <div className="gwb-control">
+                        <select
+                          id="gwb-dataset"
+                          className="gwb-input"
+                          value={selected.dataset}
+                          onChange={(e) =>
+                            apply({ type: "updatePanel", id: selected.id, patch: { dataset: e.target.value } })
+                          }
+                        >
+                          {Object.keys(state.manifest.datasets).map((d) => (
+                            <option key={d} value={d}>{d}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <fieldset className="gwb-fieldset">
+                      <legend>Position</legend>
+                      <p className="gwb-hint">
+                        Drag the panel to move it, or its corners to resize. Arrow keys nudge
+                        the selected panel; hold shift to resize.
+                      </p>
+                      {LAYOUT_KEYS.map(([k, name]) => (
+                        <div className="gwb-row" key={k}>
+                          <label className="gwb-label" htmlFor={`gwb-${k}`}>{name}</label>
+                          <div className="gwb-control">
+                            <input
+                              id={`gwb-${k}`}
+                              className="gwb-input"
+                              type="number"
+                              min={k === "w" || k === "h" ? 1 : 0}
+                              max={k === "x" || k === "w" ? columns : undefined}
+                              value={selected.layout[k]}
+                              onChange={(e) => {
+                                const n = Number(e.target.value);
+                                if (!Number.isFinite(n)) return;
+                                const layout = { ...selected.layout, [k]: Math.trunc(n) };
+                                apply({ type: "updatePanel", id: selected.id, patch: { layout } });
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </fieldset>
+                  </details>
+                </>
               ) : (
                 <p className="gwb-hint">No editor for panel type “{selected.type}”.</p>
               )}

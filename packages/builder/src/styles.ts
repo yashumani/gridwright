@@ -118,8 +118,18 @@ export const builderStyles = `
 .gwb-section > summary {
   cursor: pointer; font-size: 11.5px; font-weight: 650;
   letter-spacing: 0.05em; text-transform: uppercase; color: var(--gwb-faint);
-  display: flex; align-items: center; gap: 8px; list-style-position: inside;
+  display: flex; align-items: center; gap: 8px;
 }
+.gwb-section > summary::-webkit-details-marker { display: none; }
+.gwb-section > summary::marker { content: ""; }
+.gwb-section > summary::before {
+  content: ""; flex: none; width: 0; height: 0;
+  border-left: 4px solid currentColor;
+  border-top: 3.5px solid transparent; border-bottom: 3.5px solid transparent;
+  transition: transform 120ms ease; transform-origin: 25% 50%;
+}
+.gwb-section[open] > summary::before { transform: rotate(90deg); }
+.gwb-section > summary:hover { color: var(--gwb-ink); }
 .gwb-section > summary:focus-visible { outline: 2px solid var(--gwb-accent); outline-offset: 2px; }
 .gwb-section[open] > summary { margin-bottom: 10px; color: var(--gwb-ink); }
 .gwb-count {
