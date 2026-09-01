@@ -97,6 +97,17 @@ result.
   Gridwright specifically — a way to reach it through our API — that is in
   scope, and please say so.
 
+## Repository settings this policy depends on
+
+Two of these need switching on in **Settings → Security** before they work, and
+both are free on a public repository:
+
+- **Private vulnerability reporting** — the reporting link at the top of this
+  file only opens once it is enabled.
+- **Dependency graph** — CodeQL and the dependency-review check both wait on it.
+  Their workflows skip rather than fail while the repository is private, so
+  they turn themselves on the day it goes public.
+
 ## Supported versions
 
 Pre-1.0. Fixes land on the latest release; there are no maintained release
