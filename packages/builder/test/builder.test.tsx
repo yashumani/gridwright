@@ -8,7 +8,7 @@ import { sourceFromText } from "@gridwright/engine";
 import { defaultRegistry } from "@gridwright/panels";
 import {
   Builder, PropertyForm, blankFor, checkManifest, exportManifest, initialState,
-  nextPanelId, placePanel, reduce, toYaml, type EditorState, type JsonSchema,
+  nextPanelId, overlaps, placePanel, reduce, toYaml, type EditorState, type JsonSchema,
 } from "@gridwright/builder";
 
 const dir = (p: string) => fileURLToPath(new URL(p, import.meta.url));
@@ -22,6 +22,20 @@ function manifest(): Manifest {
 }
 
 const state = (): EditorState => initialState(manifest());
+
+/**
+ * A pointer event carrying real coordinates.
+ *
+ * jsdom implements no `PointerEvent`, so `fireEvent.pointerDown` builds a bare
+ * `Event` and drops `clientX`, `clientY` and `button` — every drag would read as
+ * a zero-distance gesture by an unknown button. A `MouseEvent` under the pointer
+ * event's name carries all three, and React dispatches on the name.
+ */
+function pointer(type: string, x: number, y: number): MouseEvent {
+  const e = new MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0 });
+  Object.defineProperty(e, "pointerId", { value: 1 });
+  return e;
+}
 
 beforeEach(cleanup);
 
@@ -342,6 +356,117 @@ describe("the builder shell", () => {
       fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Revenue" } });
     });
     expect(seen.at(-1)!.panels[0]!.title).toBe("Revenue");
+  });
+
+  it("moves a panel by dragging its grip", async () => {
+    const seen: Manifest[] = [];
+    render(<Builder manifest={manifest()} source={source()} onChange={(m) => seen.push(m)} />);
+    await waitFor(() => expect(screen.queryByText("Updating…")).not.toBeInTheDocument());
+
+    // jsdom does no layout, so the panel's box has to be supplied. kpi_rev is
+    // 3 columns wide, so a 300px box over a 12px gap makes one column 104px.
+    const box = document.querySelector('[data-panel="kpi_rev"]') as HTMLElement;
+    box.getBoundingClientRect = () => ({ width: 300, height: 164 }) as DOMRect;
+
+    const grip = box.querySelector(".gwb-grip")!;
+    await act(async () => {
+      grip.dispatchEvent(pointer("pointerdown", 0, 0));
+      grip.dispatchEvent(pointer("pointermove", 312, 0));   // 3 columns of 104
+      grip.dispatchEvent(pointer("pointerup", 312, 0));
+    });
+
+    const next = seen.at(-1)!;
+    expect(next.panels.find((p) => p.id === "kpi_rev")!.layout).toMatchObject({ x: 3, y: 0 });
+
+    // Whatever it landed on moved out of the way rather than being covered.
+    for (let i = 0; i < next.panels.length; i++) {
+      for (let j = i + 1; j < next.panels.length; j++) {
+        const a = next.panels[i]!, b = next.panels[j]!;
+        expect(overlaps(a.layout, b.layout), `${a.id} overlaps ${b.id}`).toBe(false);
+      }
+    }
+    // And the whole gesture was one action, not one per pointermove.
+    expect(seen).toHaveLength(1);
+  });
+
+  it("does not move a panel whose box has not been laid out", async () => {
+    // A zero-sized box means no pitch. Deriving one from the gap alone would
+    // make a short drag land a hundred columns away.
+    const seen: Manifest[] = [];
+    render(<Builder manifest={manifest()} source={source()} onChange={(m) => seen.push(m)} />);
+    await waitFor(() => expect(screen.queryByText("Updating…")).not.toBeInTheDocument());
+
+    const grip = document.querySelector('[data-panel="kpi_rev"] .gwb-grip')!;
+    await act(async () => {
+      grip.dispatchEvent(pointer("pointerdown", 0, 0));
+      grip.dispatchEvent(pointer("pointermove", 400, 0));
+      grip.dispatchEvent(pointer("pointerup", 400, 0));
+    });
+    expect(seen).toHaveLength(0);
+  });
+
+  it("resizes a panel by dragging a corner", async () => {
+    const seen: Manifest[] = [];
+    render(<Builder manifest={manifest()} source={source()} onChange={(m) => seen.push(m)} />);
+    await waitFor(() => expect(screen.queryByText("Updating…")).not.toBeInTheDocument());
+
+    const box = document.querySelector('[data-panel="kpi_rev"]') as HTMLElement;
+    box.getBoundingClientRect = () => ({ width: 300, height: 164 }) as DOMRect;
+
+    const handle = box.querySelector(".gwb-handle-se")!;
+    await act(async () => {
+      handle.dispatchEvent(pointer("pointerdown", 0, 0));
+      handle.dispatchEvent(pointer("pointermove", 104, 88));
+      handle.dispatchEvent(pointer("pointerup", 104, 88));
+    });
+    expect(seen.at(-1)!.panels.find((p) => p.id === "kpi_rev")!.layout)
+      .toMatchObject({ x: 0, y: 0, w: 4, h: 3 });
+  });
+
+  it("moves the selected panel with the arrow keys", async () => {
+    const seen: Manifest[] = [];
+    render(<Builder manifest={manifest()} source={source()} onChange={(m) => seen.push(m)} />);
+    await waitFor(() => expect(screen.queryByText("Updating…")).not.toBeInTheDocument());
+    await act(async () => { fireEvent.click(document.querySelectorAll(".gwb-listitem")[0]!); });
+
+    const canvas = document.querySelector(".gwb-preview")!;
+    await act(async () => { fireEvent.keyDown(canvas, { key: "ArrowRight" }); });
+
+    const moved = seen.at(-1)!.panels.find((p) => p.id === "kpi_rev")!;
+    expect(moved.layout.x).toBe(1);
+
+    // Shift resizes instead of moving.
+    await act(async () => { fireEvent.keyDown(canvas, { key: "ArrowDown", shiftKey: true }); });
+    expect(seen.at(-1)!.panels.find((p) => p.id === "kpi_rev")!.layout.h).toBe(3);
+  });
+
+  it("will not walk a panel off the edge of the grid", async () => {
+    const seen: Manifest[] = [];
+    render(<Builder manifest={manifest()} source={source()} onChange={(m) => seen.push(m)} />);
+    await waitFor(() => expect(screen.queryByText("Updating…")).not.toBeInTheDocument());
+    await act(async () => { fireEvent.click(document.querySelectorAll(".gwb-listitem")[0]!); });
+
+    const canvas = document.querySelector(".gwb-preview")!;
+    await act(async () => {
+      for (let i = 0; i < 20; i++) fireEvent.keyDown(canvas, { key: "ArrowLeft" });
+    });
+    // It started at x0, so every press is a no-op and none of them commits.
+    expect(seen).toHaveLength(0);
+  });
+
+  it("keeps a whole drag as one undo step", async () => {
+    render(<Builder manifest={manifest()} source={source()} />);
+    await waitFor(() => expect(screen.queryByText("Updating…")).not.toBeInTheDocument());
+    await act(async () => { fireEvent.click(document.querySelectorAll(".gwb-listitem")[0]!); });
+
+    const canvas = document.querySelector(".gwb-preview")!;
+    const undo = screen.getByRole("button", { name: "Undo" }) as HTMLButtonElement;
+    await act(async () => { fireEvent.keyDown(canvas, { key: "ArrowRight" }); });
+    expect(undo.disabled).toBe(false);
+
+    await act(async () => { fireEvent.click(undo); });
+    const back = document.querySelector('[data-panel="kpi_rev"]') as HTMLElement;
+    expect(back.style.gridColumn).toBe("1 / span 3");
   });
 
   it("closes the export dialog on Escape", async () => {

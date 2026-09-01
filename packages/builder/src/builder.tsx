@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { Manifest, PanelDef } from "@gridwright/schema";
 import type { DataSource } from "@gridwright/engine";
 import { PanelRegistry, defaultRegistry, type PanelSpec } from "@gridwright/panels";
 import { Dashboard, FilterStore } from "@gridwright/react";
 import { PropertyForm, type JsonSchema } from "./property-form.js";
 import { ModelEditor } from "./model-form.js";
+import { DropGhost, PanelChrome, useDrag } from "./drag.js";
+import { compact, gridColumns, resizeTo, resolveCollisions, type Rect } from "./layout.js";
 import {
   checkManifest, exportManifest, initialState, nextPanelId, placePanel, reduce,
 } from "./editor.js";
@@ -117,7 +119,57 @@ export function Builder({ manifest, manifestText, source, registry, onChange, lo
     return [...(ds?.dimensions ?? []), ...(ds?.measures ?? [])];
   }, [selected, state.manifest]);
 
-  const columns = state.manifest.grid?.columns ?? 12;
+  const columns = gridColumns(state.manifest);
+
+  /**
+   * A dropped panel takes its cells outright and pushes whatever was under it
+   * down, then everything settles upwards into the space that leaves. Doing both
+   * as one action keeps the whole gesture a single undo step — a drag that took
+   * three presses of undo to reverse would be worse than no drag.
+   */
+  const place = useCallback(
+    (id: string, to: Rect) => {
+      const panels = compact(resolveCollisions(state.manifest.panels, id, to));
+      const settled = panels.every((p, i) => p === state.manifest.panels[i]);
+      if (settled) return;
+      apply({ type: "replace", manifest: { ...state.manifest, panels } });
+      dispatch({ type: "select", id });
+    },
+    [state.manifest],
+  );
+
+  const drag = useDrag({
+    manifest: state.manifest,
+    minSize: (p) => reg.get(p.type)?.minSize ?? { w: 1, h: 1 },
+    onCommit: place,
+    onSelect: (id) => apply({ type: "select", id }),
+  });
+
+  /**
+   * The same moves from the keyboard. A layout you can only change by dragging
+   * is one a keyboard user cannot change at all, and arrows are the faster way
+   * to nudge something one cell anyway.
+   */
+  const onGridKeyDown = (e: React.KeyboardEvent) => {
+    if (!selected) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const step: Record<string, [number, number]> = {
+      ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1],
+    };
+    const d = step[e.key];
+    if (!d) return;
+    e.preventDefault();
+    const [dx, dy] = d;
+    const min = reg.get(selected.type)?.minSize ?? { w: 1, h: 1 };
+    const to = e.shiftKey
+      ? resizeTo(selected.layout, "se", dx, dy, columns, min)
+      : {
+          ...selected.layout,
+          x: Math.min(Math.max(0, selected.layout.x + dx), columns - selected.layout.w),
+          y: Math.max(0, selected.layout.y + dy),
+        };
+    place(selected.id, to);
+  };
 
   // Escape closes the export dialog. It covers the editor, so there has to be
   // a way out that is not hunting for the button.
@@ -177,13 +229,25 @@ export function Builder({ manifest, manifestText, source, registry, onChange, lo
       </header>
 
       <div className="gwb-body">
-        <main className="gwb-preview">
+        <main
+          className={`gwb-preview${drag.gesture ? " gwb-gesturing" : ""}`}
+          onKeyDown={onGridKeyDown}
+        >
           <Dashboard
             manifest={preview}
             source={source}
             registry={reg}
             store={store}
             {...(locale ? { locale } : {})}
+            panelOverlay={(p) => (
+              <PanelChrome
+                panel={p}
+                selected={p.id === state.selected}
+                drag={drag}
+                label={p.title ?? describePanel(p, state.manifest, reg.get(p.type))}
+              />
+            )}
+            gridOverlay={<DropGhost gesture={drag.gesture} />}
           />
         </main>
 
