@@ -1,0 +1,59 @@
+name: Release
+
+# Manual on purpose. Publishing is a one-way door — a version that reaches npm
+# cannot be taken back, only deprecated — so it needs somebody to decide, not a
+# tag push to decide for them.
+on:
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: "Pack and check without publishing"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: npm        # gate the real publish behind an environment approval
+    permissions:
+      contents: read
+      id-token: write       # npm provenance: proves the tarball came from this workflow
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0 == v5.0.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # Everything CI runs, again. A release is the worst possible time to find
+      # out the build was only green on somebody's laptop.
+      - name: Build
+        run: pnpm build
+
+      - name: Test
+        run: pnpm test
+
+      - name: Validate the reference manifests against real data
+        run: |
+          node packages/cli/dist/bin.js validate examples/sales-overview.gw.yaml --data
+          node packages/cli/dist/bin.js validate examples/orders-star.gw.yaml --data
+
+      - name: Publish
+        run: |
+          if [ "${{ inputs.dry-run }}" = "true" ]; then
+            pnpm -r --filter "./packages/*" exec npm pack --dry-run
+          else
+            pnpm -r --filter "./packages/*" publish --access public --no-git-checks --provenance
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -1,0 +1,12 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/schema" },
+    { "path": "packages/expr" },
+    { "path": "packages/engine" },
+    { "path": "packages/panels" },
+    { "path": "packages/react" },
+    { "path": "packages/builder" },
+    { "path": "packages/cli" }
+  ]
+}

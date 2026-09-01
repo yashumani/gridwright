@@ -1,0 +1,53 @@
+{
+  "name": "gridwright",
+  "version": "0.1.0",
+  "description": "Command line tool for Gridwright: validate a manifest against real data, explain its compiled SQL, and inspect the format.",
+  "license": "MIT",
+  "author": "yashumani (https://github.com/yashumani)",
+  "homepage": "https://github.com/yashumani/gridwright#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yashumani/gridwright.git",
+    "directory": "packages/cli"
+  },
+  "bugs": "https://github.com/yashumani/gridwright/issues",
+  "keywords": [
+    "cli",
+    "validate",
+    "lint",
+    "sql",
+    "explain",
+    "dashboard",
+    "analytics",
+    "declarative",
+    "manifest",
+    "gridwright"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "gridwright": "./dist/bin.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "dependencies": {
+    "@gridwright/schema": "workspace:*",
+    "@gridwright/expr": "workspace:*",
+    "@gridwright/engine": "workspace:*",
+    "@gridwright/panels": "workspace:*"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,110 @@
+gridwright: 1
+title: Orders by customer and product
+
+source:
+  kind: file
+  files:
+    - { id: orders,    path: ./orders.csv,    format: csv }
+    - { id: customers, path: ./customers.csv, format: csv }
+    - { id: products,  path: ./products.csv,  format: csv }
+  relations:
+    - { left: orders.customer_id, right: customers.customer_id, cardinality: many-to-one }
+    - { left: orders.product_id,  right: products.product_id,   cardinality: many-to-one }
+
+model:
+  fields:
+    - { name: order_date,   type: date,   from: orders.order_date }
+    - { name: quantity,     type: number, from: orders.quantity }
+    - { name: amount,       type: number, from: orders.amount }
+    - { name: region,       type: string, from: customers.region }
+    - { name: tier,         type: string, from: customers.tier }
+    - { name: category,     type: string, from: products.category }
+    - { name: product_name, type: string, from: products.product_name }
+    - { name: unit_cost,    type: number, from: products.unit_cost }
+
+  dimensions:
+    - { id: region,   field: region,       label: Region }
+    - { id: tier,     field: tier,         label: Segment }
+    - { id: category, field: category,     label: Category }
+    - { id: product,  field: product_name, label: Product }
+    - { id: month,    field: order_date,   label: Month, grain: month }
+
+  measures:
+    - { id: revenue, label: Revenue,  expr: "sum(amount)",   format: "$#,##0" }
+    - { id: orders,  label: Orders,   expr: "count()",       format: "#,##0" }
+    - { id: units,   label: Units,    expr: "sum(quantity)", format: "#,##0" }
+    - { id: aov,     label: Avg order, expr: "measure(revenue) / measure(orders)", format: "$#,##0.00" }
+    - { id: share,   label: Share,    expr: "pctOfTotal(measure(revenue))", format: "0.0%" }
+    - { id: run,     label: Cumulative, expr: "runningSum(measure(revenue))", format: "$#,##0" }
+
+datasets:
+  totals:
+    measures: [revenue, orders, units, aov]
+
+  by_region:
+    dimensions: [region]
+    measures: [revenue, orders, share]
+    sort: [{ measure: revenue, dir: desc }]
+
+  by_category:
+    dimensions: [category]
+    measures: [revenue, units]
+    sort: [{ measure: revenue, dir: desc }]
+
+  by_month:
+    dimensions: [month]
+    measures: [revenue, run]
+    sort: [{ dimension: month, dir: asc }]
+
+  top_products:
+    dimensions: [product, category]
+    measures: [revenue, units, aov]
+    sort: [{ measure: revenue, dir: desc }]
+    limit: 15
+
+grid: { columns: 12, rowHeight: 76, gap: 12 }
+
+panels:
+  - { id: kpi_rev,   type: kpi, dataset: totals, layout: { x: 0, y: 0, w: 3, h: 2 }, props: { measure: revenue } }
+  - { id: kpi_ord,   type: kpi, dataset: totals, layout: { x: 3, y: 0, w: 3, h: 2 }, props: { measure: orders } }
+  - { id: kpi_units, type: kpi, dataset: totals, layout: { x: 6, y: 0, w: 3, h: 2 }, props: { measure: units } }
+  - { id: kpi_aov,   type: kpi, dataset: totals, layout: { x: 9, y: 0, w: 3, h: 2 }, props: { measure: aov } }
+
+  - id: trend
+    type: line
+    dataset: by_month
+    title: Revenue by month
+    layout: { x: 0, y: 2, w: 8, h: 4 }
+    props: { x: month, y: [revenue], area: true }
+
+  - id: regions
+    type: bar
+    dataset: by_region
+    title: Revenue by region
+    layout: { x: 8, y: 2, w: 4, h: 4 }
+    props: { category: region, value: revenue }
+
+  - id: categories
+    type: bar
+    dataset: by_category
+    title: Revenue by category
+    layout: { x: 0, y: 6, w: 4, h: 4 }
+    props: { category: category, value: revenue }
+
+  - id: products
+    type: table
+    dataset: top_products
+    title: Top products
+    layout: { x: 4, y: 6, w: 8, h: 4 }
+    props:
+      columns:
+        - { ref: product }
+        - { ref: category }
+        - { ref: revenue, align: right, bar: true }
+        - { ref: units, align: right }
+        - { ref: aov, align: right }
+
+interactions:
+  - { on: regions.click,     do: [{ action: filter, dimension: region, from: value }] }
+  - { on: categories.click,  do: [{ action: filter, dimension: category, from: value }] }
+  - { on: products.rowClick, do: [{ action: filter, dimension: product, from: row }] }

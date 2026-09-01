@@ -1,0 +1,26 @@
+name: Dependency review
+
+# Fails a pull request that pulls in a dependency with a known advisory, or one
+# whose licence does not fit an MIT project — before it is merged rather than
+# after somebody notices.
+on: [pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    # Needs **Settings -> Security -> Dependency graph** switched on, or the
+    # action stops with "Dependency review is not supported on this
+    # repository". That is free on a public repository and needs Advanced
+    # Security on a private one, so the visibility check keeps this quiet for
+    # anyone who forks the project somewhere private rather than handing them a
+    # check that cannot pass.
+    if: github.event.repository.visibility == 'public'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
+        with:
+          fail-on-severity: moderate
+          deny-licenses: AGPL-1.0-or-later, AGPL-3.0-or-later, GPL-2.0-or-later, GPL-3.0-or-later

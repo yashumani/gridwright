@@ -1,0 +1,21 @@
+{
+  "name": "@gridwright/playground",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "bundle": "vite build && node bundle.mjs"
+  },
+  "dependencies": {
+    "@gridwright/schema": "workspace:*",
+    "@gridwright/engine": "workspace:*",
+    "@gridwright/panels": "workspace:*",
+    "@gridwright/react": "workspace:*",
+    "@gridwright/builder": "workspace:*",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}
