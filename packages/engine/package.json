@@ -1,0 +1,51 @@
+{
+  "name": "@gridwright/engine",
+  "version": "0.1.0",
+  "description": "Query engine for Gridwright: plan compiler, star-schema joins, a columnar in-process executor and a DataSource seam for pushdown.",
+  "license": "MIT",
+  "author": "yashumani (https://github.com/yashumani)",
+  "homepage": "https://github.com/yashumani/gridwright#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yashumani/gridwright.git",
+    "directory": "packages/engine"
+  },
+  "bugs": "https://github.com/yashumani/gridwright/issues",
+  "keywords": [
+    "query-engine",
+    "olap",
+    "joins",
+    "columnar",
+    "csv",
+    "dashboard",
+    "analytics",
+    "declarative",
+    "manifest",
+    "gridwright"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "dependencies": {
+    "@gridwright/schema": "workspace:*",
+    "@gridwright/expr": "workspace:*"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

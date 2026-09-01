@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/yashumani/gridwright/security/advisories/new
+    about: Report privately, not in a public issue.
+  - name: Question or idea
+    url: https://github.com/yashumani/gridwright/discussions
+    about: For anything that is not yet a bug or a concrete request.

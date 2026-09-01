@@ -1,0 +1,40 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly, so a newly published query finds old code too, not just new commits.
+    - cron: "27 4 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    # Code scanning is free on public repositories and needs Advanced Security
+    # on private ones, so a private fork skips this rather than collecting a
+    # failure it can do nothing about.
+    if: github.event.repository.visibility == 'public'
+    permissions:
+      contents: read
+      security-events: write   # the only write this repository grants any workflow
+      actions: read
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: github/codeql-action/init@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
+        with:
+          languages: javascript-typescript
+          queries: security-extended
+
+      # No build step: the JS/TS extractor reads the source directly, and
+      # compiling first would only hide the .ts behind emitted .js.
+      - uses: github/codeql-action/analyze@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
+        with:
+          category: "/language:javascript-typescript"

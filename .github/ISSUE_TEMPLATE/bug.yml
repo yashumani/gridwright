@@ -1,0 +1,58 @@
+name: Bug report
+description: Something renders, calculates or validates wrongly.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A manifest that reproduces it is worth more than a description —
+        everything runs in a browser tab, so a small one is usually enough.
+
+        Found a security problem? Do not file it here. See
+        [SECURITY.md](https://github.com/yashumani/gridwright/blob/main/SECURITY.md).
+
+  - type: textarea
+    id: manifest
+    attributes:
+      label: The manifest
+      description: The smallest `.gw.yaml` that shows the problem.
+      render: yaml
+    validations:
+      required: true
+
+  - type: textarea
+    id: data
+    attributes:
+      label: The data
+      description: >
+        A few rows are usually enough — column names and types matter more than
+        volume. Please do not paste anything confidential.
+      render: text
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected, and what happened
+      description: Numbers if it is a calculation; a screenshot if it is a rendering.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where
+      multiple: true
+      options:
+        - The playground
+        - "`<Dashboard>` embedded in my own app"
+        - The builder
+        - The CLI
+        - A DataSource I wrote
+    validations:
+      required: true
+
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      placeholder: "gridwright 0.1.0, node 22.11, Chrome 141"
