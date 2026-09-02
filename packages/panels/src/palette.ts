@@ -431,6 +431,60 @@ export function checkPalette(colours: readonly string[], o: CheckOptions = {}): 
 }
 
 /**
+ * A sequential ramp in one hue: the scale magnitude is drawn on.
+ *
+ * Seven steps of one hue, lightness stepping monotonically and chroma growing
+ * as it darkens — which is what a saturated colour does as it deepens, and what
+ * makes the steps read as one scale rather than as seven colours.
+ *
+ * The direction flips per mode rather than being reused, because "more" means
+ * "further from the background": darker on a light surface, lighter on a dark
+ * one. A ramp that did not flip would put the cells that matter most closest to
+ * the surface and hide them.
+ */
+export function rampFrom(hex: string, mode: Mode = "light", steps = 7): string[] {
+  const { h } = oklch(hex);
+  // Two constraints pull against each other. Every adjacent pair has to stay
+  // above the ~0.06 lightness an eye needs to separate two shades of one hue,
+  // which wants a wide range; and the near end has to stay visible against the
+  // surface, which wants a narrow one — a step that matches the background is
+  // not a low value, it is a missing cell, and a heatmap must not confuse the
+  // two. These ends clear 1.4:1 at the near end with 0.075 between steps.
+  const [from, to] = mode === "light" ? [0.88, 0.42] : [0.34, 0.86];
+  return Array.from({ length: steps }, (_, i) => {
+    const t = steps > 1 ? i / (steps - 1) : 0;
+    // Chroma rises toward the far end, the way a colour deepens rather than
+    // just darkening — it is what makes the steps read as one scale.
+    return toHex({ l: from + (to - from) * t, c: 0.07 + 0.08 * t, h });
+  });
+}
+
+/**
+ * The ink to write on a given step of a ramp.
+ *
+ * Picking this by a threshold on the step index is the obvious approach and it
+ * is wrong twice over: the threshold is a guess, and the ramp runs the other way
+ * in dark mode, so the same rule that works on one surface inverts on the other.
+ * A label on a mid-blue cell came out at 2.33:1.
+ *
+ * Measuring is neither harder nor slower. Whichever of the two available inks
+ * stands further off the fill wins, and the answer is right for every step, in
+ * every mode, for any brand hue.
+ */
+export function inkFor(background: string, candidates: readonly string[]): string {
+  let best = candidates[0]!;
+  let bestRatio = -1;
+  for (const ink of candidates) {
+    const ratio = contrast(ink, background);
+    if (ratio > bestRatio) {
+      bestRatio = ratio;
+      best = ink;
+    }
+  }
+  return best;
+}
+
+/**
  * A brand palette made safe for both modes.
  *
  * Dark mode is not an automatic flip of the light one: the band is different and

@@ -44,8 +44,15 @@ describe("plan compilation", () => {
   });
 
   it("projects only the fields the query reads", () => {
-    const plan = compileDataset(m, "by_channel");
-    expect(plan.fields.sort()).toEqual(["amount", "channel"]);
+    // by_region groups one dimension and sums one column, so the plan must
+    // touch exactly two of the model's five fields.
+    const plan = compileDataset(m, "by_region");
+    expect(plan.fields.sort()).toEqual(["amount", "region"]);
+
+    // A dataset that measures more reads more: countIf(returned) pulls the
+    // boolean in, and nothing else.
+    expect(compileDataset(m, "by_channel").fields.sort())
+      .toEqual(["amount", "channel", "returned"]);
   });
 
   it("routes a sort on a post measure to the post tier", () => {

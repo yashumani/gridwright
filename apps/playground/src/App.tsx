@@ -383,6 +383,15 @@ export function App() {
                 <strong>Orders, customers and products</strong>
                 <span>Three files joined together, so you can slice orders by things stored elsewhere.</span>
               </button>
+              <button
+                type="button"
+                className="pg-example"
+                disabled={busy !== null}
+                onClick={() => void loadExample("chart-types.gw.yaml", ["sales.csv"])}
+              >
+                <strong>What each chart is for</strong>
+                <span>Every panel type, laid out to show which one answers which question.</span>
+              </button>
             </div>
           </div>
         </main>

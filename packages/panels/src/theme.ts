@@ -1,6 +1,6 @@
 import {
-  checkColour, checkPalette, derivePalette, oklch, parseHex, snapToPassing, toHex,
-  type Mode,
+  checkColour, checkPalette, derivePalette, inkFor, oklch, parseHex, rampFrom, snapToPassing,
+  toHex, type Mode,
 } from "./palette.js";
 
 /**
@@ -28,6 +28,56 @@ export const seriesVar = (index: number): string => `var(--gw-series-${(index % 
 
 /** A ninth series is never a generated hue; callers fold the tail into Other. */
 export const MAX_SERIES = 8;
+
+/** Steps in the sequential ramp. Enough to read a gradient, few enough to name. */
+export const RAMP_STEPS = 7;
+
+/**
+ * A step of the sequential ramp, from a fraction of the way along it.
+ *
+ * Magnitude is one hue getting darker, never a rainbow: a multi-hue scale
+ * invents an order the eye does not agree on, and the reader has to consult a
+ * legend to decode every cell. One hue needs no legend to learn — more is
+ * darker — which is what makes a grid of a few hundred cells readable at all.
+ *
+ * The steps are CSS variables so the ramp follows the theme's first colour, and
+ * so the whole thing re-anchors in dark mode: on a dark surface "more" is
+ * lighter, and a ramp that did not flip would put the most important cells
+ * closest to the background.
+ */
+const rampStep = (t: number): number => {
+  const clamped = Number.isFinite(t) ? Math.min(1, Math.max(0, t)) : 0;
+  return Math.min(RAMP_STEPS, Math.max(1, Math.round(clamped * (RAMP_STEPS - 1)) + 1));
+};
+
+export const rampVar = (t: number): string => `var(--gw-ramp-${rampStep(t)})`;
+
+/**
+ * The ink for whatever sits on that step.
+ *
+ * Which of the two inks reads on a given step is a property of the step, so it
+ * is computed alongside it and travels as its own variable — the component
+ * cannot work it out, because at render time the fill is a CSS variable whose
+ * value it has never seen. Deciding by a threshold on the step index instead
+ * looks equivalent and is not: the ramp runs the other way in dark mode, so one
+ * rule cannot serve both, and a mid-blue cell came out at 2.33:1.
+ */
+export const rampInkVar = (t: number): string => `var(--gw-ramp-${rampStep(t)}-ink)`;
+
+/**
+ * The two inks a label on a coloured fill may use.
+ *
+ * Pure black and pure white, not the theme's own ink and surface. Those are
+ * softened for reading long text on a plain background, and that softening is
+ * spent contrast — against a saturated fill, which is what a label on a chart
+ * actually sits on, the extremes are what clear the threshold. Measured across
+ * the whole hue circle in both modes: 4.58:1 at worst with these, 4.00:1 with
+ * the theme pair, and 4.5:1 is what normal-size text needs.
+ */
+export const INK_CANDIDATES: Record<Mode, readonly string[]> = {
+  light: ["#000000", "#ffffff"],
+  dark: ["#ffffff", "#000000"],
+};
 
 /**
  * A whole palette built from one brand colour.
@@ -148,14 +198,19 @@ export function seriesCss(colours: readonly string[] | undefined, scope: string)
   if (!clean.length) return "";
 
   const { light, dark } = derivePalette(clean);
-  const vars = (list: readonly string[]): string =>
-    list.map((c, i) => `--gw-series-${i + 1}:${c};`).join("");
+  // The heatmap's ramp follows the first colour too, so a brand theme reaches
+  // every chart rather than only the ones drawn in categorical hues.
+  const vars = (list: readonly string[], mode: Mode): string =>
+    list.map((c, i) => `--gw-series-${i + 1}:${c};`).join("") +
+    rampFrom(list[0]!, mode, RAMP_STEPS)
+      .map((c, i) => `--gw-ramp-${i + 1}:${c};--gw-ramp-${i + 1}-ink:${inkFor(c, INK_CANDIDATES[mode])};`)
+      .join("");
 
   const at = `[data-gw-theme="${id}"]`;
   return [
-    `${at}{${vars(light)}}`,
-    `@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) ${at}{${vars(dark)}}}`,
-    `:root[data-theme="dark"] ${at}{${vars(dark)}}`,
+    `${at}{${vars(light, "light")}}`,
+    `@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) ${at}{${vars(dark, "dark")}}}`,
+    `:root[data-theme="dark"] ${at}{${vars(dark, "dark")}}`,
   ].join("");
 }
 

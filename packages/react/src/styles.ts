@@ -27,6 +27,20 @@ export const styles = `
   --gw-series-6: #008300;
   --gw-series-7: #4a3aa7;
   --gw-series-8: #e34948;
+  --gw-ramp-1: #bedaff;
+  --gw-ramp-2: #9bc2f4;
+  --gw-ramp-3: #7ea9e3;
+  --gw-ramp-4: #6091d1;
+  --gw-ramp-5: #4379c0;
+  --gw-ramp-6: #2362ae;
+  --gw-ramp-7: #004b97;
+  --gw-ramp-1-ink: #000000;
+  --gw-ramp-2-ink: #000000;
+  --gw-ramp-3-ink: #000000;
+  --gw-ramp-4-ink: #000000;
+  --gw-ramp-5-ink: #000000;
+  --gw-ramp-6-ink: #ffffff;
+  --gw-ramp-7-ink: #ffffff;
 
   color: var(--gw-ink);
   background: var(--gw-surface-2);
@@ -58,6 +72,20 @@ export const styles = `
     --gw-series-6: #008300;
     --gw-series-7: #9085e9;
     --gw-series-8: #e66767;
+    --gw-ramp-1: #1e395b;
+    --gw-ramp-2: #2e507c;
+    --gw-ramp-3: #3f689e;
+    --gw-ramp-4: #5282c1;
+    --gw-ramp-5: #659ce5;
+    --gw-ramp-6: #82b8ff;
+    --gw-ramp-7: #b3d4ff;
+    --gw-ramp-1-ink: #ffffff;
+    --gw-ramp-2-ink: #ffffff;
+    --gw-ramp-3-ink: #ffffff;
+    --gw-ramp-4-ink: #000000;
+    --gw-ramp-5-ink: #000000;
+    --gw-ramp-6-ink: #000000;
+    --gw-ramp-7-ink: #000000;
   }
 }
 
@@ -81,6 +109,20 @@ export const styles = `
   --gw-series-6: #008300;
   --gw-series-7: #9085e9;
   --gw-series-8: #e66767;
+  --gw-ramp-1: #1e395b;
+  --gw-ramp-2: #2e507c;
+  --gw-ramp-3: #3f689e;
+  --gw-ramp-4: #5282c1;
+  --gw-ramp-5: #659ce5;
+  --gw-ramp-6: #82b8ff;
+  --gw-ramp-7: #b3d4ff;
+  --gw-ramp-1-ink: #ffffff;
+  --gw-ramp-2-ink: #ffffff;
+  --gw-ramp-3-ink: #ffffff;
+  --gw-ramp-4-ink: #000000;
+  --gw-ramp-5-ink: #000000;
+  --gw-ramp-6-ink: #000000;
+  --gw-ramp-7-ink: #000000;
 }
 
 .gw-root *, .gw-root *::before, .gw-root *::after { box-sizing: border-box; }
@@ -146,6 +188,19 @@ export const styles = `
 .gw-delta-down { color: var(--gw-bad); }
 .gw-delta-flat { color: var(--gw-ink-faint); }
 
+/* The sparkline is context, not the subject: a hairline in the series colour,
+   stretched to the tile's width so the shape reads at any panel size. It is
+   deliberately unlabelled — the number above it is the value, and a point label
+   on every month is the noise this is meant to replace. */
+.gw-spark { display: block; margin-top: 6px; overflow: visible; }
+.gw-spark-line {
+  stroke: var(--gw-series-1); stroke-width: 1.5;
+  stroke-linejoin: round; stroke-linecap: round;
+  /* preserveAspectRatio="none" stretches the geometry, which would stretch the
+     stroke with it and leave a line that is thick one way and thin the other. */
+  vector-effect: non-scaling-stroke;
+}
+
 .gw-table-wrap { height: 100%; overflow: auto; }
 .gw-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .gw-table th {
@@ -194,6 +249,50 @@ export const styles = `
   fill: var(--gw-ink); font-size: 11.5px; font-weight: 600;
   dominant-baseline: middle; font-variant-numeric: tabular-nums;
 }
+
+/* A heatmap cell carries its number as well as its shade wherever it fits.
+   Colour alone is not a value — two adjacent steps of a ramp are hard to
+   separate at the light end, and a reader with nothing else has no recourse. */
+.gw-cell { cursor: pointer; }
+.gw-cell:focus-visible { outline: 2px solid var(--gw-accent); outline-offset: 1px; }
+.gw-cell-fill { transition: opacity 120ms ease; }
+.gw-cell.gw-dim .gw-cell-fill { opacity: 0.3; }
+.gw-cell:hover .gw-cell-fill { opacity: 0.85; }
+.gw-cell.gw-on .gw-cell-fill { stroke: var(--gw-accent); stroke-width: 2; }
+/* The fill is set per cell from the ramp step's own ink variable, which was
+   chosen by measuring contrast against that step rather than by a threshold on
+   the step index — the ramp runs the other way in dark mode, so one threshold
+   cannot serve both. */
+.gw-cell-value {
+  font-size: 10.5px; font-weight: 600;
+  dominant-baseline: middle; font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+/* A combination the query returned no row for is an absence, not a zero. It is
+   drawn as a recess so the grid still reads as a grid. */
+.gw-cell-empty { fill: var(--gw-surface-2); }
+
+.gw-scale {
+  display: flex; align-items: center; gap: 8px; margin-top: 6px;
+  font-size: 10.5px; color: var(--gw-ink-faint); font-variant-numeric: tabular-nums;
+}
+.gw-scale-ramp {
+  flex: 1; height: 8px; border-radius: 4px;
+  background: linear-gradient(
+    to right,
+    var(--gw-ramp-1), var(--gw-ramp-2), var(--gw-ramp-3), var(--gw-ramp-4),
+    var(--gw-ramp-5), var(--gw-ramp-6), var(--gw-ramp-7)
+  );
+}
+
+/* Stacked bars: the whole bar is the click target, the segments are the hover
+   targets. A segment carries no stroke — the 2px surface gap between them is
+   the separator, because a border would add a colour nothing validated. */
+.gw-stack { cursor: pointer; }
+.gw-stack:focus-visible { outline: 2px solid var(--gw-accent); outline-offset: 1px; }
+.gw-stack-seg { transition: opacity 120ms ease; }
+.gw-stack.gw-dim .gw-stack-seg { opacity: 0.32; }
+.gw-stack:hover .gw-stack-seg { opacity: 0.88; }
 
 .gw-legend {
   display: flex; flex-wrap: wrap; gap: 4px 14px; list-style: none;

@@ -1,0 +1,126 @@
+gridwright: 1
+title: What each chart is for
+
+# The same data as sales-overview, laid out to show which form answers which
+# question. Every panel here is the right shape for its job — the point of the
+# example is the mapping, not the numbers.
+
+source:
+  kind: file
+  files:
+    - { id: sales, path: ./sales.csv, format: csv }
+
+model:
+  fields:
+    - { name: order_date, type: date,    from: sales.order_date }
+    - { name: region,     type: string,  from: sales.region }
+    - { name: channel,    type: string,  from: sales.channel }
+    - { name: amount,     type: number,  from: sales.amount }
+    - { name: returned,   type: boolean, from: sales.returned }
+
+  dimensions:
+    - { id: region,  field: region,     label: Region }
+    - { id: channel, field: channel,    label: Channel }
+    - { id: month,   field: order_date, label: Month, grain: month }
+
+  measures:
+    - { id: revenue, label: Revenue,   expr: "sum(amount)",       format: "$#,##0" }
+    - { id: orders,  label: Orders,    expr: "count()",           format: "#,##0" }
+    - { id: returns, label: Returns,   expr: "countIf(returned)", format: "#,##0" }
+    - { id: rtn_rate, label: Return rate,
+        expr: "measure(returns) / measure(orders)", format: "0.0%" }
+
+datasets:
+  by_month:
+    dimensions: [month]
+    measures: [revenue, orders, rtn_rate]
+    sort: [{ dimension: month, dir: asc }]
+
+  by_channel:
+    dimensions: [channel]
+    measures: [revenue, orders, returns]
+    sort: [{ measure: revenue, dir: desc }]
+
+  # Two dimensions at once. No other panel here can show this shape.
+  region_channel:
+    dimensions: [region, channel]
+    measures: [revenue, orders]
+    sort: [{ dimension: region, dir: asc }]
+
+grid: { columns: 12, rowHeight: 76, gap: 12 }
+
+panels:
+  # A single number. A chart drawn around one value is decoration; the shape
+  # behind it is what turns "where we are" into "how we got here".
+  - id: kpi_now
+    type: kpi
+    dataset: by_month
+    layout: { x: 0, y: 0, w: 4, h: 3 }
+    props: { measure: revenue, sparkline: true, caption: Latest month }
+
+  - id: kpi_rate
+    type: kpi
+    dataset: by_month
+    layout: { x: 4, y: 0, w: 4, h: 3 }
+    # Down is good here, so the arrow's colour has to be told that.
+    props: { measure: rtn_rate, sparkline: true, invertTrend: true, caption: Latest month }
+
+  # One series is the point and the rest are context: highlight it, recess the
+  # others. The most underused form there is — eight competing hues say "these
+  # are eight different things" when the story was "look at this one".
+  - id: leader
+    type: bar
+    dataset: by_channel
+    title: Direct leads on revenue
+    layout: { x: 8, y: 0, w: 4, h: 3 }
+    props: { category: channel, value: revenue, emphasise: Direct }
+
+  # Change over an ordered dimension. One y-axis, always.
+  - id: trend
+    type: line
+    dataset: by_month
+    title: Revenue by month
+    layout: { x: 0, y: 3, w: 8, h: 4 }
+    props: { x: month, y: [revenue], area: true }
+
+  # Magnitude across one dimension, sorted. Horizontal because the labels are
+  # words, and rotating words is how a bar chart becomes unreadable.
+  - id: ranked
+    type: bar
+    dataset: by_channel
+    title: Orders by channel
+    layout: { x: 8, y: 3, w: 4, h: 4 }
+    props: { category: channel, value: orders }
+
+  # Part-to-whole. The segments share a unit, which is what makes the stack mean
+  # anything: revenue on top of a count is metres plus seconds.
+  - id: mix
+    type: stack
+    dataset: by_channel
+    title: Orders and returns
+    layout: { x: 0, y: 7, w: 6, h: 5 }
+    props: { category: channel, values: [orders, returns] }
+
+  # The same bars normalised, which throws the totals away and makes the mix the
+  # only story. The total travels with each bar so the comparison stays honest.
+  - id: mix_share
+    type: stack
+    dataset: by_channel
+    title: The same, as a share
+    layout: { x: 6, y: 7, w: 6, h: 5 }
+    props: { category: channel, values: [orders, returns], mode: share }
+
+  # One number across two dimensions. Sequential colour — one hue, more is
+  # darker — because these cells differ in size, not in kind.
+  - id: grid_panel
+    type: heatmap
+    dataset: region_channel
+    title: Revenue by region and channel
+    layout: { x: 0, y: 12, w: 12, h: 6 }
+    props: { x: channel, y: region, value: revenue }
+
+interactions:
+  - on: ranked.click
+    do: [{ action: filter, dimension: channel, from: value }]
+  - on: grid_panel.click
+    do: [{ action: filter, dimension: channel, from: value }]
