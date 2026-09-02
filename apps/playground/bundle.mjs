@@ -31,7 +31,13 @@ const safe = (s) => s.replaceAll("</script", "<\\/script");
 // within the first 1024 bytes, which is why it leads.
 const html = `<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Gridwright Playground</title>
+<title>Gridwright playground</title>
+<meta name="description" content="Drop a CSV in the browser and get a working dashboard — cross-filtering, joins and all. Nothing is uploaded; every query runs in the tab.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Gridwright — dashboards from a manifest">
+<meta property="og:description" content="Drop a CSV in the browser and get a working dashboard — cross-filtering, joins and all. Nothing is uploaded; every query runs in the tab.">
+<meta property="og:image" content="https://raw.githubusercontent.com/yashumani/gridwright/main/docs/social-card.png">
+<meta name="twitter:card" content="summary_large_image">
 <style>
   :root { --boot-bg: #f5f7f6; --boot-ink: #15211f; }
   @media (prefers-color-scheme: dark) {

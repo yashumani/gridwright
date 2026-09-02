@@ -1,3 +1,5 @@
+![Gridwright](docs/social-card.png)
+
 # Gridwright
 
 **A schema-driven dashboard engine.** Write a manifest, get a working React
