@@ -213,6 +213,16 @@ export function App() {
     <div className="pg-root">
       <header className="pg-head">
         <div className="pg-brand">
+          {/* The mark is the product: a grid with one cell filled. Drawn inline
+              rather than fetched, because the standalone build promises no
+              network requests at all after load — a logo is not worth breaking
+              that for. */}
+          <svg className="pg-mark" viewBox="0 0 20 20" aria-hidden="true">
+            <rect x="1"  y="1"  width="8" height="8" rx="1.5" className="pg-mark-on" />
+            <rect x="11" y="1"  width="8" height="8" rx="1.5" />
+            <rect x="1"  y="11" width="8" height="8" rx="1.5" />
+            <rect x="11" y="11" width="8" height="8" rx="1.5" />
+          </svg>
           <strong>Gridwright</strong>
           <span>playground</span>
         </div>
@@ -339,7 +349,11 @@ export function App() {
           }}
         >
           <div className="pg-drop-inner">
-            <h1>Turn a spreadsheet into a dashboard</h1>
+            <p className="pg-eyebrow">Schema-driven dashboards</p>
+            <h1>
+              Turn a spreadsheet<br />
+              into a dashboard
+            </h1>
             <p className="pg-lede">
               Drop a CSV here. Gridwright reads the columns, works out what can be
               grouped and what can be counted, and builds you a dashboard you can
@@ -369,6 +383,7 @@ export function App() {
                 disabled={busy !== null}
                 onClick={() => void loadExample("sales-overview.gw.yaml", ["sales.csv"])}
               >
+                <span className="pg-example-mark pg-mark-flat" aria-hidden="true" />
                 <strong>Sales overview</strong>
                 <span>2,694 orders in one file. Revenue by month, channel and region.</span>
               </button>
@@ -380,6 +395,7 @@ export function App() {
                   void loadExample("orders-star.gw.yaml", ["orders.csv", "customers.csv", "products.csv"])
                 }
               >
+                <span className="pg-example-mark pg-mark-join" aria-hidden="true" />
                 <strong>Orders, customers and products</strong>
                 <span>Three files joined together, so you can slice orders by things stored elsewhere.</span>
               </button>
@@ -389,6 +405,7 @@ export function App() {
                 disabled={busy !== null}
                 onClick={() => void loadExample("chart-types.gw.yaml", ["sales.csv"])}
               >
+                <span className="pg-example-mark pg-mark-forms" aria-hidden="true" />
                 <strong>What each chart is for</strong>
                 <span>Every panel type, laid out to show which one answers which question.</span>
               </button>
