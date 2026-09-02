@@ -234,6 +234,9 @@ export const styles = `
 .gw-grid-line, .gw-grid { stroke: var(--gw-rule); stroke-width: 1; }
 .gw-axis { fill: var(--gw-ink-faint); font-size: 10.5px; }
 .gw-crosshair { stroke: var(--gw-ink-faint); stroke-width: 1; stroke-dasharray: 3 3; }
+/* A chart you can tab to has to say so when you get there. */
+.gw-focusable:focus { outline: none; }
+.gw-focusable:focus-visible { outline: 2px solid var(--gw-accent); outline-offset: 2px; border-radius: 4px; }
 .gw-series-label { fill: var(--gw-ink-soft); font-size: 11px; font-weight: 600; }
 .gw-marker { stroke: var(--gw-surface); stroke-width: 2; }
 .gw-marker-on { stroke-width: 2.5; }

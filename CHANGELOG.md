@@ -29,6 +29,35 @@ documented types, and the internals of every package below `@gridwright/react`.
 
 ### Added
 
+- **Drag panels around the canvas.** A grip to move, eight handles to resize,
+  snapping to the grid, a ghost showing where a panel will land, and a drop that
+  pushes what it lands on down then settles everything up into the space that
+  leaves. Arrows nudge the selected panel, shift+arrows resize it. The whole
+  gesture is one undo step.
+- **Two new panel types.** `stack` for part-to-whole, with a `share` mode that
+  normalises every bar — and a note when the segments turn out to be measured in
+  different units, because revenue stacked on an order count is metres plus
+  seconds. `heatmap` for one number across two dimensions, shaded with a
+  sequential ramp that follows the theme and re-anchors in dark mode. See
+  [Panels](docs/panels.md).
+- **`emphasise` on the bar chart** — one category in the accent colour, the rest
+  recessed. When the story is "this one went up", a chart where every bar
+  competes buries it.
+- **`sparkline` on the KPI**, drawing the measure's own history behind the
+  number. With a series present the headline is now its last point rather than
+  its first: a KPI beside a trend means "now".
+- **Brand colours.** `theme.colors` has been in the schema since v1 and nothing
+  read it; it now repaints every chart, and the builder has a tab for editing it.
+  Each colour is measured — lightness against the surface, chroma, separation
+  from its neighbour under simulated colour blindness, contrast — and anything
+  that fails is named in words with a one-click fix in the same hue. "Build from
+  your brand colour" turns one hex into a whole validated palette.
+- **A third worked example**, [`chart-types.gw.yaml`](examples/chart-types.gw.yaml),
+  laying every panel type out beside the question it answers.
+- **Keyboard access to a line chart's values.** Arrows walk the points, Home and
+  End jump to the ends; the readout is a live region, so what appears on screen
+  is what a screen reader is told. Previously a crosshair was the only way to get
+  a number out of it, and the crosshair needed a mouse.
 - **A dashboard from a bare CSV.** Drop a spreadsheet with no manifest and
   `inferManifest` writes one: it sniffs each column's type, picks the columns
   worth grouping by and the ones worth adding up, and lays out KPIs, a trend, bar
@@ -58,6 +87,19 @@ documented types, and the internals of every package below `@gridwright/react`.
 
 ### Changed
 
+- **Selecting a panel asks its own question first, in words.** A bar chart
+  offered eleven controls in schema order — X, Y, W, H, "Category", "Value",
+  "Orientation", "Show Values", "Max Bars" — all weighted the same. It now leads
+  with the two that decide what the chart draws and folds the rest, including the
+  layout numbers, behind one disclosure. Props carry their own labels via JSON
+  Schema's `title`, so "Show Values" is "Show the numbers".
+- **A field that names a column is a dropdown of your own labels**, not a
+  free-text box with a datalist. It is narrowed to what the field accepts, so a
+  category picker no longer offers measures, and a value the dataset does not
+  have stays selected and says so rather than silently blanking.
+- **The playground serves `examples/` directly.** It served copies out of
+  `apps/playground/public/`, which had drifted from the originals the tests and
+  the CLI validate.
 - **The builder names an untitled panel by what it draws.** A list reading
   `kpi_rev`, `kpi_rtn`, `detail` is legible to whoever wrote the manifest and to
   nobody else — and for an inferred manifest, to nobody at all.
@@ -71,6 +113,11 @@ documented types, and the internals of every package below `@gridwright/react`.
 
 ### Fixed
 
+- **A heatmap cell's number could fall to 2.33:1 against its own fill.** The ink
+  was picked by a threshold on the ramp step, and the ramp runs the other way in
+  dark mode, so one threshold could not serve both. It is now chosen by measuring
+  contrast against the step; worst case across the whole hue circle in both
+  modes is 4.58:1.
 - **The standalone build had no `<meta charset>`.** Opened over `file://` there
   is no header to say what the bytes mean, so the browser fell back to a legacy
   encoding and every em-dash, ellipsis and `×` in the app rendered as mojibake.

@@ -92,8 +92,17 @@ under a null group rather than vanishing from the totals. → [Joins](docs/joins
 
 **The whole manifest is editable visually**, not just the panels — fields,
 dimensions, measures, datasets and relations, with expressions validating as you
-type. Export keeps the comments of the file it was opened from, so an engineer's
-YAML and an analyst's edits can share one file. → [Architecture](docs/architecture.md#the-builder)
+type. Panels drag and resize on the grid rather than being positioned by typing
+four numbers. Export keeps the comments of the file it was opened from, so an
+engineer's YAML and an analyst's edits can share one file.
+→ [Architecture](docs/architecture.md#the-builder)
+
+**Your colours, checked rather than trusted.** Give it one brand hex and it
+builds a whole palette at the spacing that keeps series apart; paste a set and
+anything that would vanish into the background, read as grey, or be
+indistinguishable from its neighbour under colour blindness is named in words,
+with a one-click fix in the same hue. Nothing is refused — you just find out
+before you publish. → [Panels](docs/panels.md#colour)
 
 **Files stream into columns.** A 350 MB CSV never exists as one JavaScript
 string. Measured: 5M rows group in 1.8 s and cross-filter in 0.2 s. The honest
@@ -133,7 +142,7 @@ if (r.ok) return <Dashboard manifest={r.manifest} source={r.source} />;
 
 ## Status
 
-**Pre-1.0, and honest about it.** 402 tests, two worked examples, and a
+**Pre-1.0, and honest about it.** 496 tests, two worked examples, and a
 [changelog](CHANGELOG.md) that says what you can rely on. What is deliberately
 not here:
 
