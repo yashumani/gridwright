@@ -23,13 +23,13 @@ describe("validate", () => {
     const r = await run("validate", REF);
     expect(r.code, text(r.err)).toBe(0);
     expect(text(r.out)).toContain("✓");
-    expect(text(r.out)).toContain("4 datasets");
+    expect(text(r.out)).toContain("5 datasets");
   });
 
   it("runs every dataset with --data", async () => {
     const r = await run("validate", REF, "--data");
     expect(r.code, text(r.err)).toBe(0);
-    for (const name of ["totals", "by_region", "by_month", "by_channel"]) {
+    for (const name of ["totals", "by_region", "by_month", "by_channel", "region_channel"]) {
       expect(text(r.out)).toContain(name);
     }
     expect(text(r.out)).toMatch(/\d+ rows? in \d+ms/);

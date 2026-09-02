@@ -242,6 +242,120 @@ describe("cross-filtering", () => {
   });
 });
 
+describe("the newer chart forms", () => {
+  /** Swaps one panel for another type, keeping everything else the same. */
+  async function withPanel(type: string, props: Record<string, unknown>, dataset = "by_channel") {
+    const { manifest, source } = fixture();
+    manifest.panels = [{
+      id: "p", type, dataset, layout: { x: 0, y: 0, w: 12, h: 6 }, props,
+    }];
+    manifest.interactions = [];
+    render(<Dashboard manifest={manifest} source={source} store={new FilterStore()} />);
+    await waitFor(() => expect(screen.queryByText("Updating…")).not.toBeInTheDocument());
+  }
+
+  it("stacks segments to the full width of the bar in share mode", async () => {
+    await withPanel("stack", { category: "channel", values: ["revenue", "orders"], mode: "share" });
+    const bars = document.querySelectorAll(".gw-stack");
+    expect(bars.length).toBeGreaterThan(1);
+    for (const bar of bars) {
+      const widths = [...bar.querySelectorAll("rect")].map((r) => Number(r.getAttribute("width")));
+      const total = widths.reduce((a, b) => a + b, 0);
+      // Every bar normalises to the same length; only the split differs.
+      expect(total).toBeGreaterThan(0);
+    }
+    const totals = [...bars].map((b) =>
+      [...b.querySelectorAll("rect")].reduce((a, r) => a + Number(r.getAttribute("width")), 0));
+    // Within the 2px gap per segment.
+    expect(Math.max(...totals) - Math.min(...totals)).toBeLessThan(3);
+  });
+
+  it("keeps the totals comparable when it is not normalising", async () => {
+    await withPanel("stack", { category: "channel", values: ["revenue", "orders"] });
+    const totals = [...document.querySelectorAll(".gw-stack")].map((b) =>
+      [...b.querySelectorAll("rect")].reduce((a, r) => a + Number(r.getAttribute("width")), 0));
+    // Channels differ in revenue, so the bars must differ in length.
+    expect(Math.max(...totals) - Math.min(...totals)).toBeGreaterThan(3);
+  });
+
+  it("names every segment, so identity is never colour alone", async () => {
+    await withPanel("stack", { category: "channel", values: ["revenue", "orders"] });
+    const legend = [...document.querySelectorAll(".gw-legend li")].map((l) => l.textContent);
+    expect(legend).toEqual(["Revenue", "Orders"]);
+  });
+
+  it("draws a heatmap cell per combination the query returned", async () => {
+    const { manifest, source } = fixture();
+    manifest.datasets["grid"] = {
+      dimensions: ["region", "channel"],
+      measures: ["revenue"],
+      sort: [{ dimension: "region", dir: "asc" }],
+    };
+    manifest.panels = [{
+      id: "h", type: "heatmap", dataset: "grid",
+      layout: { x: 0, y: 0, w: 12, h: 6 },
+      props: { x: "channel", y: "region", value: "revenue" },
+    }];
+    manifest.interactions = [];
+    render(<Dashboard manifest={manifest} source={source} store={new FilterStore()} />);
+    await waitFor(() => expect(screen.queryByText("Updating…")).not.toBeInTheDocument());
+
+    // 5 regions × 4 channels in the reference data.
+    expect(document.querySelectorAll(".gw-cell").length).toBe(20);
+    // Shade comes from the ramp, never from a categorical hue: magnitude is not
+    // identity, and a rainbow invents an order the eye does not agree on.
+    const fills = [...document.querySelectorAll(".gw-cell-fill")]
+      .map((c) => c.getAttribute("fill"));
+    expect(fills.every((f) => f?.startsWith("var(--gw-ramp-"))).toBe(true);
+    // And every cell says its number as well as its shade.
+    expect(document.querySelectorAll(".gw-cell-value").length).toBe(20);
+  });
+
+  it("recesses everything but the highlighted bar", async () => {
+    await withPanel("bar", { category: "channel", value: "revenue", emphasise: "Direct" });
+    const lead = document.querySelectorAll(".gw-bar.gw-on");
+    const rest = document.querySelectorAll(".gw-bar.gw-dim");
+    expect(lead).toHaveLength(1);
+    expect(rest.length).toBeGreaterThan(0);
+    expect(lead[0]!.querySelector(".gw-bar-label")?.textContent).toBe("Direct");
+  });
+
+  it("leaves every bar equal when nothing is highlighted", async () => {
+    await withPanel("bar", { category: "channel", value: "revenue" });
+    expect(document.querySelectorAll(".gw-bar.gw-dim")).toHaveLength(0);
+    expect(document.querySelectorAll(".gw-bar.gw-on")).toHaveLength(0);
+  });
+
+  it("draws a sparkline from the measure's own series", async () => {
+    await withPanel("kpi", { measure: "revenue", sparkline: true }, "by_month");
+    const path = document.querySelector(".gw-spark-line");
+    expect(path).toBeTruthy();
+    // 24 months in the reference data, so 24 points.
+    expect(path!.getAttribute("d")!.match(/[ML]/g)).toHaveLength(24);
+  });
+
+  it("draws no sparkline where there is no series to draw", async () => {
+    // A totals dataset is one row. Two points is a segment, not a trend.
+    await withPanel("kpi", { measure: "revenue", sparkline: true }, "totals");
+    expect(document.querySelector(".gw-spark-line")).toBeNull();
+    // The number is still there — the option degrades rather than failing.
+    expect(document.querySelector(".gw-kpi-value")?.textContent).toMatch(/\$/);
+  });
+
+  it("reads the last point of a series, not the first", async () => {
+    // A KPI beside a trend means "now", not "when the window opened". The two
+    // months differ by fifty thousand, so reading the wrong end is not a
+    // rounding difference — it is a different number on the dashboard.
+    await withPanel("kpi", { measure: "revenue" }, "by_month");
+    expect(document.querySelector(".gw-kpi-value")!.textContent).toBe("$221,948");
+
+    // And a single-row dataset still reads that row.
+    cleanup();
+    await withPanel("kpi", { measure: "revenue" }, "totals");
+    expect(document.querySelector(".gw-kpi-value")!.textContent).toBe("$4,282,970");
+  });
+});
+
 describe("misconfiguration is contained", () => {
   it("reports an unknown panel type without taking the dashboard down", async () => {
     const { manifest, source } = fixture();
@@ -381,7 +495,8 @@ describe("accessibility", () => {
 
 describe("registry", () => {
   it("lists the built-in panel types", () => {
-    expect(defaultRegistry().types()).toEqual(["bar", "kpi", "line", "table"]);
+    expect(defaultRegistry().types())
+      .toEqual(["bar", "heatmap", "kpi", "line", "stack", "table"]);
   });
 
   it("accepts a custom panel type", () => {

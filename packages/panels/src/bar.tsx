@@ -20,6 +20,16 @@ export interface BarProps {
   /** Direct value labels. On by default — they carry the relief rule. */
   showValues?: boolean;
   maxBars?: number;
+  /**
+   * One category drawn in the accent colour, the rest in gray.
+   *
+   * The most underused form there is. When the story is "this one went up", a
+   * chart where every bar competes for attention buries it — eight hues say
+   * "these are eight different things" when what you meant was "look at this
+   * one". Highlighting one and recessing the rest says it in the encoding
+   * rather than in a caption nobody reads.
+   */
+  emphasise?: string;
 }
 
 const schema = obj({
@@ -28,6 +38,7 @@ const schema = obj({
   orientation: described(opt(enum_(["horizontal", "vertical"] as const)), { title: "Bar direction" }),
   showValues: described(opt(bool()), { title: "Show the numbers" }),
   maxBars: described(opt(num({ integer: true, min: 1, max: 200 })), { title: "Most bars to show" }),
+  emphasise: described(opt(str({ minLength: 1 })), { title: "Highlight one" }),
 });
 
 /**
@@ -109,7 +120,14 @@ function Bar({ result, props, size, select, selected, locale }: PanelProps<BarPr
       >
         {numbers.map((v, i) => {
           const on = isSelected(selected, category.id, labels[i] ?? null);
-          const dim = selectedAny(selected, category.id) && !on;
+          // Emphasis and selection are the same visual language — one bar
+          // forward, the rest back — so a selection simply overrides the
+          // configured highlight rather than fighting it.
+          const highlighted = props.emphasise !== undefined
+            && String(labels[i] ?? "") === props.emphasise;
+          const anySelected = selectedAny(selected, category.id);
+          const dim = anySelected ? !on : props.emphasise !== undefined && !highlighted;
+          const lead = anySelected ? on : highlighted;
           const length = (v / max) * (horizontal ? plotW : plotH);
           const x = horizontal ? LABEL_GUTTER : i * band + GAP / 2;
           const y = horizontal ? i * band + GAP / 2 : plotH - length;
@@ -119,7 +137,7 @@ function Bar({ result, props, size, select, selected, locale }: PanelProps<BarPr
           return (
             <g
               key={i}
-              className={`gw-bar${on ? " gw-on" : ""}${dim ? " gw-dim" : ""}`}
+              className={`gw-bar${lead ? " gw-on" : ""}${dim ? " gw-dim" : ""}`}
               onMouseEnter={() => setHover(i)}
               onMouseLeave={() => setHover(null)}
               onClick={() => select(category.id, labels[i] ?? null, resultRow(result, i))}

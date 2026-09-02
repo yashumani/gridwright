@@ -19,5 +19,10 @@ export default defineConfig({
       "@gridwright/builder": pkg("builder"),
     },
   },
+  // The examples are served straight out of examples/ rather than copied into
+  // a public/ folder. The copies had already drifted — the one the playground
+  // served was three days behind the one the tests and the CLI validate — and
+  // a second source of truth for a file nobody edits twice is a bug waiting.
+  publicDir: fileURLToPath(new URL("../../examples", import.meta.url)),
   build: { outDir: "dist", emptyOutDir: true },
 });

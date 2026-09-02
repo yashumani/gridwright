@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   PRESETS, SERIES_DARK, SERIES_LIGHT, checkColour, checkPalette, contrast, derivePalette,
-  distance, oklch, paletteFromBrand, parseHex, parsePalette, seriesCss, snapToPassing, toHex,
+  INK_CANDIDATES, distance, inkFor, oklch, paletteFromBrand, parseHex, parsePalette,
+  rampFrom, seriesCss, snapToPassing, toHex,
 } from "@gridwright/panels";
 
 describe("reading a hex", () => {
@@ -358,6 +359,84 @@ describe("the starting sets", () => {
         const r = checkColour(hex, { mode: "dark" });
         expect(r.verdict, `${key} ${hex}: ${r.problems.join("; ")}`).not.toBe("fail");
       }
+    }
+  });
+});
+
+describe("the sequential ramp", () => {
+  it("steps monotonically, far enough apart to see", () => {
+    for (const mode of ["light", "dark"] as const) {
+      const ramp = rampFrom("#2a78d6", mode);
+      const ls = ramp.map((h) => oklch(h).l);
+      const rising = mode === "dark";
+      for (let i = 1; i < ls.length; i++) {
+        expect(rising ? ls[i]! > ls[i - 1]! : ls[i]! < ls[i - 1]!, `${mode} step ${i}`).toBe(true);
+        // Below about 0.06 two shades of one hue stop being separable.
+        expect(Math.abs(ls[i]! - ls[i - 1]!), `${mode} step ${i}`).toBeGreaterThan(0.06);
+      }
+    }
+  });
+
+  it("keeps one hue from end to end — a rainbow invents an order", () => {
+    // Hue is an angle, so the difference is around the circle: a ramp near red
+    // has steps at 359° and 1°, which are two degrees apart and not 358.
+    const apart = (a: number, b: number): number => {
+      const d = Math.abs(a - b) % 360;
+      return d > 180 ? 360 - d : d;
+    };
+    for (const seed of ["#eb6834", "#e34948", "#2a78d6"]) {
+      const hues = rampFrom(seed).map((h) => oklch(h).h);
+      // Some drift is inevitable: a step whose chroma the screen cannot show
+      // gets clamped, and eight-bit rounding moves the angle a little. Two
+      // degrees is far below anything an eye reads as a different colour.
+      for (const h of hues) expect(apart(h, hues[0]!), seed).toBeLessThan(2);
+    }
+  });
+
+  it("runs the other way in dark mode, because more means further from the surface", () => {
+    expect(oklch(rampFrom("#2a78d6", "light")[0]!).l)
+      .toBeGreaterThan(oklch(rampFrom("#2a78d6", "light")[6]!).l);
+    expect(oklch(rampFrom("#2a78d6", "dark")[0]!).l)
+      .toBeLessThan(oklch(rampFrom("#2a78d6", "dark")[6]!).l);
+  });
+
+  it("stays visible against the surface at the near end", () => {
+    // A step that matches the background is not a low value, it is a missing
+    // cell, and a heatmap must not conflate the two.
+    expect(contrast(rampFrom("#2a78d6", "light")[0]!, "#ffffff")).toBeGreaterThan(1.35);
+    expect(contrast(rampFrom("#2a78d6", "dark")[0]!, "#171f1e")).toBeGreaterThan(1.35);
+  });
+
+  it("gives every step an ink that is readable on it", () => {
+    // Chosen by measuring, not by a threshold on the step index: the ramp
+    // inverts between modes, so one threshold cannot serve both. A mid-blue
+    // cell in dark mode came out at 2.33:1 under the threshold version.
+    for (const mode of ["light", "dark"] as const) {
+      for (const step of rampFrom("#2a78d6", mode)) {
+        const ink = inkFor(step, INK_CANDIDATES[mode]);
+        expect(contrast(step, ink), `${mode} ${step}`).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
+
+  it("holds up for any brand hue, not just the default", () => {
+    for (let h = 0; h < 360; h += 30) {
+      const seed = toHex({ l: 0.55, c: 0.15, h });
+      for (const mode of ["light", "dark"] as const) {
+        for (const step of rampFrom(seed, mode)) {
+          const ink = inkFor(step, INK_CANDIDATES[mode]);
+          // 4.5:1 is what normal-size text needs, and it holds for every hue.
+          expect(contrast(step, ink), `${mode} ${seed} ${step}`).toBeGreaterThanOrEqual(4.5);
+        }
+      }
+    }
+  });
+
+  it("emits an ink beside every step in the theme stylesheet", () => {
+    const css = seriesCss(["#7a1fa2"], "abc");
+    for (let i = 1; i <= 7; i++) {
+      expect(css).toContain(`--gw-ramp-${i}:`);
+      expect(css).toContain(`--gw-ramp-${i}-ink:`);
     }
   });
 });

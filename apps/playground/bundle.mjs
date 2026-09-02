@@ -11,6 +11,7 @@ const js = readFileSync(join(dist, "assets", assets.find((f) => f.endsWith(".js"
 
 const files = [
   "sales-overview.gw.yaml", "sales.csv",
+  "chart-types.gw.yaml",
   "orders-star.gw.yaml", "orders.csv", "customers.csv", "products.csv",
 ];
 const embedded = Object.fromEntries(

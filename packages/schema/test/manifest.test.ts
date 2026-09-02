@@ -30,7 +30,8 @@ describe("reference manifest", () => {
 
   it("exposes every declared panel type and dataset", () => {
     const m = good();
-    expect(Object.keys(m.datasets)).toEqual(["totals", "by_region", "by_month", "by_channel"]);
+    expect(Object.keys(m.datasets))
+      .toEqual(["totals", "by_region", "by_month", "by_channel", "region_channel"]);
     expect(m.panels.map((p: any) => p.type).sort()).toEqual(
       ["bar", "kpi", "kpi", "kpi", "kpi", "line", "table"].sort(),
     );
