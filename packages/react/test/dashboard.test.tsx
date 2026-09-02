@@ -356,6 +356,61 @@ describe("the newer chart forms", () => {
   });
 });
 
+describe("reading a value without a mouse", () => {
+  it("walks the line chart's points with the arrow keys", async () => {
+    await mount();
+    const svg = document.querySelector('[data-panel="trend"] .gw-svg') as SVGElement;
+    expect(svg.getAttribute("tabindex")).toBe("0");
+
+    // Focus lands on the most recent point, because that is the one people
+    // came to read.
+    await act(async () => { fireEvent.focus(svg); });
+    const last = document.querySelector('[data-panel="trend"] .gw-tip')!.textContent;
+    expect(last).toBeTruthy();
+
+    await act(async () => { fireEvent.keyDown(svg, { key: "Home" }); });
+    const first = document.querySelector('[data-panel="trend"] .gw-tip')!.textContent;
+    expect(first).not.toBe(last);
+
+    await act(async () => { fireEvent.keyDown(svg, { key: "ArrowRight" }); });
+    expect(document.querySelector('[data-panel="trend"] .gw-tip')!.textContent).not.toBe(first);
+
+    await act(async () => { fireEvent.keyDown(svg, { key: "End" }); });
+    expect(document.querySelector('[data-panel="trend"] .gw-tip')!.textContent).toBe(last);
+  });
+
+  it("stops at both ends rather than wrapping", async () => {
+    await mount();
+    const svg = document.querySelector('[data-panel="trend"] .gw-svg') as SVGElement;
+    await act(async () => { fireEvent.focus(svg); fireEvent.keyDown(svg, { key: "Home" }); });
+    const first = document.querySelector('[data-panel="trend"] .gw-tip')!.textContent;
+    await act(async () => {
+      for (let i = 0; i < 5; i++) fireEvent.keyDown(svg, { key: "ArrowLeft" });
+    });
+    expect(document.querySelector('[data-panel="trend"] .gw-tip')!.textContent).toBe(first);
+  });
+
+  it("announces what it shows, rather than only drawing it", async () => {
+    // The tip is a live region, so what appears for a sighted reader is what a
+    // screen reader is told.
+    await mount();
+    const svg = document.querySelector('[data-panel="trend"] .gw-svg') as SVGElement;
+    await act(async () => { fireEvent.focus(svg); });
+    const tip = document.querySelector('[data-panel="trend"] .gw-tip')!;
+    expect(tip.getAttribute("role")).toBe("status");
+    expect(tip.textContent).toMatch(/Revenue/);
+  });
+
+  it("lets go of the readout when focus leaves", async () => {
+    await mount();
+    const svg = document.querySelector('[data-panel="trend"] .gw-svg') as SVGElement;
+    await act(async () => { fireEvent.focus(svg); });
+    expect(document.querySelector('[data-panel="trend"] .gw-tip')).toBeTruthy();
+    await act(async () => { fireEvent.blur(svg); });
+    expect(document.querySelector('[data-panel="trend"] .gw-tip')).toBeNull();
+  });
+});
+
 describe("misconfiguration is contained", () => {
   it("reports an unknown panel type without taking the dashboard down", async () => {
     const { manifest, source } = fixture();

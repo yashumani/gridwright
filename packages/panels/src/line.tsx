@@ -74,13 +74,38 @@ function Line({ result, props, size, locale }: PanelProps<LineProps>) {
         height={height}
         role="img"
         aria-label={`${series.map((s) => s.label).join(", ")} by ${x.label}`}
-        className="gw-svg"
+        className="gw-svg gw-focusable"
+        /*
+         * The keyboard reaches the same readout the pointer does.
+         *
+         * Without this a line chart is a picture: the crosshair was the only
+         * way to get a number out of it, and the crosshair needed a mouse.
+         * Arrows walk the points, Home and End jump to the ends, and the tip is
+         * a live region, so what a sighted reader sees appear is what a screen
+         * reader announces.
+         */
+        tabIndex={0}
         onMouseLeave={() => setHover(null)}
         onMouseMove={(e) => {
           const box = e.currentTarget.getBoundingClientRect();
           const rel = e.clientX - box.left - PAD.left;
           const i = n === 1 ? 0 : Math.round((rel / plotW) * (n - 1));
           setHover(i >= 0 && i < n ? i : null);
+        }}
+        onFocus={() => setHover((h) => h ?? n - 1)}
+        onBlur={() => setHover(null)}
+        onKeyDown={(e) => {
+          const step: Record<string, (h: number | null) => number | null> = {
+            ArrowRight: (h) => Math.min(n - 1, (h ?? -1) + 1),
+            ArrowLeft: (h) => Math.max(0, (h ?? n) - 1),
+            Home: () => 0,
+            End: () => n - 1,
+            Escape: () => null,
+          };
+          const next = step[e.key];
+          if (!next) return;
+          e.preventDefault();
+          setHover(next);
         }}
       >
         {ticks.map((t, i) => (
