@@ -113,6 +113,19 @@ documented types, and the internals of every package below `@gridwright/react`.
 
 ### Fixed
 
+- **`theme.colors` accepted hex the palette could not read.** The schema pattern
+  allowed 3 to 8 digits, but a colour is measured by a parser that takes 3 or 6;
+  a four- or eight-digit value carries alpha, which the palette maths has no way
+  to represent, and five or seven digits are not a colour in any notation. All of
+  them validated and then threw out of the Colours tab, several files from where
+  the mistake was made. The schema now states what is actually accepted, so the
+  failure arrives at validation with a message that names the field.
+- **A new panel was invisible to review.** `heatmap.tsx` used a literal NUL as a
+  Map key separator, which makes git classify the file as binary — 273 lines
+  rendered as "Binary files differ" in the diff that introduced them. It is
+  written as an escape now (the same string at runtime), and a test walks every
+  source file for stray control characters, because this is the second time the
+  project has hit it.
 - **A heatmap cell's number could fall to 2.33:1 against its own fill.** The ink
   was picked by a threshold on the ramp step, and the ramp runs the other way in
   dark mode, so one threshold could not serve both. It is now chosen by measuring

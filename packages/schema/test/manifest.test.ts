@@ -76,6 +76,12 @@ const REJECTIONS: Array<[name: string, mutate: (m: any) => void, path: string]> 
   ["unknown action verb", (m) => { m.interactions[0].do = [{ action: "drop" }]; }, "interactions[0].do[0].action"],
   ["filter on dimension the panel cannot emit", (m) => { m.interactions[0].do[0].dimension = "channel"; }, "interactions[0].do[0].dimension"],
   ["bad hex colour", (m) => { m.theme = { colors: ["rebeccapurple"] }; }, "theme.colors[0]"],
+  // Four- and eight-digit hex carry alpha, which the palette maths cannot
+  // represent; five and seven digits are not a colour in any notation. All
+  // of these used to validate and then throw when the palette was measured.
+  ["hex colour with alpha", (m) => { m.theme = { colors: ["#1234"] }; }, "theme.colors[0]"],
+  ["eight-digit hex colour", (m) => { m.theme = { colors: ["#12345678"] }; }, "theme.colors[0]"],
+  ["five-digit hex colour", (m) => { m.theme = { colors: ["#12345"] }; }, "theme.colors[0]"],
   ["reserved dimension id", (m) => { m.model.dimensions[0].id = "__proto__"; }, "model.dimensions[0].id"],
   ["reserved measure id", (m) => { m.model.measures[0].id = "constructor"; }, "model.measures[0].id"],
   ["reserved dataset key", (m) => {
