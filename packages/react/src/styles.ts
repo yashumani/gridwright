@@ -177,9 +177,9 @@ export const styles = `
   text-transform: uppercase; color: var(--gw-ink-faint);
 }
 .gw-kpi-value {
-  font-size: clamp(20px, 2.4vw, 30px); font-weight: 650;
-  letter-spacing: -0.02em; line-height: 1.15; margin-top: 2px;
-  font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis;
+  font-size: clamp(22px, 2.6vw, 34px); font-weight: 640;
+  letter-spacing: -0.025em; line-height: 1.1; margin-top: 3px;
+  overflow: hidden; text-overflow: ellipsis;
 }
 .gw-kpi-foot { display: flex; align-items: baseline; gap: 8px; margin-top: 4px; font-size: 12.5px; }
 .gw-kpi-caption { color: var(--gw-ink-faint); }
@@ -231,7 +231,7 @@ export const styles = `
 
 .gw-chart { position: relative; width: 100%; height: 100%; }
 .gw-svg { display: block; overflow: visible; }
-.gw-grid-line, .gw-grid { stroke: var(--gw-rule); stroke-width: 1; }
+.gw-grid-line { stroke: var(--gw-rule); stroke-width: 1; }
 .gw-axis { fill: var(--gw-ink-faint); font-size: 10.5px; }
 .gw-crosshair { stroke: var(--gw-ink-faint); stroke-width: 1; stroke-dasharray: 3 3; }
 /* A chart you can tab to has to say so when you get there. */

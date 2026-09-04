@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { arr, bool, described, obj, opt, str } from "@gridwright/schema";
 import type { ColumnMeta } from "@gridwright/engine";
 import { formatCompact, formatValue } from "./format.js";
+import { niceScale, notablePoints } from "./marks.js";
 import { foldSeries, seriesVar } from "./theme.js";
 import {
   columnValues, firstDimension, firstMeasure, requireColumn,
@@ -33,6 +34,7 @@ const PAD = { top: 14, right: 16, bottom: 26, left: 52 };
 
 function Line({ result, props, size, locale }: PanelProps<LineProps>) {
   const [hover, setHover] = useState<number | null>(null);
+  const gid = useId().replace(/:/g, "");
 
   const x = requireColumn(result, props.x, "props.x");
   const requested = props.y.map((ref) => requireColumn(result, ref, "props.y[]"));
@@ -56,16 +58,21 @@ function Line({ result, props, size, locale }: PanelProps<LineProps>) {
   const all = columns.flatMap((c) => c.values).filter((v): v is number => v !== null);
   if (!n || !all.length) return <p className="gw-empty">No data to plot.</p>;
 
+  // The axis top is rounded to a number a person would pick. Dividing the data
+  // maximum in half gave ticks like 232.7K and 116.3K — arithmetic, not a scale.
   const lo = Math.min(0, ...all);
-  const hi = Math.max(...all);
+  const scale = lo === 0 ? niceScale(Math.max(...all)) : null;
+  const hi = scale ? scale.max : Math.max(...all);
   const span = hi - lo || 1;
   const px = (i: number) => PAD.left + (n === 1 ? plotW / 2 : (i / (n - 1)) * plotW);
   const py = (v: number) => PAD.top + plotH - ((v - lo) / span) * plotH;
 
-  const ticks = [lo, lo + span / 2, hi];
+  const ticks = scale ? scale.ticks : [lo, lo + span / 2, hi];
   // Direct labels while there are few enough series to place them without collision.
   const directLabel = series.length > 1 && series.length <= 4;
-  const showMarkers = props.markers ?? n <= 24;
+  // A dot on every point turns two years of months into a row of beads. The
+  // ends and the extremes are what a reader looks for; the rest is the line.
+  const allMarkers = props.markers === true;
 
   return (
     <div className="gw-chart">
@@ -110,7 +117,7 @@ function Line({ result, props, size, locale }: PanelProps<LineProps>) {
       >
         {ticks.map((t, i) => (
           <g key={i}>
-            <line x1={PAD.left} x2={width - PAD.right} y1={py(t)} y2={py(t)} className="gw-grid" />
+            <line x1={PAD.left} x2={width - PAD.right} y1={py(t)} y2={py(t)} className="gw-grid-line" />
             <text x={PAD.left - 8} y={py(t)} className="gw-axis" textAnchor="end" dominantBaseline="middle">
               {formatCompact(t, locale)}
             </text>
@@ -128,20 +135,30 @@ function Line({ result, props, size, locale }: PanelProps<LineProps>) {
           if (!points.length) return null;
           const d = points.map(([cx, cy], i) => `${i ? "L" : "M"}${cx} ${cy}`).join(" ");
           const colour = seriesVar(si);
+          const notable = notablePoints(c.values.map((v) => (v === null ? NaN : v)));
           return (
             <g key={c.meta.key}>
               {props.area && columns.length === 1 && (
-                <path
-                  d={`${d} L${points.at(-1)![0]} ${py(lo)} L${points[0]![0]} ${py(lo)} Z`}
-                  fill={colour}
-                  opacity={0.12}
-                />
+                <>
+                  <defs>
+                    <linearGradient id={`${gid}-fill`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={colour} stopOpacity={0.22} />
+                      <stop offset="70%" stopColor={colour} stopOpacity={0.04} />
+                      <stop offset="100%" stopColor={colour} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <path
+                    d={`${d} L${points.at(-1)![0]} ${py(lo)} L${points[0]![0]} ${py(lo)} Z`}
+                    fill={`url(#${gid}-fill)`}
+                  />
+                </>
               )}
               <path d={d} fill="none" stroke={colour} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
-              {showMarkers &&
-                points.map(([cx, cy], i) => (
+              {points.map(([cx, cy], i) =>
+                allMarkers || notable.has(i) ? (
                   <circle key={i} cx={cx} cy={cy} r={4} fill={colour} className="gw-marker" />
-                ))}
+                ) : null,
+              )}
               {hover !== null && c.values[hover] !== null && (
                 <circle cx={px(hover)} cy={py(c.values[hover]!)} r={5} fill={colour} className="gw-marker gw-marker-on" />
               )}

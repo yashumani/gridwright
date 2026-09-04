@@ -2,6 +2,7 @@ import { useState } from "react";
 import { bool, described, enum_, num, obj, opt, str } from "@gridwright/schema";
 import type { Value } from "@gridwright/engine";
 import { formatValue } from "./format.js";
+import { bandLayout } from "./marks.js";
 import { resultRow } from "./rules.js";
 import {
   columnValues, firstDimension, firstMeasure, isSelected, requireColumn,
@@ -81,7 +82,6 @@ function Bar({ result, props, size, select, selected, locale }: PanelProps<BarPr
 
   if (!count || max <= 0) return <p className="gw-empty">No data to plot.</p>;
 
-  const GAP = 2;             // surface gap between adjacent bars
   const RADIUS = 4;          // rounded data-end
   const FONT = 11.5;
 
@@ -101,8 +101,10 @@ function Bar({ result, props, size, select, selected, locale }: PanelProps<BarPr
 
   const plotW = horizontal ? Math.max(24, width - LABEL_GUTTER - VALUE_GUTTER) : width;
   const plotH = horizontal ? height : height - 28;
-  const band = (horizontal ? plotH : plotW) / count;
-  const thickness = Math.max(4, band - GAP);
+  // The bar is capped and centred in its band. Filling the band is what made a
+  // four-category chart in a tall panel read as a stack of coloured blocks
+  // rather than as four measurements.
+  const { band, thickness, offset } = bandLayout(horizontal ? plotH : plotW, count);
 
   const tip = hover !== null ? {
     label: String(labels[hover] ?? "—"),
@@ -129,8 +131,8 @@ function Bar({ result, props, size, select, selected, locale }: PanelProps<BarPr
           const dim = anySelected ? !on : props.emphasise !== undefined && !highlighted;
           const lead = anySelected ? on : highlighted;
           const length = (v / max) * (horizontal ? plotW : plotH);
-          const x = horizontal ? LABEL_GUTTER : i * band + GAP / 2;
-          const y = horizontal ? i * band + GAP / 2 : plotH - length;
+          const x = horizontal ? LABEL_GUTTER : i * band + offset;
+          const y = horizontal ? i * band + offset : plotH - length;
           const w = horizontal ? length : thickness;
           const h = horizontal ? thickness : length;
 
