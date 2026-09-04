@@ -118,7 +118,13 @@ export function App() {
       setIssues([]);
       setBusy(`Reading ${first.name}…`);
       try {
-        const table = await loadBlob(tableName(first.name), first, { maxRows: MAX_ROWS });
+        // The picker accepts .tsv, so the loader has to be told: with the comma
+        // default a tab-separated file parses as a single column and infers a
+        // dashboard of nothing.
+        const table = await loadBlob(tableName(first.name), first, {
+          maxRows: MAX_ROWS,
+          ...(/\.tsv$/i.test(first.name) ? { delimiter: "\t" } : {}),
+        });
         const { manifest, notes } = inferManifest(table, { path: first.name });
         if (rest.length) {
           notes.push(
@@ -203,7 +209,16 @@ export function App() {
   const body = useMemo(() => {
     if (!loaded) return null;
     return mode === "build" ? (
-      <Builder manifest={loaded.manifest} manifestText={loaded.text} source={loaded.source} />
+      <Builder
+          manifest={loaded.manifest}
+          manifestText={loaded.text}
+          source={loaded.source}
+          onChange={(manifest) =>
+            setLoaded((prev) =>
+              prev ? { ...prev, manifest, text: stringify(manifest, { lineWidth: 100 }) } : prev,
+            )
+          }
+        />
     ) : (
       <Dashboard manifest={loaded.manifest} source={loaded.source} />
     );

@@ -128,6 +128,28 @@ documented types, and the internals of every package below `@gridwright/react`.
 
 ### Fixed
 
+- **A tab-separated file parsed as one column.** The picker accepts `.tsv` but
+  the loader was never told, so it split on commas and inferred a dashboard of
+  nothing.
+- **A CSV header a manifest cannot name broke the whole dashboard.** `field.from`
+  is held to `table.column` with a strict column pattern, so a header like
+  `Order-ID` or `2026 Sales` produced a reference the schema rejects — the
+  inferred dashboard failed to validate and could not be reopened from its own
+  export. Those columns are skipped with a note now, and a file with no usable
+  header says so instead of throwing something opaque.
+- **`Order ID` and `orderId` were summed.** The identifier test only ever saw
+  underscore-separated headers, so a numeric id column written the way people
+  write it produced exactly the large, confident, meaningless total the rule
+  exists to prevent.
+- **A KPI paired today's number with the oldest change.** The headline reads the
+  last point of a series; the delta was still reading row 0, which can point the
+  arrow the wrong way outright.
+- **Build-mode edits never reached "View manifest".** The sheet and its Copy
+  button served the text the dashboard was opened with, while telling you it
+  reopens the dashboard exactly as it is now.
+- **A heatmap axis lost a category** where a dimension held both a blank and the
+  literal text `null`: both keyed to the same string, so one heading vanished and
+  the two values overwrote each other.
 - **Every label in every chart was being outlined.** `.gw-grid` named both the
   dashboard's panel layout and a chart's gridline stroke. `stroke` inherits
   through SVG, so every text node and every transparent hit rect inside every

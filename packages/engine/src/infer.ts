@@ -33,6 +33,24 @@ const FALSE_WORDS = new Set(["false", "no", "n", "f"]);
 const ID_NAME = /(^|_)(id|uuid|guid|key|code|no|num|number)$/i;
 
 /**
+ * The column pattern `field.from` is held to. A header outside it produces a
+ * reference the manifest rejects, so the dashboard it appears in cannot
+ * validate or be reopened from its own export.
+ */
+const USABLE_COLUMN = /^[A-Za-z_][A-Za-z0-9_ ]*$/;
+
+/**
+ * Headers as people write them, in a shape the identifier test can read:
+ * `Order ID` and `orderId` name a row as surely as `order_id` does, and
+ * matching only the last of the three is how a column of ids ends up summed.
+ */
+function separated(header: string): string {
+  return header.replace(/([a-z0-9])([A-Z])/g, "$1_$2").replace(/[^A-Za-z0-9]+/g, "_");
+}
+
+const namesARow = (header: string): boolean => ID_NAME.test(separated(header));
+
+/**
  * A column's type, from its values.
  *
  * Order matters: boolean before number, because `0` and `1` satisfy both and a
@@ -149,15 +167,29 @@ export function inferManifest(table: Table, o: InferOptions = {}): InferredManif
     type: sniffType(values),
   }));
 
-  if (!columns.length) throw new Error(`"${table.name}" has no columns to build from`);
+  const unusable = columns.filter((c) => !USABLE_COLUMN.test(c.column));
+  if (unusable.length) {
+    notes.push(
+      `Skipped ${unusable.map((c) => `"${c.column}"`).join(", ")} — a column a manifest can ` +
+      "name has to start with a letter and hold only letters, numbers, underscores and spaces.",
+    );
+  }
+  const usable = columns.filter((c) => USABLE_COLUMN.test(c.column));
 
-  const fields = columns.map((c) => ({ name: c.name, type: c.type, from: `${table.name}.${c.column}` }));
+  if (!usable.length) {
+    throw new Error(
+      `"${table.name}" has no columns a manifest can name: a column has to start with a letter ` +
+      "and hold only letters, numbers, underscores and spaces.",
+    );
+  }
+
+  const fields = usable.map((c) => ({ name: c.name, type: c.type, from: `${table.name}.${c.column}` }));
 
   // ---- measures ----
   // A number that identifies a row does not measure anything: summing an order
   // id produces a large, confident, meaningless number. Those stay dimensions.
-  const numeric = columns.filter((c) => c.type === "number" && !ID_NAME.test(c.column));
-  const idish = columns.filter((c) => c.type === "number" && ID_NAME.test(c.column));
+  const numeric = usable.filter((c) => c.type === "number" && !namesARow(c.column));
+  const idish = usable.filter((c) => c.type === "number" && namesARow(c.column));
   if (idish.length) {
     notes.push(
       `Treated ${idish.map((c) => `"${c.column}"`).join(", ")} as ${idish.length === 1 ? "a label" : "labels"} rather than ${idish.length === 1 ? "a number to add up" : "numbers to add up"}.`,
@@ -182,8 +214,8 @@ export function inferManifest(table: Table, o: InferOptions = {}): InferredManif
   // customers by name draws sixty bars of one. So a column earns a place only
   // if it actually collects rows together — few distinct values in absolute
   // terms, and well short of one per row.
-  const groupable = columns.filter((c) => {
-    if (c.type === "number" && !ID_NAME.test(c.column)) return false;
+  const groupable = usable.filter((c) => {
+    if (c.type === "number" && !namesARow(c.column)) return false;
     if (c.type === "date") return true;
     const distinct = distinctCount(c.values, MAX_GROUPS + 1);
     if (distinct <= 1 || distinct > MAX_GROUPS) return false;

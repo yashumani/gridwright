@@ -839,6 +839,45 @@ describe("inferring a manifest from bare data", () => {
     expect(sniffType(["yes", "N"])).toBe("boolean");
   });
 
+  it("reads an identifier header the way a person wrote it", () => {
+    // The test ran against the raw header with an underscore-only pattern, so
+    // `Order ID` and `orderId` fell through and were summed — producing exactly
+    // the large, confident, meaningless number the rule exists to prevent.
+    const t = loadDelimited(
+      "sales",
+      "Order ID,orderId,Customer Id,amount\n101,55,7,10\n102,56,8,20\n103,57,9,30\n",
+    );
+    const { manifest, notes } = inferManifest(t);
+    const summed = manifest.model.measures.map((m) => m.expr).join(" ");
+    for (const id of ["Order_ID", "orderId", "Customer_Id"]) {
+      expect(summed).not.toContain(`sum(${id})`);
+    }
+    expect(summed).toContain("sum(amount)");
+    expect(notes.join(" ")).toContain("rather than");
+  });
+
+  it("skips a header a manifest cannot name, rather than emitting one that fails", () => {
+    // `from` is held to "table.column" with a strict column pattern, so a
+    // header like `Order-ID` produced a reference the schema rejects: the whole
+    // inferred dashboard failed to validate and could not be reopened from its
+    // own export.
+    const t = loadDelimited("sales", "Order-ID,2026 Sales,region,amount\nA,1,North,10\nB,2,South,20\n");
+    const { manifest, notes } = inferManifest(t);
+
+    expect(manifest.model.fields.map((f) => f.from)).toEqual(["sales.region", "sales.amount"]);
+    expect(notes.join(" ")).toContain("Order-ID");
+
+    const check = validateManifest(manifest, {
+      checkExpression: (e) => analyzeExpression(e).issues,
+    });
+    expect(check.ok, check.ok ? "" : formatIssues(check.issues)).toBe(true);
+  });
+
+  it("says so rather than throwing something opaque when no header is usable", () => {
+    const t = loadDelimited("sales", "Order-ID,2026 Sales\nA,1\n");
+    expect(() => inferManifest(t)).toThrow(/no columns a manifest can name/);
+  });
+
   it("produces a manifest that validates and runs", async () => {
     const { manifest } = inferManifest(table());
     const check = validateManifest(JSON.parse(JSON.stringify(manifest)), {

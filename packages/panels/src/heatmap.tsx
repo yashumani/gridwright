@@ -53,12 +53,21 @@ const schema = obj({
 const FONT = 11;
 const GAP = 2;
 
+/**
+ * A key that keeps a value's type. `String(v)` turns both `null` and the text
+ * "null" into "null", so a dimension holding both loses one category from the
+ * axis and lets the two overwrite each other in the cell map.
+ */
+export function cellKey(v: Value): string {
+  return v === undefined ? "undefined" : JSON.stringify(v);
+}
+
 /** Distinct values in first-seen order — the order the query already sorted. */
 function axisOf(values: readonly Value[], cap: number): Value[] {
   const seen = new Set<string>();
   const out: Value[] = [];
   for (const v of values) {
-    const key = String(v);
+    const key = cellKey(v);
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(v);
@@ -89,7 +98,7 @@ function Heatmap({ result, props, size, select, selected, locale }: PanelProps<H
   for (let i = 0; i < result.rowCount; i++) {
     const v = vs[i];
     if (typeof v !== "number" || !Number.isFinite(v)) continue;
-    cell.set(`${String(xs[i])}\u0000${String(ys[i])}`, { value: v, row: i });
+    cell.set(`${cellKey(xs[i]!)}\u0000${cellKey(ys[i]!)}`, { value: v, row: i });
   }
 
   // The ramp spans what the data spans, not zero to the maximum.
@@ -158,7 +167,7 @@ function Heatmap({ result, props, size, select, selected, locale }: PanelProps<H
       >
         {rows.map((rowValue, r) =>
           columns.map((colValue, c) => {
-            const hit = cell.get(`${String(colValue)}\u0000${String(rowValue)}`);
+            const hit = cell.get(`${cellKey(colValue)}\u0000${cellKey(rowValue)}`);
             const x = LABEL_GUTTER + c * cw;
             const y = r * ch;
             const on = hit !== undefined &&

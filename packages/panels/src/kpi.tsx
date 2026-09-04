@@ -89,11 +89,15 @@ function Kpi({ result, props, locale }: PanelProps<KpiProps>) {
   const series = columnValues(result, measure);
   // With a series, the headline is its last point: a KPI beside a trend means
   // "now", not "when the window opened".
-  const value = (series.length > 1 ? series[series.length - 1] : series[0]) ?? null;
+  // One row index for both: reading the headline from the end of the series and
+  // the delta from row 0 pairs today's number with the oldest change, which can
+  // point the arrow the wrong way outright.
+  const at = series.length > 1 ? series.length - 1 : 0;
+  const value = series[at] ?? null;
   const spark = props.sparkline ? sparkPath(series, SPARK.w, SPARK.h - 3) : null;
 
   const deltaMeta = props.delta ? requireColumn(result, props.delta, "props.delta") : undefined;
-  const deltaValue = deltaMeta ? columnValues(result, deltaMeta)[0] ?? null : null;
+  const deltaValue = deltaMeta ? columnValues(result, deltaMeta)[at] ?? null : null;
   const deltaNumber = typeof deltaValue === "number" && Number.isFinite(deltaValue) ? deltaValue : null;
 
   const rising = deltaNumber !== null && deltaNumber > 0;

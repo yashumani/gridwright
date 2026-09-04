@@ -342,6 +342,17 @@ describe("the newer chart forms", () => {
     expect(document.querySelector(".gw-kpi-value")?.textContent).toMatch(/\$/);
   });
 
+  it("reads the delta from the same row as the headline", async () => {
+    // The headline moved to the last point of the series but the delta stayed
+    // on row 0, so a time-series KPI paired today's number with the oldest
+    // change — enough to point the arrow the wrong way.
+    await withPanel("kpi", { measure: "revenue", delta: "revenue" }, "by_month");
+    const headline = document.querySelector(".gw-kpi-value")!.textContent;
+    const delta = document.querySelector(".gw-delta")!.textContent;
+    // Same column, same row: whatever the headline reads, the delta reads too.
+    expect(delta).toContain(headline!.replace(/^[^\d]*/, ""));
+  });
+
   it("reads the last point of a series, not the first", async () => {
     // A KPI beside a trend means "now", not "when the window opened". The two
     // months differ by fifty thousand, so reading the wrong end is not a
