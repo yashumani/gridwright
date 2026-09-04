@@ -8,7 +8,7 @@ import { sourceFromText } from "@gridwright/engine";
 import { defaultRegistry } from "@gridwright/panels";
 import {
   Builder, PropertyForm, blankFor, checkManifest, exportManifest, initialState,
-  nextPanelId, placePanel, reduce, toYaml, type EditorState, type JsonSchema,
+  nextPanelId, overlaps, placePanel, reduce, toYaml, type EditorState, type JsonSchema,
 } from "@gridwright/builder";
 
 const dir = (p: string) => fileURLToPath(new URL(p, import.meta.url));
@@ -22,6 +22,20 @@ function manifest(): Manifest {
 }
 
 const state = (): EditorState => initialState(manifest());
+
+/**
+ * A pointer event carrying real coordinates.
+ *
+ * jsdom implements no `PointerEvent`, so `fireEvent.pointerDown` builds a bare
+ * `Event` and drops `clientX`, `clientY` and `button` — every drag would read as
+ * a zero-distance gesture by an unknown button. A `MouseEvent` under the pointer
+ * event's name carries all three, and React dispatches on the name.
+ */
+function pointer(type: string, x: number, y: number): MouseEvent {
+  const e = new MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0 });
+  Object.defineProperty(e, "pointerId", { value: 1 });
+  return e;
+}
 
 beforeEach(cleanup);
 
@@ -248,19 +262,98 @@ describe("schema-driven property form", () => {
     expect(seen.at(-1)).toEqual([]);
   });
 
-  it("offers dataset columns wherever a field names a reference", () => {
+  it("makes a field that names a column a choice, not a spelling test", () => {
+    // This used to be a datalist on a free-text input: a suggestion rather than
+    // a choice, easy to miss, and offering raw ids. Someone who has not read the
+    // manifest cannot know the number they want is spelled `rtn_rate`.
     render(
       <PropertyForm
         schema={{ type: "object", properties: { measure: { type: "string" } } }}
         value={{}}
-        suggestions={{ refs: ["revenue", "orders"] }}
+        suggestions={{
+          refs: [
+            { id: "region", label: "Region", kind: "dimension" },
+            { id: "rtn_rate", label: "Return rate", kind: "measure" },
+          ],
+        }}
         onChange={() => {}}
       />,
     );
-    const input = screen.getByLabelText("Measure");
-    const list = document.getElementById(input.getAttribute("list")!)!;
-    expect([...list.querySelectorAll("option")].map((o) => o.getAttribute("value")))
-      .toEqual(["revenue", "orders"]);
+    const select = screen.getByLabelText("Measure") as HTMLSelectElement;
+    expect(select.tagName).toBe("SELECT");
+    // A field that wants a number is not offered things to group by. Half the
+    // list being wrong is what makes a picker feel like a guess.
+    expect([...select.querySelectorAll("optgroup")].map((g) => g.label)).toEqual(["Numbers"]);
+    // Labels are what you read; ids are what gets written.
+    expect([...select.querySelectorAll("optgroup option")].map((o) => o.textContent))
+      .toEqual(["Return rate"]);
+    expect([...select.querySelectorAll("optgroup option")].map((o) => o.getAttribute("value")))
+      .toEqual(["rtn_rate"]);
+  });
+
+  it("offers both halves where a field takes either", () => {
+    // A table column may be a dimension or a measure, so `ref` narrows to
+    // neither and the groups tell them apart.
+    render(
+      <PropertyForm
+        schema={{ type: "object", properties: { ref: { type: "string" } } }}
+        value={{}}
+        suggestions={{
+          refs: [
+            { id: "region", label: "Region", kind: "dimension" },
+            { id: "revenue", label: "Revenue", kind: "measure" },
+          ],
+        }}
+        onChange={() => {}}
+      />,
+    );
+    expect([...screen.getByLabelText("Ref").querySelectorAll("optgroup")].map((g) => g.label))
+      .toEqual(["Group by", "Numbers"]);
+  });
+
+  it("falls back to the whole list rather than offering nothing", () => {
+    // A dataset with no dimensions still has to let you pick something; an
+    // empty select is a dead end that explains nothing.
+    render(
+      <PropertyForm
+        schema={{ type: "object", properties: { category: { type: "string" } } }}
+        value={{}}
+        suggestions={{ refs: [{ id: "revenue", label: "Revenue", kind: "measure" }] }}
+        onChange={() => {}}
+      />,
+    );
+    expect([...screen.getByLabelText("Category").querySelectorAll("optgroup option")]
+      .map((o) => o.textContent)).toEqual(["Revenue"]);
+  });
+
+  it("keeps a hand-written reference the dataset does not have, and says so", () => {
+    // Silently dropping to blank would lose what the author wrote and give no
+    // clue why — the usual way a typo turns into a mystery.
+    render(
+      <PropertyForm
+        schema={{ type: "object", properties: { measure: { type: "string" } } }}
+        value={{ measure: "revenu" }}
+        suggestions={{ refs: [{ id: "revenue", label: "Revenue", kind: "measure" }] }}
+        onChange={() => {}}
+      />,
+    );
+    const select = screen.getByLabelText("Measure") as HTMLSelectElement;
+    expect(select.value).toBe("revenu");
+    expect(screen.getByText(/revenu — not in this dataset/)).toBeTruthy();
+  });
+
+  it("renders only the properties it was asked for, in that order", () => {
+    const schema: JsonSchema = {
+      type: "object",
+      properties: { a: { type: "string" }, b: { type: "string" }, c: { type: "string" } },
+    };
+    const { rerender } = render(
+      <PropertyForm schema={schema} value={{}} only={["c", "a"]} onChange={() => {}} />,
+    );
+    expect([...document.querySelectorAll(".gwb-label")].map((l) => l.textContent)).toEqual(["C", "A"]);
+
+    rerender(<PropertyForm schema={schema} value={{}} except={["c", "a"]} onChange={() => {}} />);
+    expect([...document.querySelectorAll(".gwb-label")].map((l) => l.textContent)).toEqual(["B"]);
   });
 
   it("builds a blank value that satisfies the schema's required keys", () => {
@@ -304,11 +397,46 @@ describe("the builder shell", () => {
     expect(document.querySelector(".gwb-listitem.gwb-on")).toBeTruthy();
   });
 
-  it("shows the selected panel's own settings form", async () => {
+  it("names an untitled panel by what it draws, not by its id", async () => {
+    // Four of the reference panels carry no title, so the list falls back.
+    // Falling back to `kpi_rtn` tells a newcomer nothing; the measure it shows
+    // has a label already, and that is the thing they recognise.
+    await mountBuilder();
+    const names = [...document.querySelectorAll(".gwb-listitem")].map(
+      (el) => el.lastElementChild!.textContent,
+    );
+    expect(names.slice(0, 4)).toEqual(["Revenue", "Orders", "Avg order", "Return rate"]);
+    expect(names.join()).not.toMatch(/kpi_/);
+    // A titled panel still wins.
+    expect(names).toContain("Revenue by month");
+  });
+
+  it("falls back to the panel type when nothing it draws is recognisable", async () => {
+    const m = manifest();
+    m.panels = [{ id: "p1", type: "kpi", dataset: "totals", layout: { x: 0, y: 0, w: 3, h: 2 }, props: {} }];
+    render(<Builder manifest={m} source={source()} />);
+    await waitFor(() => expect(screen.queryByText("Updating…")).not.toBeInTheDocument());
+    expect(document.querySelector(".gwb-listitem")!.lastElementChild!.textContent).toBe("KPI");
+  });
+
+  it("leads with what the selected panel draws, and folds the rest away", async () => {
     await mountBuilder();
     await act(async () => { fireEvent.click(document.querySelectorAll(".gwb-listitem")[0]!); });
-    expect(screen.getByText("KPI settings")).toBeTruthy();
-    expect(screen.getByLabelText("Measure")).toBeTruthy();
+
+    // A KPI asks one question. It is asked first, in words rather than in the
+    // property's name, as a pick from the measures this dataset has.
+    const measure = screen.getByLabelText("Number to show") as HTMLSelectElement;
+    expect([...measure.querySelectorAll("optgroup option")].map((o) => o.textContent))
+      .toEqual(["Revenue", "Orders", "Avg order", "Return rate"]);
+
+    // Everything else — including the layout numbers, now that dragging exists —
+    // is behind one disclosure rather than competing with it.
+    const more = screen.getByText("More settings").closest("details") as HTMLDetailsElement;
+    expect(more.open).toBe(false);
+    expect(more.textContent).toMatch(/Columns wide/);
+    expect(more.textContent).toMatch(/Reads from/);
+    // And the primary prop is not repeated inside it.
+    expect(more.querySelector("#" + CSS.escape(measure.id))).toBeNull();
   });
 
   it("edits a title and reports the new manifest", async () => {
@@ -320,6 +448,125 @@ describe("the builder shell", () => {
       fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Revenue" } });
     });
     expect(seen.at(-1)!.panels[0]!.title).toBe("Revenue");
+  });
+
+  it("moves a panel by dragging its grip", async () => {
+    const seen: Manifest[] = [];
+    render(<Builder manifest={manifest()} source={source()} onChange={(m) => seen.push(m)} />);
+    await waitFor(() => expect(screen.queryByText("Updating…")).not.toBeInTheDocument());
+
+    // jsdom does no layout, so the panel's box has to be supplied. kpi_rev is
+    // 3 columns wide, so a 300px box over a 12px gap makes one column 104px.
+    const box = document.querySelector('[data-panel="kpi_rev"]') as HTMLElement;
+    box.getBoundingClientRect = () => ({ width: 300, height: 164 }) as DOMRect;
+
+    const grip = box.querySelector(".gwb-grip")!;
+    await act(async () => {
+      grip.dispatchEvent(pointer("pointerdown", 0, 0));
+      grip.dispatchEvent(pointer("pointermove", 312, 0));   // 3 columns of 104
+      grip.dispatchEvent(pointer("pointerup", 312, 0));
+    });
+
+    const next = seen.at(-1)!;
+    expect(next.panels.find((p) => p.id === "kpi_rev")!.layout).toMatchObject({ x: 3, y: 0 });
+
+    // Whatever it landed on moved out of the way rather than being covered.
+    for (let i = 0; i < next.panels.length; i++) {
+      for (let j = i + 1; j < next.panels.length; j++) {
+        const a = next.panels[i]!, b = next.panels[j]!;
+        expect(overlaps(a.layout, b.layout), `${a.id} overlaps ${b.id}`).toBe(false);
+      }
+    }
+    // And the whole gesture was one action, not one per pointermove.
+    expect(seen).toHaveLength(1);
+  });
+
+  it("does not move a panel whose box has not been laid out", async () => {
+    // A zero-sized box means no pitch. Deriving one from the gap alone would
+    // make a short drag land a hundred columns away.
+    const seen: Manifest[] = [];
+    render(<Builder manifest={manifest()} source={source()} onChange={(m) => seen.push(m)} />);
+    await waitFor(() => expect(screen.queryByText("Updating…")).not.toBeInTheDocument());
+
+    const grip = document.querySelector('[data-panel="kpi_rev"] .gwb-grip')!;
+    await act(async () => {
+      grip.dispatchEvent(pointer("pointerdown", 0, 0));
+      grip.dispatchEvent(pointer("pointermove", 400, 0));
+      grip.dispatchEvent(pointer("pointerup", 400, 0));
+    });
+    expect(seen).toHaveLength(0);
+  });
+
+  it("resizes a panel by dragging a corner", async () => {
+    const seen: Manifest[] = [];
+    render(<Builder manifest={manifest()} source={source()} onChange={(m) => seen.push(m)} />);
+    await waitFor(() => expect(screen.queryByText("Updating…")).not.toBeInTheDocument());
+
+    const box = document.querySelector('[data-panel="kpi_rev"]') as HTMLElement;
+    box.getBoundingClientRect = () => ({ width: 300, height: 164 }) as DOMRect;
+
+    const handle = box.querySelector(".gwb-handle-se")!;
+    await act(async () => {
+      handle.dispatchEvent(pointer("pointerdown", 0, 0));
+      handle.dispatchEvent(pointer("pointermove", 104, 88));
+      handle.dispatchEvent(pointer("pointerup", 104, 88));
+    });
+    expect(seen.at(-1)!.panels.find((p) => p.id === "kpi_rev")!.layout)
+      .toMatchObject({ x: 0, y: 0, w: 4, h: 3 });
+  });
+
+  it("moves the selected panel with the arrow keys", async () => {
+    const seen: Manifest[] = [];
+    render(<Builder manifest={manifest()} source={source()} onChange={(m) => seen.push(m)} />);
+    await waitFor(() => expect(screen.queryByText("Updating…")).not.toBeInTheDocument());
+    await act(async () => { fireEvent.click(document.querySelectorAll(".gwb-listitem")[0]!); });
+
+    const canvas = document.querySelector(".gwb-preview")!;
+    await act(async () => { fireEvent.keyDown(canvas, { key: "ArrowRight" }); });
+
+    const moved = seen.at(-1)!.panels.find((p) => p.id === "kpi_rev")!;
+    expect(moved.layout.x).toBe(1);
+
+    // Shift resizes instead of moving.
+    await act(async () => { fireEvent.keyDown(canvas, { key: "ArrowDown", shiftKey: true }); });
+    expect(seen.at(-1)!.panels.find((p) => p.id === "kpi_rev")!.layout.h).toBe(3);
+  });
+
+  it("will not walk a panel off the edge of the grid", async () => {
+    const seen: Manifest[] = [];
+    render(<Builder manifest={manifest()} source={source()} onChange={(m) => seen.push(m)} />);
+    await waitFor(() => expect(screen.queryByText("Updating…")).not.toBeInTheDocument());
+    await act(async () => { fireEvent.click(document.querySelectorAll(".gwb-listitem")[0]!); });
+
+    const canvas = document.querySelector(".gwb-preview")!;
+    await act(async () => {
+      for (let i = 0; i < 20; i++) fireEvent.keyDown(canvas, { key: "ArrowLeft" });
+    });
+    // It started at x0, so every press is a no-op and none of them commits.
+    expect(seen).toHaveLength(0);
+  });
+
+  it("keeps a whole drag as one undo step", async () => {
+    render(<Builder manifest={manifest()} source={source()} />);
+    await waitFor(() => expect(screen.queryByText("Updating…")).not.toBeInTheDocument());
+    await act(async () => { fireEvent.click(document.querySelectorAll(".gwb-listitem")[0]!); });
+
+    const canvas = document.querySelector(".gwb-preview")!;
+    const undo = screen.getByRole("button", { name: "Undo" }) as HTMLButtonElement;
+    await act(async () => { fireEvent.keyDown(canvas, { key: "ArrowRight" }); });
+    expect(undo.disabled).toBe(false);
+
+    await act(async () => { fireEvent.click(undo); });
+    const back = document.querySelector('[data-panel="kpi_rev"]') as HTMLElement;
+    expect(back.style.gridColumn).toBe("1 / span 3");
+  });
+
+  it("closes the export dialog on Escape", async () => {
+    await mountBuilder();
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Export" })); });
+    expect(screen.getByRole("dialog", { name: /exported manifest/i })).toBeTruthy();
+    await act(async () => { fireEvent.keyDown(window, { key: "Escape" }); });
+    expect(screen.queryByRole("dialog", { name: /exported manifest/i })).toBeNull();
   });
 
   it("adds a panel from the toolbar", async () => {

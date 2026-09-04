@@ -50,8 +50,15 @@ datasets:
 
   by_channel:
     dimensions: [channel]
-    measures: [revenue, orders]
+    measures: [revenue, orders, returns]
     sort: [{ measure: revenue, dir: desc }]
+
+  # Two dimensions at once — the shape a heatmap needs and no other panel here
+  # can show.
+  region_channel:
+    dimensions: [region, channel]
+    measures: [revenue, orders]
+    sort: [{ dimension: region, dir: asc }]
 
 grid: { columns: 12, rowHeight: 76, gap: 12 }
 

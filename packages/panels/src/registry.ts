@@ -47,6 +47,15 @@ export interface PanelSpec<P = Record<string, unknown>> {
   Component: ComponentType<PanelProps<P>>;
   /** Minimum grid footprint the builder should honour when placing one. */
   minSize?: { w: number; h: number };
+  /**
+   * The props that decide what this panel draws, in the order to ask for them.
+   *
+   * A bar chart has five settings and two of them are the chart; the rest are
+   * tuning. The builder leads with these and folds the remainder behind a
+   * disclosure, so the first thing a newcomer sees is the question the panel is
+   * actually asking. Omit it and every prop shows at once, as before.
+   */
+  primary?: readonly string[];
 }
 
 export class PanelRegistry {

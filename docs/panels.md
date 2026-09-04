@@ -10,6 +10,24 @@ hand-writes a config UI.
 gridwright panels    # what is registered, with descriptions
 ```
 
+## Which form answers which question
+
+Pick the form from the reader's job, not from what looks good. The example
+[`chart-types.gw.yaml`](../examples/chart-types.gw.yaml) lays all of these out
+side by side.
+
+| The reader has to… | Use | Not |
+|---|---|---|
+| Read one current number | `kpi`, with `sparkline` for the shape behind it | a one-bar bar chart |
+| Compare magnitudes across a category | `bar` | a pie |
+| Compare values that sit close together | `dot` | a bar chart with a truncated axis |
+| Follow a change over time | `line` | a bar per month |
+| Notice that **one** of them is the point | `bar` with `emphasise` | eight competing hues |
+| See what each category is made of | `stack` | a pie per category |
+| Compare the mix rather than the totals | `stack` with `mode: share` | reading percentages off a table |
+| Find the hot spot across two dimensions | `heatmap` | a grouped bar with twenty groups |
+| Check the actual numbers | `table` | squinting at a chart |
+
 ## What ships
 
 ### `kpi` — a single headline number
@@ -26,6 +44,16 @@ gridwright panels    # what is registered, with descriptions
 | `caption` | string | Small text under the value. |
 | `delta` | string | A second measure shown as a change against the headline. |
 | `invertTrend` | boolean | Down is good — return rate, cost, churn. |
+| `sparkline` | boolean | Draw the measure's own history behind the number. |
+
+**A number alone says where you are and nothing about how you got there.** 8.4%
+could be the best month on record or the worst. `sparkline` costs one line of
+ink and answers that; point it at a dataset with a dimension to run along — the
+same one a trend chart would use — and it does nothing quietly when the dataset
+is a single total.
+
+With a series present the headline is that series' **last** point, not its
+first: a KPI beside a trend means "now", not "when the window opened".
 
 Minimum size 2×2.
 
@@ -71,8 +99,45 @@ props: { category: channel, value: revenue, orientation: horizontal, showValues:
 | `orientation` | `horizontal`\|`vertical` | Default `horizontal` — category labels are words, and rotating them under vertical bars is the usual reason a bar chart becomes unreadable. |
 | `showValues` | boolean | Direct value labels. |
 | `maxBars` | integer 1–200 | Keep only the largest N. |
+| `emphasise` | string | One category value drawn in the accent colour, the rest recessed. |
+
+**`emphasise` is the most underused thing here.** When the story is "this one
+went up", a chart where every bar competes for attention buries it. Highlighting
+one and recessing the rest says it in the encoding rather than in a caption
+nobody reads. A live selection overrides it, since both mean the same thing:
+one mark forward, the rest back.
 
 Minimum size 3×3.
+
+### `dot` — the same comparison, when the values sit close together
+
+```yaml
+props: { category: channel, value: orders }
+```
+
+| Prop | Type | Notes |
+|---|---|---|
+| `category` | string | The dimension. |
+| `value` | string | The measure. |
+| `showValues` | boolean | Direct value labels. |
+| `maxRows` | integer 1–200 | Keep only the first N. |
+| `zero` | boolean | Force the axis to include zero. Off by default. |
+| `emphasise` | string | One category value in the accent colour, the rest recessed. |
+
+**Why this exists.** A bar's length *is* the measurement, so its axis has to
+start at zero — and that means values within a few percent of each other draw
+bars of visibly the same size. Orders of 690, 676, 680 and 648 are four
+full-width blocks in a bar chart: the 6% spread anyone came for is invisible,
+and truncating the bar axis to reveal it would overstate every difference at
+once.
+
+A dot is read *against* the axis rather than measured from an origin, so the
+domain can close in on the data without lying. The axis is always drawn and
+always labelled, because that is the whole basis on which the truncation is
+fair. Set `zero: true` if you want the bar chart's trade instead — but then
+you probably want a bar chart.
+
+Minimum size 3×2.
 
 ### `line` — change over an ordered dimension
 
@@ -93,6 +158,89 @@ author's scaling happened to put them, which is why it is the most misread
 chart there is.
 
 Minimum size 4×3.
+
+### `stack` — what each category is made of
+
+```yaml
+props: { category: channel, values: [orders, returns], mode: total }
+```
+
+| Prop | Type | Notes |
+|---|---|---|
+| `category` | string | The bars. |
+| `values` | string[] | 1–8 measures, one segment each, in order. |
+| `mode` | `total`\|`share` | `share` normalises every bar to full width. |
+| `orientation` | `horizontal`\|`vertical` | Default `horizontal`. |
+| `maxBars` | integer 1–200 | |
+
+The form a pie chart is usually reaching for. A pie compares angles, which
+people read badly, and shows one whole; this compares lengths against a shared
+baseline and shows a whole per category, so "how big" and "what it is made of"
+arrive together.
+
+**`total` and `share` answer different questions.** `share` throws the totals
+away and makes the mix the only story, which is right when the mix *is* the
+story and misleading when one category has forty rows and another forty
+thousand. The total travels with each bar either way, so the comparison stays
+honest.
+
+**The segments have to share a unit.** Revenue stacked on an order count is
+metres plus seconds; the chart cannot tell, and draws one segment at 99.9% and a
+sliver, which reads as a finding rather than a mistake. Segments whose `format`
+differs get a note saying so.
+
+A negative value cannot be stacked — there is no sensible place to draw it — so
+it reads as absent rather than being flipped or folded into its neighbour.
+
+Minimum size 4×4.
+
+### `heatmap` — one number across two dimensions
+
+```yaml
+props: { x: channel, y: region, value: revenue, showValues: true }
+```
+
+| Prop | Type | Notes |
+|---|---|---|
+| `x` | string | Dimension across the top. |
+| `y` | string | Dimension down the side. |
+| `value` | string | The measure the shade encodes. |
+| `showValues` | boolean | Default on, and dropped automatically where a cell is too small to hold a number. |
+| `maxColumns`, `maxRows` | integer 1–60 | |
+
+Nothing else here shows two dimensions at once. A grouped bar chart manages
+about four groups before it becomes a picket fence; this keeps reading at twenty
+by twenty, because position tells the cells apart and colour only has to carry
+magnitude.
+
+**The shade is sequential — one hue, light to dark.** That is what makes the
+form safe: more is darker needs no legend to learn, whereas a rainbow invents an
+order the eye does not agree on and forces a lookup per cell. The ramp follows
+the theme's first colour and re-anchors in dark mode, where "more" means
+*lighter* — further from the background either way.
+
+**The scale spans the data, not zero.** A grid of values between 183k and 261k
+anchored at zero is one flat block. Both ends are printed under the grid, so the
+range is stated rather than implied.
+
+A combination the query returned no row for is drawn as an absence, not as zero.
+
+Minimum size 4×4.
+
+## Reading a value
+
+Every chart answers on hover, and answers the same way from the keyboard.
+
+- **Bar, stacked bar and heatmap** show the mark's own number on hover, and the
+  mark is reachable with Tab and activated with Enter or Space.
+- **Line** takes focus as a whole: arrows walk the points, Home and End jump to
+  the ends, Escape clears. Focus lands on the most recent point, because that is
+  the one people came for.
+- The readout is a live region, so what a sighted reader sees appear is what a
+  screen reader is told. It sits in the panel's corner rather than following the
+  cursor, so it never covers the thing being read.
+- **A tooltip is never the only way to a value.** Bars carry direct labels,
+  heatmap cells print their number, and the `table` panel exists.
 
 ## Colour
 

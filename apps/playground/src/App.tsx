@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatIssues, type Issue, type Manifest } from "@gridwright/schema";
-import { loadBundleFromBlobs, type BundleBlob, type DataSource } from "@gridwright/engine";
+import {
+  inferManifest, loadBlob, loadBundleFromBlobs, MemorySource,
+  type BundleBlob, type DataSource,
+} from "@gridwright/engine";
+import { stringify } from "yaml";
 import { Dashboard, injectStyles, styles } from "@gridwright/react";
 import { Builder, builderStyles } from "@gridwright/builder";
 import { appStyles } from "./styles.js";
@@ -17,7 +21,13 @@ import { appStyles } from "./styles.js";
  * before anything renders, and its strings reach the DOM only as React text.
  */
 
-type Loaded = { manifest: Manifest; source: DataSource; text: string };
+type Loaded = {
+  manifest: Manifest;
+  source: DataSource;
+  text: string;
+  /** Present when the manifest was guessed rather than supplied. */
+  inferred?: string[];
+};
 
 const MANIFEST_EXT = /\.(gw\.ya?ml|ya?ml|json)$/i;
 const DATA_EXT = /\.(csv|tsv|txt)$/i;
@@ -45,6 +55,8 @@ export function App() {
     return stamped === "dark" || stamped === "light" ? stamped : "system";
   });
   const [dragging, setDragging] = useState(false);
+  const [showManifest, setShowManifest] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     injectStyles();
@@ -61,6 +73,16 @@ export function App() {
     if (theme === "system") document.documentElement.removeAttribute("data-theme");
     else document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
+
+  // Escape closes the manifest sheet. It covers the dashboard, so somebody who
+  // opened it to look has to be able to get out the way every other dialog on
+  // the web lets them.
+  useEffect(() => {
+    if (!showManifest) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setShowManifest(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showManifest]);
 
   const accept = useCallback(
     async (manifestText: string, data: readonly BundleBlob[], label: string) => {
@@ -82,6 +104,49 @@ export function App() {
     [],
   );
 
+  /**
+   * Builds a dashboard from data alone.
+   *
+   * Only the first table is used. Joining several needs declared relations,
+   * and cardinality is what stops a join silently multiplying rows — that is
+   * not a thing to guess on somebody's behalf.
+   */
+  const inferFrom = useCallback(
+    async (files: readonly File[]) => {
+      const [first, ...rest] = files;
+      if (!first) return;
+      setIssues([]);
+      setBusy(`Reading ${first.name}…`);
+      try {
+        // The picker accepts .tsv, so the loader has to be told: with the comma
+        // default a tab-separated file parses as a single column and infers a
+        // dashboard of nothing.
+        const table = await loadBlob(tableName(first.name), first, {
+          maxRows: MAX_ROWS,
+          ...(/\.tsv$/i.test(first.name) ? { delimiter: "\t" } : {}),
+        });
+        const { manifest, notes } = inferManifest(table, { path: first.name });
+        if (rest.length) {
+          notes.push(
+            `Used ${first.name}. ${rest.length} other file${rest.length === 1 ? "" : "s"} ` +
+            "ignored — combining tables needs a manifest that says how they connect.",
+          );
+        }
+        setLoaded({
+          manifest,
+          source: MemorySource.fromTables([table]),
+          text: stringify(manifest, { lineWidth: 100 }),
+          inferred: notes,
+        });
+      } catch (err) {
+        setIssues([{ path: "(data)", message: (err as Error).message }]);
+      } finally {
+        setBusy(null);
+      }
+    },
+    [],
+  );
+
   const openFiles = useCallback(
     async (list: FileList | null) => {
       const files = Array.from(list ?? []);
@@ -89,10 +154,18 @@ export function App() {
 
       const manifestFile = files.find((f) => MANIFEST_EXT.test(f.name));
       if (!manifestFile) {
-        setIssues([{
-          path: "(files)",
-          message: "no manifest found — include a .gw.yaml, .yaml or .json file",
-        }]);
+        // The common case for somebody new: they have a spreadsheet and have
+        // never heard of a manifest. Guess one from the data rather than
+        // sending them away to read the format first.
+        const data = files.filter((f) => DATA_EXT.test(f.name));
+        if (!data.length) {
+          setIssues([{
+            path: "(files)",
+            message: "nothing to read — drop a .csv, or a .gw.yaml manifest with the files it names",
+          }]);
+          return;
+        }
+        await inferFrom(data);
         return;
       }
       // Only the manifest is read whole; the data files stay as streams.
@@ -104,7 +177,7 @@ export function App() {
       const bytes = data.reduce((t, d) => t + d.blob.size, 0);
       await accept(manifestText, data, `Reading ${describeBytes(bytes)}…`);
     },
-    [accept],
+    [accept, inferFrom],
   );
 
   const loadExample = useCallback(
@@ -136,7 +209,16 @@ export function App() {
   const body = useMemo(() => {
     if (!loaded) return null;
     return mode === "build" ? (
-      <Builder manifest={loaded.manifest} manifestText={loaded.text} source={loaded.source} />
+      <Builder
+          manifest={loaded.manifest}
+          manifestText={loaded.text}
+          source={loaded.source}
+          onChange={(manifest) =>
+            setLoaded((prev) =>
+              prev ? { ...prev, manifest, text: stringify(manifest, { lineWidth: 100 }) } : prev,
+            )
+          }
+        />
     ) : (
       <Dashboard manifest={loaded.manifest} source={loaded.source} />
     );
@@ -146,6 +228,16 @@ export function App() {
     <div className="pg-root">
       <header className="pg-head">
         <div className="pg-brand">
+          {/* The mark is the product: a grid with one cell filled. Drawn inline
+              rather than fetched, because the standalone build promises no
+              network requests at all after load — a logo is not worth breaking
+              that for. */}
+          <svg className="pg-mark" viewBox="0 0 20 20" aria-hidden="true">
+            <rect x="1"  y="1"  width="8" height="8" rx="1.5" className="pg-mark-on" />
+            <rect x="11" y="1"  width="8" height="8" rx="1.5" />
+            <rect x="1"  y="11" width="8" height="8" rx="1.5" />
+            <rect x="11" y="11" width="8" height="8" rx="1.5" />
+          </svg>
           <strong>Gridwright</strong>
           <span>playground</span>
         </div>
@@ -186,12 +278,17 @@ export function App() {
             />
           </label>
           {loaded && (
+            <button type="button" className="pg-button" onClick={() => setShowManifest(true)}>
+              View manifest
+            </button>
+          )}
+          {loaded && (
             <button
               type="button"
               className="pg-button"
-              onClick={() => { setLoaded(null); setIssues([]); }}
+              onClick={() => { setLoaded(null); setIssues([]); setShowManifest(false); }}
             >
-              Close
+              Start over
             </button>
           )}
         </div>
@@ -202,6 +299,54 @@ export function App() {
           <strong>{issues.length} problem{issues.length === 1 ? "" : "s"} in that manifest</strong>
           {/* User content, rendered as text — never as markup. */}
           <pre>{formatIssues(issues)}</pre>
+        </div>
+      )}
+
+      {loaded && showManifest && (
+        <div className="pg-scrim" onClick={() => setShowManifest(false)} />
+      )}
+      {loaded && showManifest && (
+        <div className="pg-sheet" role="dialog" aria-modal="true" aria-label="The manifest behind this dashboard">
+          <header>
+            <div>
+              <strong>This dashboard, as a file</strong>
+              <p>
+                Everything above is this text. Save it as <code>dashboard.gw.yaml</code>{" "}
+                beside your data and it reopens exactly as it is now.
+              </p>
+            </div>
+            <div className="pg-sheet-actions">
+              <button
+                type="button"
+                className="pg-button"
+                onClick={() => {
+                  void navigator.clipboard?.writeText(loaded.text).then(
+                    () => { setCopied(true); setTimeout(() => setCopied(false), 2000); },
+                    () => setCopied(false),
+                  );
+                }}
+              >
+                {copied ? "Copied" : "Copy"}
+              </button>
+              <button type="button" className="pg-button" onClick={() => setShowManifest(false)}>
+                Close
+              </button>
+            </div>
+          </header>
+          {/* User content, rendered as text — never as markup. */}
+          <textarea readOnly value={loaded.text} spellCheck={false} />
+        </div>
+      )}
+
+      {loaded?.inferred && mode === "view" && (
+        <div className="pg-guessed" role="status">
+          <div>
+            <strong>Guessed from your columns.</strong>{" "}
+            {loaded.inferred.join(" ")}
+          </div>
+          <button type="button" className="pg-button" onClick={() => setMode("build")}>
+            Change it
+          </button>
         </div>
       )}
 
@@ -219,39 +364,79 @@ export function App() {
           }}
         >
           <div className="pg-drop-inner">
-            <h1>Drop a manifest and its data</h1>
-            <p>
-              A <code>.gw.yaml</code> manifest plus the CSV files it names. Nothing is uploaded —
-              the data is streamed straight into this tab and never leaves it.
+            <p className="pg-eyebrow">Schema-driven dashboards</p>
+            <h1>
+              Turn a spreadsheet<br />
+              into a dashboard
+            </h1>
+            <p className="pg-lede">
+              Drop a CSV here. Gridwright reads the columns, works out what can be
+              grouped and what can be counted, and builds you a dashboard you can
+              click through — then edit, and export as a file you own.
             </p>
+
+            <label className="pg-button pg-primary pg-cta">
+              Choose a CSV
+              <input
+                type="file"
+                multiple
+                accept=".yaml,.yml,.json,.csv,.tsv,.txt"
+                onChange={(e) => void openFiles(e.target.files)}
+              />
+            </label>
+            <p className="pg-hint">
+              …or drag it anywhere on this page. Nothing is uploaded — your file is
+              read inside this tab and never leaves your machine.
+            </p>
+
+            <div className="pg-or"><span>or see one already built</span></div>
+
             <div className="pg-examples">
               <button
                 type="button"
-                className="pg-button pg-primary"
+                className="pg-example"
                 disabled={busy !== null}
                 onClick={() => void loadExample("sales-overview.gw.yaml", ["sales.csv"])}
               >
-                Load flat example
+                <span className="pg-example-mark pg-mark-flat" aria-hidden="true" />
+                <strong>Sales overview</strong>
+                <span>2,694 orders in one file. Revenue by month, channel and region.</span>
               </button>
               <button
                 type="button"
-                className="pg-button"
+                className="pg-example"
                 disabled={busy !== null}
                 onClick={() =>
                   void loadExample("orders-star.gw.yaml", ["orders.csv", "customers.csv", "products.csv"])
                 }
               >
-                Load star schema
+                <span className="pg-example-mark pg-mark-join" aria-hidden="true" />
+                <strong>Orders, customers and products</strong>
+                <span>Three files joined together, so you can slice orders by things stored elsewhere.</span>
+              </button>
+              <button
+                type="button"
+                className="pg-example"
+                disabled={busy !== null}
+                onClick={() => void loadExample("chart-types.gw.yaml", ["sales.csv"])}
+              >
+                <span className="pg-example-mark pg-mark-forms" aria-hidden="true" />
+                <strong>What each chart is for</strong>
+                <span>Every panel type, laid out to show which one answers which question.</span>
               </button>
             </div>
-            <p className="pg-hint">
-              The star schema joins a fact table to two dimension tables.
-            </p>
           </div>
         </main>
       )}
     </div>
   );
+}
+
+/** A file name reduced to a legal table id: "Q3 Sales.csv" -> "q3_sales". */
+function tableName(file: string): string {
+  const base = file.replace(/\.[^.]+$/, "").trim().toLowerCase()
+    .replace(/[^a-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
+  return /^[a-z_]/.test(base) && base ? base : `t_${base}`;
 }
 
 function describeBytes(bytes: number): string {

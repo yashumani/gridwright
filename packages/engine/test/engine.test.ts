@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { parseManifest, type Manifest } from "@gridwright/schema";
+import { formatIssues, parseManifest, validateManifest, type Manifest } from "@gridwright/schema";
+import { analyzeExpression } from "@gridwright/expr";
 import {
   Engine, EngineError, MemorySource, QueryCache,
   compileDataset, hashPlan, loadDelimited, parseDelimited, planToSql, projectFields,
-  loadBundle, planToSqlParams, sourceFromText, typesForTable,
+  inferManifest, loadBundle, planToSqlParams, sniffType, sourceFromText, typesForTable,
   type QueryResult, type Table, type Value,
 } from "@gridwright/engine";
 
@@ -43,8 +44,15 @@ describe("plan compilation", () => {
   });
 
   it("projects only the fields the query reads", () => {
-    const plan = compileDataset(m, "by_channel");
-    expect(plan.fields.sort()).toEqual(["amount", "channel"]);
+    // by_region groups one dimension and sums one column, so the plan must
+    // touch exactly two of the model's five fields.
+    const plan = compileDataset(m, "by_region");
+    expect(plan.fields.sort()).toEqual(["amount", "region"]);
+
+    // A dataset that measures more reads more: countIf(returned) pulls the
+    // boolean in, and nothing else.
+    expect(compileDataset(m, "by_channel").fields.sort())
+      .toEqual(["amount", "channel", "returned"]);
   });
 
   it("routes a sort on a post measure to the post tier", () => {
@@ -797,5 +805,189 @@ describe("bound parameters", () => {
     expect(bound.split("\n").length).toBe(readable.split("\n").length);
     expect(bound).toContain("WITH grouped AS (");
     expect(bound).toContain("GROUP BY");
+  });
+});
+
+describe("inferring a manifest from bare data", () => {
+  // The path for somebody who has a spreadsheet and has never heard of the
+  // manifest format. Every guess below is one a wrong answer would make
+  // visibly silly, which is why it is pinned.
+  const csv = readFileSync(dir("../../../examples/sales.csv"), "utf8");
+  const table = () => loadDelimited("sales", csv);
+
+  it("sniffs a column's type from its values", () => {
+    expect(sniffType(["2024-01-05", "2024-02-11"])).toBe("date");
+    expect(sniffType(["1200.50", "980"])).toBe("number");
+    expect(sniffType(["true", "no", "Y"])).toBe("boolean");
+    expect(sniffType(["North", "South"])).toBe("string");
+    expect(sniffType([null, "", null])).toBe("string");
+  });
+
+  it("does not read a bare number as a date", () => {
+    // Date.parse("2024") succeeds, which would turn a count column into a
+    // timeline and a bar chart into nonsense.
+    expect(sniffType(["2024", "1999", "5"])).toBe("number");
+  });
+
+  it("reads 0/1 as a number, because from values alone it cannot be a flag", () => {
+    // "true"/"yes" are unambiguous; digits are not. A quantity column that
+    // happens to hold only 0 and 1 would be destroyed by guessing boolean —
+    // the measure disappears — whereas summing a flag still counts its trues.
+    // So the ambiguous case takes the recoverable side.
+    expect(sniffType(["1", "0", "1"])).toBe("number");
+    expect(sniffType(["true", "false"])).toBe("boolean");
+    expect(sniffType(["yes", "N"])).toBe("boolean");
+  });
+
+  it("reads an identifier header the way a person wrote it", () => {
+    // The test ran against the raw header with an underscore-only pattern, so
+    // `Order ID` and `orderId` fell through and were summed — producing exactly
+    // the large, confident, meaningless number the rule exists to prevent.
+    const t = loadDelimited(
+      "sales",
+      "Order ID,orderId,Customer Id,amount\n101,55,7,10\n102,56,8,20\n103,57,9,30\n",
+    );
+    const { manifest, notes } = inferManifest(t);
+    const summed = manifest.model.measures.map((m) => m.expr).join(" ");
+    for (const id of ["Order_ID", "orderId", "Customer_Id"]) {
+      expect(summed).not.toContain(`sum(${id})`);
+    }
+    expect(summed).toContain("sum(amount)");
+    expect(notes.join(" ")).toContain("rather than");
+  });
+
+  it("skips a header a manifest cannot name, rather than emitting one that fails", () => {
+    // `from` is held to "table.column" with a strict column pattern, so a
+    // header like `Order-ID` produced a reference the schema rejects: the whole
+    // inferred dashboard failed to validate and could not be reopened from its
+    // own export.
+    const t = loadDelimited("sales", "Order-ID,2026 Sales,region,amount\nA,1,North,10\nB,2,South,20\n");
+    const { manifest, notes } = inferManifest(t);
+
+    expect(manifest.model.fields.map((f) => f.from)).toEqual(["sales.region", "sales.amount"]);
+    expect(notes.join(" ")).toContain("Order-ID");
+
+    const check = validateManifest(manifest, {
+      checkExpression: (e) => analyzeExpression(e).issues,
+    });
+    expect(check.ok, check.ok ? "" : formatIssues(check.issues)).toBe(true);
+  });
+
+  it("says so rather than throwing something opaque when no header is usable", () => {
+    const t = loadDelimited("sales", "Order-ID,2026 Sales\nA,1\n");
+    expect(() => inferManifest(t)).toThrow(/no columns a manifest can name/);
+  });
+
+  it("produces a manifest that validates and runs", async () => {
+    const { manifest } = inferManifest(table());
+    const check = validateManifest(JSON.parse(JSON.stringify(manifest)), {
+      checkExpression: (e) => analyzeExpression(e).issues,
+    });
+    expect(check.ok, check.ok ? "" : formatIssues(check.issues)).toBe(true);
+
+    const engine = new Engine(manifest, sourceFromText(manifest, { sales: csv }), { cache: false });
+    for (const name of Object.keys(manifest.datasets)) {
+      expect((await engine.query(name)).rowCount).toBeGreaterThan(0);
+    }
+  });
+
+  it("refuses to sum a column that identifies a row", () => {
+    // sum(order_id) is a large, confident, meaningless number.
+    const { manifest, notes } = inferManifest(table());
+    expect(manifest.model.measures.map((m) => m.expr)).not.toContain("sum(order_id)");
+    expect(manifest.model.measures.map((m) => m.expr)).toContain("sum(amount)");
+    expect(notes.join(" ")).toContain("order_id");
+  });
+
+  it("skips a column with a distinct value per row", () => {
+    // A legal dimension and a useless chart: one bar per row.
+    const wide: Table = {
+      name: "t", rowCount: 4,
+      columns: {
+        email: ["a@x", "b@x", "c@x", "d@x"],
+        team: ["red", "red", "blue", "blue"],
+        spend: [1, 2, 3, 4],
+      },
+    };
+    const { manifest } = inferManifest(wide);
+    const fields = manifest.model.dimensions.map((d) => d.field);
+    expect(fields).toContain("team");
+    expect(fields).not.toContain("email");
+  });
+
+  it("leads with the date, because change over time is the chart people look for", () => {
+    const { manifest } = inferManifest(table());
+    expect(manifest.model.dimensions[0]!.field).toBe("order_date");
+    expect(manifest.model.dimensions[0]!.grain).toBe("month");
+    expect(manifest.panels.find((p) => p.type === "line")).toBeTruthy();
+  });
+
+  it("lays panels out without leaving a hole in the grid", () => {
+    const { manifest } = inferManifest(table());
+    const rows = new Map<number, number>();
+    for (const p of manifest.panels) {
+      rows.set(p.layout.y, (rows.get(p.layout.y) ?? 0) + p.layout.w);
+    }
+    // Every occupied row is either full width or a tidy pair; none is a lone
+    // half-width panel with a gap beside it.
+    for (const [y, width] of rows) {
+      expect(width, `row ${y} spans ${width} of 12`).toBeLessThanOrEqual(12);
+    }
+    const ys = [...rows.keys()].sort((a, b) => a - b);
+    expect(ys[0]).toBe(0);
+    // The KPI row in particular fills its width. Two KPIs at a quarter each
+    // leaves half the screen blank, which reads as a dashboard that broke.
+    expect(rows.get(0)).toBe(12);
+  });
+
+  it("spreads however many KPIs there are across the full row", () => {
+    const two: Table = {
+      name: "t", rowCount: 4,
+      columns: { team: ["a", "a", "b", "b"], spend: [1, 2, 3, 4] },
+    };
+    const kpis = inferManifest(two).manifest.panels.filter((p) => p.type === "kpi");
+    expect(kpis).toHaveLength(2);
+    expect(kpis.map((p) => p.layout.w)).toEqual([6, 6]);
+    expect(kpis.map((p) => p.layout.x)).toEqual([0, 6]);
+  });
+
+  it("makes legal identifiers out of awkward column names", () => {
+    const awkward: Table = {
+      name: "t", rowCount: 2,
+      columns: {
+        "Order Date": ["2024-01-01", "2024-02-01"],
+        "amount (£)": [1, 2],
+        "__proto__": ["a", "b"],
+      },
+    };
+    const { manifest } = inferManifest(awkward);
+    for (const f of manifest.model.fields) {
+      expect(f.name).toMatch(/^[A-Za-z_][A-Za-z0-9_]*$/);
+      expect(["__proto__", "constructor", "prototype"]).not.toContain(f.name);
+    }
+    // The original column is still what gets read from the file.
+    expect(manifest.model.fields.map((f) => f.from)).toContain("t.Order Date");
+  });
+
+  it("points the manifest at the file the data actually came from", () => {
+    // A table id has to be a legal identifier, so "support-tickets.csv" becomes
+    // `support_tickets`. Writing the path from the id would name a file nobody
+    // has — and the manifest's whole claim is that saving it beside the data
+    // reopens the dashboard.
+    const t: Table = { name: "support_tickets", rowCount: 2, columns: { team: ["a", "b"] } };
+    const { manifest } = inferManifest(t, { path: "support-tickets.csv" });
+    expect(manifest.source.files[0]!.path).toBe("./support-tickets.csv");
+    expect(manifest.source.files[0]!.id).toBe("support_tickets");
+
+    // With nothing supplied, the id is the only name available.
+    expect(inferManifest(t).manifest.source.files[0]!.path).toBe("./support_tickets.csv");
+  });
+
+  it("still produces something when nothing is groupable", () => {
+    const flat: Table = { name: "t", rowCount: 2, columns: { note: ["a", "b"] } };
+    const { manifest, notes } = inferManifest(flat);
+    expect(manifest.model.dimensions).toEqual([]);
+    expect(manifest.panels.length).toBeGreaterThan(0);
+    expect(notes.join(" ")).toMatch(/totals only/i);
   });
 });

@@ -242,6 +242,186 @@ describe("cross-filtering", () => {
   });
 });
 
+describe("the newer chart forms", () => {
+  /** Swaps one panel for another type, keeping everything else the same. */
+  async function withPanel(type: string, props: Record<string, unknown>, dataset = "by_channel") {
+    const { manifest, source } = fixture();
+    manifest.panels = [{
+      id: "p", type, dataset, layout: { x: 0, y: 0, w: 12, h: 6 }, props,
+    }];
+    manifest.interactions = [];
+    render(<Dashboard manifest={manifest} source={source} store={new FilterStore()} />);
+    await waitFor(() => expect(screen.queryByText("Updating…")).not.toBeInTheDocument());
+  }
+
+  it("stacks segments to the full width of the bar in share mode", async () => {
+    await withPanel("stack", { category: "channel", values: ["revenue", "orders"], mode: "share" });
+    const bars = document.querySelectorAll(".gw-stack");
+    expect(bars.length).toBeGreaterThan(1);
+    for (const bar of bars) {
+      const widths = [...bar.querySelectorAll("rect")].map((r) => Number(r.getAttribute("width")));
+      const total = widths.reduce((a, b) => a + b, 0);
+      // Every bar normalises to the same length; only the split differs.
+      expect(total).toBeGreaterThan(0);
+    }
+    const totals = [...bars].map((b) =>
+      [...b.querySelectorAll("rect")].reduce((a, r) => a + Number(r.getAttribute("width")), 0));
+    // Within the 2px gap per segment.
+    expect(Math.max(...totals) - Math.min(...totals)).toBeLessThan(3);
+  });
+
+  it("keeps the totals comparable when it is not normalising", async () => {
+    await withPanel("stack", { category: "channel", values: ["revenue", "orders"] });
+    const totals = [...document.querySelectorAll(".gw-stack")].map((b) =>
+      [...b.querySelectorAll("rect")].reduce((a, r) => a + Number(r.getAttribute("width")), 0));
+    // Channels differ in revenue, so the bars must differ in length.
+    expect(Math.max(...totals) - Math.min(...totals)).toBeGreaterThan(3);
+  });
+
+  it("names every segment, so identity is never colour alone", async () => {
+    await withPanel("stack", { category: "channel", values: ["revenue", "orders"] });
+    const legend = [...document.querySelectorAll(".gw-legend li")].map((l) => l.textContent);
+    expect(legend).toEqual(["Revenue", "Orders"]);
+  });
+
+  it("draws a heatmap cell per combination the query returned", async () => {
+    const { manifest, source } = fixture();
+    manifest.datasets["grid"] = {
+      dimensions: ["region", "channel"],
+      measures: ["revenue"],
+      sort: [{ dimension: "region", dir: "asc" }],
+    };
+    manifest.panels = [{
+      id: "h", type: "heatmap", dataset: "grid",
+      layout: { x: 0, y: 0, w: 12, h: 6 },
+      props: { x: "channel", y: "region", value: "revenue" },
+    }];
+    manifest.interactions = [];
+    render(<Dashboard manifest={manifest} source={source} store={new FilterStore()} />);
+    await waitFor(() => expect(screen.queryByText("Updating…")).not.toBeInTheDocument());
+
+    // 5 regions × 4 channels in the reference data.
+    expect(document.querySelectorAll(".gw-cell").length).toBe(20);
+    // Shade comes from the ramp, never from a categorical hue: magnitude is not
+    // identity, and a rainbow invents an order the eye does not agree on.
+    const fills = [...document.querySelectorAll(".gw-cell-fill")]
+      .map((c) => c.getAttribute("fill"));
+    expect(fills.every((f) => f?.startsWith("var(--gw-ramp-"))).toBe(true);
+    // And every cell says its number as well as its shade.
+    expect(document.querySelectorAll(".gw-cell-value").length).toBe(20);
+  });
+
+  it("recesses everything but the highlighted bar", async () => {
+    await withPanel("bar", { category: "channel", value: "revenue", emphasise: "Direct" });
+    const lead = document.querySelectorAll(".gw-bar.gw-on");
+    const rest = document.querySelectorAll(".gw-bar.gw-dim");
+    expect(lead).toHaveLength(1);
+    expect(rest.length).toBeGreaterThan(0);
+    expect(lead[0]!.querySelector(".gw-bar-label")?.textContent).toBe("Direct");
+  });
+
+  it("leaves every bar equal when nothing is highlighted", async () => {
+    await withPanel("bar", { category: "channel", value: "revenue" });
+    expect(document.querySelectorAll(".gw-bar.gw-dim")).toHaveLength(0);
+    expect(document.querySelectorAll(".gw-bar.gw-on")).toHaveLength(0);
+  });
+
+  it("draws a sparkline from the measure's own series", async () => {
+    await withPanel("kpi", { measure: "revenue", sparkline: true }, "by_month");
+    const path = document.querySelector(".gw-spark-line");
+    expect(path).toBeTruthy();
+    // 24 months in the reference data, so 24 points.
+    expect(path!.getAttribute("d")!.match(/[ML]/g)).toHaveLength(24);
+  });
+
+  it("draws no sparkline where there is no series to draw", async () => {
+    // A totals dataset is one row. Two points is a segment, not a trend.
+    await withPanel("kpi", { measure: "revenue", sparkline: true }, "totals");
+    expect(document.querySelector(".gw-spark-line")).toBeNull();
+    // The number is still there — the option degrades rather than failing.
+    expect(document.querySelector(".gw-kpi-value")?.textContent).toMatch(/\$/);
+  });
+
+  it("reads the delta from the same row as the headline", async () => {
+    // The headline moved to the last point of the series but the delta stayed
+    // on row 0, so a time-series KPI paired today's number with the oldest
+    // change — enough to point the arrow the wrong way.
+    await withPanel("kpi", { measure: "revenue", delta: "revenue" }, "by_month");
+    const headline = document.querySelector(".gw-kpi-value")!.textContent;
+    const delta = document.querySelector(".gw-delta")!.textContent;
+    // Same column, same row: whatever the headline reads, the delta reads too.
+    expect(delta).toContain(headline!.replace(/^[^\d]*/, ""));
+  });
+
+  it("reads the last point of a series, not the first", async () => {
+    // A KPI beside a trend means "now", not "when the window opened". The two
+    // months differ by fifty thousand, so reading the wrong end is not a
+    // rounding difference — it is a different number on the dashboard.
+    await withPanel("kpi", { measure: "revenue" }, "by_month");
+    expect(document.querySelector(".gw-kpi-value")!.textContent).toBe("$221,948");
+
+    // And a single-row dataset still reads that row.
+    cleanup();
+    await withPanel("kpi", { measure: "revenue" }, "totals");
+    expect(document.querySelector(".gw-kpi-value")!.textContent).toBe("$4,282,970");
+  });
+});
+
+describe("reading a value without a mouse", () => {
+  it("walks the line chart's points with the arrow keys", async () => {
+    await mount();
+    const svg = document.querySelector('[data-panel="trend"] .gw-svg') as SVGElement;
+    expect(svg.getAttribute("tabindex")).toBe("0");
+
+    // Focus lands on the most recent point, because that is the one people
+    // came to read.
+    await act(async () => { fireEvent.focus(svg); });
+    const last = document.querySelector('[data-panel="trend"] .gw-tip')!.textContent;
+    expect(last).toBeTruthy();
+
+    await act(async () => { fireEvent.keyDown(svg, { key: "Home" }); });
+    const first = document.querySelector('[data-panel="trend"] .gw-tip')!.textContent;
+    expect(first).not.toBe(last);
+
+    await act(async () => { fireEvent.keyDown(svg, { key: "ArrowRight" }); });
+    expect(document.querySelector('[data-panel="trend"] .gw-tip')!.textContent).not.toBe(first);
+
+    await act(async () => { fireEvent.keyDown(svg, { key: "End" }); });
+    expect(document.querySelector('[data-panel="trend"] .gw-tip')!.textContent).toBe(last);
+  });
+
+  it("stops at both ends rather than wrapping", async () => {
+    await mount();
+    const svg = document.querySelector('[data-panel="trend"] .gw-svg') as SVGElement;
+    await act(async () => { fireEvent.focus(svg); fireEvent.keyDown(svg, { key: "Home" }); });
+    const first = document.querySelector('[data-panel="trend"] .gw-tip')!.textContent;
+    await act(async () => {
+      for (let i = 0; i < 5; i++) fireEvent.keyDown(svg, { key: "ArrowLeft" });
+    });
+    expect(document.querySelector('[data-panel="trend"] .gw-tip')!.textContent).toBe(first);
+  });
+
+  it("announces what it shows, rather than only drawing it", async () => {
+    // The tip is a live region, so what appears for a sighted reader is what a
+    // screen reader is told.
+    await mount();
+    const svg = document.querySelector('[data-panel="trend"] .gw-svg') as SVGElement;
+    await act(async () => { fireEvent.focus(svg); });
+    const tip = document.querySelector('[data-panel="trend"] .gw-tip')!;
+    expect(tip.getAttribute("role")).toBe("status");
+    expect(tip.textContent).toMatch(/Revenue/);
+  });
+
+  it("lets go of the readout when focus leaves", async () => {
+    await mount();
+    const svg = document.querySelector('[data-panel="trend"] .gw-svg') as SVGElement;
+    await act(async () => { fireEvent.focus(svg); });
+    expect(document.querySelector('[data-panel="trend"] .gw-tip')).toBeTruthy();
+    await act(async () => { fireEvent.blur(svg); });
+    expect(document.querySelector('[data-panel="trend"] .gw-tip')).toBeNull();
+  });
+});
+
 describe("misconfiguration is contained", () => {
   it("reports an unknown panel type without taking the dashboard down", async () => {
     const { manifest, source } = fixture();
@@ -381,7 +561,8 @@ describe("accessibility", () => {
 
 describe("registry", () => {
   it("lists the built-in panel types", () => {
-    expect(defaultRegistry().types()).toEqual(["bar", "kpi", "line", "table"]);
+    expect(defaultRegistry().types())
+      .toEqual(["bar", "dot", "heatmap", "kpi", "line", "stack", "table"]);
   });
 
   it("accepts a custom panel type", () => {
@@ -398,6 +579,17 @@ describe("registry", () => {
 });
 
 describe("value formatting", () => {
+  it("treats # after the point as an optional decimal, as Excel does", () => {
+    // `0.##` used to fall through into the suffix and print a literal "##"
+    // beside the number, which is how an inferred manifest first showed
+    // "4,282,970.##" on a KPI.
+    expect(formatValue(5, "#,##0.##")).toBe("5");
+    expect(formatValue(5.25, "#,##0.##")).toBe("5.25");
+    expect(formatValue(4282970.5, "#,##0.##")).toBe("4,282,970.5");
+    // A zero still pins the place, so money keeps its cents.
+    expect(formatValue(5, "$#,##0.00")).toBe("$5.00");
+  });
+
   it("applies Excel-style patterns", () => {
     expect(formatValue(1234567, "$#,##0", "en-US")).toBe("$1,234,567");
     expect(formatValue(0.0834, "0.0%", "en-US")).toBe("8.3%");

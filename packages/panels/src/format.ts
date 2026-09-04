@@ -3,7 +3,13 @@ import type { Value } from "@gridwright/engine";
 /**
  * Excel-style number patterns, because that is the notation the people writing
  * manifests already know. Supported: a literal prefix/suffix, `#,##0` grouping,
- * a fixed decimal count, and a trailing `%` that scales by 100.
+ * decimals, and a trailing `%` that scales by 100.
+ *
+ * After the point, `0` is a decimal that always shows and `#` is one that shows
+ * only when it is not zero — so `0.00` renders 5 as "5.00" while `0.##` renders
+ * it as "5" and 5.25 as "5.25". That is what Excel does, and a pattern written
+ * from that habit used to fall through into the suffix and print a literal
+ * "##" next to the number.
  *
  * Patterns are parsed once and cached — a table redraw formats thousands of
  * cells, and re-parsing per cell shows up immediately.
@@ -12,7 +18,10 @@ export interface NumberPattern {
   prefix: string;
   suffix: string;
   grouping: boolean;
+  /** Most decimals to show. */
   decimals: number;
+  /** Fewest to show; below this, trailing places are dropped. */
+  minDecimals: number;
   percent: boolean;
 }
 
@@ -24,14 +33,16 @@ export function parsePattern(pattern: string): NumberPattern {
 
   const percent = pattern.includes("%");
   const core = pattern.replace(/%/g, "");
-  const match = /[#0][#0,]*(?:\.0+)?/.exec(core);
+  const match = /[#0][#0,]*(?:\.[#0]+)?/.exec(core);
   const numeric = match?.[0] ?? "0";
+  const fraction = numeric.includes(".") ? (numeric.split(".")[1] ?? "") : "";
 
   const parsed: NumberPattern = {
     prefix: core.slice(0, match?.index ?? 0),
     suffix: core.slice((match?.index ?? 0) + numeric.length),
     grouping: numeric.includes(","),
-    decimals: numeric.includes(".") ? (numeric.split(".")[1] ?? "").length : 0,
+    decimals: fraction.length,
+    minDecimals: fraction.replace(/#/g, "").length,
     percent,
   };
   cache.set(pattern, parsed);
@@ -46,7 +57,7 @@ export function formatNumber(value: number, pattern: string | undefined, locale?
   const scaled = p.percent ? value * 100 : value;
   const body = new Intl.NumberFormat(locale, {
     useGrouping: p.grouping,
-    minimumFractionDigits: p.decimals,
+    minimumFractionDigits: p.minDecimals,
     maximumFractionDigits: p.decimals,
   }).format(scaled);
   return `${p.prefix}${body}${p.suffix}${p.percent ? "%" : ""}`;

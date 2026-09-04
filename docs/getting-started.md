@@ -8,9 +8,10 @@ pnpm build
 pnpm --filter @gridwright/playground dev
 ```
 
-Open the playground and click **Load flat example**, or drag in your own
-`.gw.yaml` and the CSVs it names. Nothing is uploaded — every query runs in the
-tab, and the standalone build makes no network requests at all after load.
+Open the playground and drag a file onto it — a `.csv` on its own, or a
+`.gw.yaml` together with the CSVs it names. Or click one of the two worked
+examples on the landing screen. Nothing is uploaded: every query runs in the tab,
+and the standalone build makes no network requests at all after load.
 
 Two examples ship:
 
@@ -18,6 +19,55 @@ Two examples ship:
 |---|---|
 | `examples/sales-overview.gw.yaml` | One flat CSV, 2694 rows. |
 | `examples/orders-star.gw.yaml` | A fact table joined to two dimension tables. |
+
+## Starting from a CSV, with no manifest at all
+
+Drop a bare `.csv` on the playground and you get a dashboard without writing
+anything. Gridwright reads the columns and answers three questions from the data
+itself: what type is each column, which ones are worth grouping by, and which
+ones are worth adding up.
+
+Then **View manifest** shows you the file it wrote. Save it as
+`dashboard.gw.yaml` beside your data and it reopens exactly as it was — the
+inferred path and the hand-written path produce the same kind of file, so
+nothing is a dead end.
+
+### What it guesses, and what it refuses to
+
+Every guess is one where a wrong answer would be visibly silly, so each is
+deliberately conservative:
+
+| Question | The rule | Why not something cleverer |
+|---|---|---|
+| Is this a date? | It must look like one — `YYYY-MM-DD`, or at least eight characters that parse | `Date.parse("2024")` succeeds, which would turn a count column into a timeline |
+| Is this a flag? | Only `true`/`false`/`yes`/`no`/`y`/`n`/`t`/`f` | A quantity column holding only `0` and `1` read as a flag loses the measure entirely; summing a flag still counts its trues, so the ambiguous case takes the recoverable side |
+| Should I add this up? | Numbers, unless the name says the column identifies a row (`id`, `uuid`, `key`, `code`, `no`, `num`) | `sum(order_id)` is a large, confident, meaningless number |
+| Can I group by this? | Between 2 and 50 distinct values, and no more than one per two rows | 60 customers grouped by name is a legal dimension and a useless chart: sixty bars of one |
+| How many charts? | The date first, then up to two more dimensions | More than a few is a wall nobody reads |
+
+A banner above the dashboard says what it did — how many rows it read, how many
+things it found to group by, and any column it deliberately left out of the
+measures. **Change it** opens the same builder you would use on a hand-written
+manifest.
+
+**Joins are never guessed.** Combining tables needs declared relations, and
+cardinality is what stops a join silently multiplying every total downstream —
+see [Joins](joins.md). Drop several files and the first one is used; the rest
+are named in the banner so you know they were skipped.
+
+Programmatically, this is `inferManifest`:
+
+```ts
+import { inferManifest, loadBlob } from "@gridwright/engine";
+
+const table = await loadBlob("sales", file);          // a File or Blob
+const { manifest, notes } = inferManifest(table, { path: file.name });
+```
+
+`notes` is the plain-English list the banner shows. `path` is the file's real
+name on disk — the table id has to be a legal identifier, so `sales-q3.csv`
+becomes the id `sales_q3`, and without `path` the manifest would point at a file
+nobody has.
 
 ## Your first manifest
 

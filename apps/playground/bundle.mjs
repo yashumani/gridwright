@@ -11,6 +11,7 @@ const js = readFileSync(join(dist, "assets", assets.find((f) => f.endsWith(".js"
 
 const files = [
   "sales-overview.gw.yaml", "sales.csv",
+  "chart-types.gw.yaml",
   "orders-star.gw.yaml", "orders.csv", "customers.csv", "products.csv",
 ];
 const embedded = Object.fromEntries(
@@ -23,7 +24,20 @@ const safe = (s) => s.replaceAll("</script", "<\\/script");
 // The app paints its own surfaces once mounted; these tokens cover the moment
 // before that, so the page never flashes the host's ground. Both themes are
 // declared at :root so the un-stamped "system" state resolves correctly.
-const html = `<title>Gridwright Playground</title>
+// The charset has to be declared in the document. Opened from file://, or
+// from any host that serves HTML without one, there is no header to say what
+// the bytes mean — the browser falls back to a legacy encoding and every
+// em-dash, ellipsis and "×" in the app renders as mojibake. It must also come
+// within the first 1024 bytes, which is why it leads.
+const html = `<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gridwright playground</title>
+<meta name="description" content="Drop a CSV in the browser and get a working dashboard — cross-filtering, joins and all. Nothing is uploaded; every query runs in the tab.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Gridwright — dashboards from a manifest">
+<meta property="og:description" content="Drop a CSV in the browser and get a working dashboard — cross-filtering, joins and all. Nothing is uploaded; every query runs in the tab.">
+<meta property="og:image" content="https://raw.githubusercontent.com/yashumani/gridwright/main/docs/social-card.png">
+<meta name="twitter:card" content="summary_large_image">
 <style>
   :root { --boot-bg: #f5f7f6; --boot-ink: #15211f; }
   @media (prefers-color-scheme: dark) {
@@ -40,4 +54,4 @@ const html = `<title>Gridwright Playground</title>
 `;
 
 writeFileSync("dist/standalone.html", html);
-console.log(`standalone.html: ${(html.length / 1048576).toFixed(2)} MB`);
+console.log(`standalone.html: ${(Buffer.byteLength(html) / 1048576).toFixed(2)} MB`);

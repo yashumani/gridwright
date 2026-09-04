@@ -1,8 +1,8 @@
-import { Component, useCallback, useEffect, useMemo, useRef, type ErrorInfo, type ReactNode } from "react";
+import { Component, useCallback, useEffect, useId, useMemo, useRef, type ErrorInfo, type ReactNode } from "react";
 import type { Action, Filter, Manifest, PanelDef } from "@gridwright/schema";
 import { formatIssues } from "@gridwright/schema";
 import { Engine, type DataSource, type QueryResult, type Value } from "@gridwright/engine";
-import { PanelRegistry, defaultRegistry, type PanelSpec } from "@gridwright/panels";
+import { PanelRegistry, defaultRegistry, seriesCss, type PanelSpec } from "@gridwright/panels";
 import { FilterStore, describeSelections, type Selections } from "./filter-store.js";
 import { useAsync, useMeasure, useSelections } from "./hooks.js";
 
@@ -15,6 +15,21 @@ export interface DashboardProps {
   locale?: string;
   className?: string;
   onError?: (error: Error) => void;
+  /**
+   * Rendered inside every panel's box, on top of its content.
+   *
+   * This is the seam the builder hangs its drag chrome on. It lives here rather
+   * than in an overlay the builder positions itself because the panel's box is
+   * the only place the grid's geometry is known exactly — a mirrored overlay has
+   * to re-measure and can drift by a pixel, and a drag handle that is a pixel
+   * off the thing it drags is worse than none. Absent, it costs nothing.
+   */
+  panelOverlay?: (panel: PanelDef) => ReactNode;
+  /**
+   * Rendered as a further child of the grid itself, so the builder can place a
+   * drop ghost at a cell no panel occupies yet.
+   */
+  gridOverlay?: ReactNode;
 }
 
 const DEFAULT_COLUMNS = 12;
@@ -29,7 +44,7 @@ interface Emitted {
 }
 
 export function Dashboard({
-  manifest, source, registry, store, locale, className, onError,
+  manifest, source, registry, store, locale, className, onError, panelOverlay, gridOverlay,
 }: DashboardProps) {
   const reg = useMemo(() => registry ?? defaultRegistry(), [registry]);
   const filters = useMemo(() => store ?? new FilterStore(), [store]);
@@ -54,6 +69,20 @@ export function Dashboard({
   );
 
   const active = useMemo(() => filters.toFilters(), [filters, selections]);
+
+  /**
+   * The manifest's own series colours, scoped to this dashboard.
+   *
+   * Scoped rather than global so two dashboards on one page keep their own
+   * palettes, and so the builder's preview repaints without touching anything
+   * else. `useId` gives the scope; its value carries colons, which are not legal
+   * unescaped in an attribute selector, so it is reduced to word characters.
+   */
+  const themeScope = useId().replace(/[^A-Za-z0-9_-]/g, "");
+  const themeCss = useMemo(
+    () => seriesCss(manifest.theme?.colors, themeScope),
+    [manifest.theme, themeScope],
+  );
 
   // One request per distinct (dataset, self-excluded dimensions) pair. Panels
   // that agree on both share a result, so the common case is still one query
@@ -141,7 +170,14 @@ export function Dashboard({
   const chips = describeSelections(manifest, selections);
 
   return (
-    <div className={`gw-root${className ? ` ${className}` : ""}`} data-gridwright="1">
+    <div
+      className={`gw-root${className ? ` ${className}` : ""}`}
+      data-gridwright="1"
+      {...(themeCss ? { "data-gw-theme": themeScope } : {})}
+    >
+      {/* Built entirely from hex colours this component re-validated; nothing
+          from the manifest reaches the stylesheet as text. */}
+      {themeCss && <style>{themeCss}</style>}
       {manifest.title && <h1 className="gw-title">{manifest.title}</h1>}
 
       <div className="gw-filterbar" role="region" aria-label="Active filters">
@@ -197,8 +233,10 @@ export function Dashboard({
             select={selectFor(panel)}
             {...(locale ? { locale } : {})}
             {...(onError ? { onError } : {})}
+            {...(panelOverlay ? { overlay: panelOverlay(panel) } : {})}
           />
         ))}
+        {gridOverlay}
       </div>
     </div>
   );
@@ -214,10 +252,11 @@ interface PanelHostProps {
   select: (dimension: string, value: Value, row?: Readonly<Record<string, Value>>) => void;
   locale?: string;
   onError?: (error: Error) => void;
+  overlay?: ReactNode;
 }
 
 function PanelHost({
-  panel, spec, registry, result, loading, selections, select, locale, onError,
+  panel, spec, registry, result, loading, selections, select, locale, onError, overlay,
 }: PanelHostProps) {
   const [ref, size] = useMeasure<HTMLDivElement>();
 
@@ -256,11 +295,17 @@ function PanelHost({
   }
 
   return (
-    <section className="gw-panel" style={style} aria-label={panel.title ?? panel.id}>
+    <section
+      className="gw-panel"
+      style={style}
+      aria-label={panel.title ?? panel.id}
+      data-panel={panel.id}
+    >
       {panel.title && <h2 className="gw-panel-title">{panel.title}</h2>}
       <div className="gw-panel-body" ref={ref}>
         {body}
       </div>
+      {overlay}
     </section>
   );
 }

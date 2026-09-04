@@ -158,7 +158,11 @@ export const manifestSchema = obj({
   theme: opt(
     obj({
       preset: opt(str({ maxLength: 48 })),
-      colors: opt(arr(str({ pattern: /^#[0-9a-fA-F]{3,8}$/, patternHint: "must be a hex colour" }), { max: 32 })),
+      colors: opt(
+        arr(str({ pattern: /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, patternHint: "must be a hex colour, 3 or 6 digits" }), {
+          max: 32,
+        }),
+      ),
     }),
   ),
 });

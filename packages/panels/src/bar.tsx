@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { bool, enum_, num, obj, opt, str } from "@gridwright/schema";
+import { bool, described, enum_, num, obj, opt, str } from "@gridwright/schema";
 import type { Value } from "@gridwright/engine";
 import { formatValue } from "./format.js";
+import { bandLayout } from "./marks.js";
 import { resultRow } from "./rules.js";
 import {
   columnValues, firstDimension, firstMeasure, isSelected, requireColumn,
@@ -20,14 +21,25 @@ export interface BarProps {
   /** Direct value labels. On by default — they carry the relief rule. */
   showValues?: boolean;
   maxBars?: number;
+  /**
+   * One category drawn in the accent colour, the rest in gray.
+   *
+   * The most underused form there is. When the story is "this one went up", a
+   * chart where every bar competes for attention buries it — eight hues say
+   * "these are eight different things" when what you meant was "look at this
+   * one". Highlighting one and recessing the rest says it in the encoding
+   * rather than in a caption nobody reads.
+   */
+  emphasise?: string;
 }
 
 const schema = obj({
-  category: str({ minLength: 1 }),
-  value: str({ minLength: 1 }),
-  orientation: opt(enum_(["horizontal", "vertical"] as const)),
-  showValues: opt(bool()),
-  maxBars: opt(num({ integer: true, min: 1, max: 200 })),
+  category: described(str({ minLength: 1 }), { title: "Group by" }),
+  value: described(str({ minLength: 1 }), { title: "Number to show" }),
+  orientation: described(opt(enum_(["horizontal", "vertical"] as const)), { title: "Bar direction" }),
+  showValues: described(opt(bool()), { title: "Show the numbers" }),
+  maxBars: described(opt(num({ integer: true, min: 1, max: 200 })), { title: "Most bars to show" }),
+  emphasise: described(opt(str({ minLength: 1 })), { title: "Highlight one" }),
 });
 
 /**
@@ -70,7 +82,6 @@ function Bar({ result, props, size, select, selected, locale }: PanelProps<BarPr
 
   if (!count || max <= 0) return <p className="gw-empty">No data to plot.</p>;
 
-  const GAP = 2;             // surface gap between adjacent bars
   const RADIUS = 4;          // rounded data-end
   const FONT = 11.5;
 
@@ -90,8 +101,10 @@ function Bar({ result, props, size, select, selected, locale }: PanelProps<BarPr
 
   const plotW = horizontal ? Math.max(24, width - LABEL_GUTTER - VALUE_GUTTER) : width;
   const plotH = horizontal ? height : height - 28;
-  const band = (horizontal ? plotH : plotW) / count;
-  const thickness = Math.max(4, band - GAP);
+  // The bar is capped and centred in its band. Filling the band is what made a
+  // four-category chart in a tall panel read as a stack of coloured blocks
+  // rather than as four measurements.
+  const { band, thickness, offset, origin } = bandLayout(horizontal ? plotH : plotW, count);
 
   const tip = hover !== null ? {
     label: String(labels[hover] ?? "—"),
@@ -109,17 +122,24 @@ function Bar({ result, props, size, select, selected, locale }: PanelProps<BarPr
       >
         {numbers.map((v, i) => {
           const on = isSelected(selected, category.id, labels[i] ?? null);
-          const dim = selectedAny(selected, category.id) && !on;
+          // Emphasis and selection are the same visual language — one bar
+          // forward, the rest back — so a selection simply overrides the
+          // configured highlight rather than fighting it.
+          const highlighted = props.emphasise !== undefined
+            && String(labels[i] ?? "") === props.emphasise;
+          const anySelected = selectedAny(selected, category.id);
+          const dim = anySelected ? !on : props.emphasise !== undefined && !highlighted;
+          const lead = anySelected ? on : highlighted;
           const length = (v / max) * (horizontal ? plotW : plotH);
-          const x = horizontal ? LABEL_GUTTER : i * band + GAP / 2;
-          const y = horizontal ? i * band + GAP / 2 : plotH - length;
+          const x = horizontal ? LABEL_GUTTER : origin + i * band + offset;
+          const y = horizontal ? origin + i * band + offset : plotH - length;
           const w = horizontal ? length : thickness;
           const h = horizontal ? thickness : length;
 
           return (
             <g
               key={i}
-              className={`gw-bar${on ? " gw-on" : ""}${dim ? " gw-dim" : ""}`}
+              className={`gw-bar${lead ? " gw-on" : ""}${dim ? " gw-dim" : ""}`}
               onMouseEnter={() => setHover(i)}
               onMouseLeave={() => setHover(null)}
               onClick={() => select(category.id, labels[i] ?? null, resultRow(result, i))}
@@ -135,8 +155,8 @@ function Bar({ result, props, size, select, selected, locale }: PanelProps<BarPr
             >
               {/* Hit target spans the whole band, not just the drawn bar. */}
               <rect
-                x={horizontal ? LABEL_GUTTER : i * band}
-                y={horizontal ? i * band : 0}
+                x={horizontal ? LABEL_GUTTER : origin + i * band}
+                y={horizontal ? origin + i * band : 0}
                 width={horizontal ? plotW : band}
                 height={horizontal ? band : plotH}
                 fill="transparent"
@@ -164,7 +184,7 @@ function Bar({ result, props, size, select, selected, locale }: PanelProps<BarPr
           numbers.map((_, i) => (
             <text
               key={`x${i}`}
-              x={i * band + band / 2}
+              x={origin + i * band + band / 2}
               y={plotH + 18}
               className="gw-bar-label"
               textAnchor="middle"
@@ -200,6 +220,7 @@ export const barPanel: PanelSpec<BarProps> = {
     category: firstDimension(result)?.id ?? "",
     value: firstMeasure(result)?.id ?? "",
   }),
+  primary: ["category", "value"],
   Component: Bar,
   minSize: { w: 3, h: 3 },
 };

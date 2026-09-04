@@ -1,10 +1,13 @@
-import { useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { Manifest, PanelDef } from "@gridwright/schema";
 import type { DataSource } from "@gridwright/engine";
-import { PanelRegistry, defaultRegistry } from "@gridwright/panels";
+import { PanelRegistry, defaultRegistry, type PanelSpec } from "@gridwright/panels";
 import { Dashboard, FilterStore } from "@gridwright/react";
-import { PropertyForm, type JsonSchema } from "./property-form.js";
+import { PropertyForm, type JsonSchema, type RefOption } from "./property-form.js";
 import { ModelEditor } from "./model-form.js";
+import { ThemeEditor } from "./theme-form.js";
+import { DropGhost, PanelChrome, useDrag } from "./drag.js";
+import { compact, gridColumns, resizeTo, resolveCollisions, type Rect } from "./layout.js";
 import {
   checkManifest, exportManifest, initialState, nextPanelId, placePanel, reduce,
 } from "./editor.js";
@@ -24,15 +27,53 @@ export interface BuilderProps {
 }
 
 /**
+ * A name for a panel that has no title of its own.
+ *
+ * Falling back to the id shows a list of `kpi_total_amount`, `bars_region`,
+ * `detail` — legible to whoever wrote the manifest and to nobody else, which
+ * for a generated manifest is nobody at all. The panel already says what it
+ * draws in its props, so read the ids it references and answer with their
+ * labels. The scan is generic rather than a switch on panel type, so a panel
+ * type this file has never heard of still gets a readable name.
+ */
+function describePanel(panel: PanelDef, manifest: Manifest, spec?: PanelSpec): string {
+  const labels = new Map<string, string>();
+  for (const d of manifest.model.dimensions) labels.set(d.id, d.label ?? d.id);
+  for (const m of manifest.model.measures) labels.set(m.id, m.label ?? m.id);
+
+  const found: string[] = [];
+  const scan = (v: unknown, depth: number): void => {
+    if (found.length >= 3 || depth > 4) return;
+    if (typeof v === "string") {
+      const label = labels.get(v);
+      if (label && !found.includes(label)) found.push(label);
+    } else if (Array.isArray(v)) {
+      for (const item of v) scan(item, depth + 1);
+    } else if (v && typeof v === "object") {
+      for (const item of Object.values(v)) scan(item, depth + 1);
+    }
+  };
+  scan(panel.props ?? {}, 0);
+
+  // Nothing recognisable — the panel's own type reads better than its id.
+  return found.length ? found.join(" · ") : spec?.label ?? panel.type;
+}
+
+/**
  * The visual editor. It renders the same `<Dashboard>` a viewer sees — editing
  * a live dashboard rather than a mock is the only way the preview can be
  * trusted — with an inspector driven entirely by the selected panel's schema.
  */
+/** The four layout numbers, named for what they mean rather than for the axis. */
+const LAYOUT_KEYS = [
+  ["x", "From column"], ["y", "From row"], ["w", "Columns wide"], ["h", "Rows tall"],
+] as const;
+
 export function Builder({ manifest, manifestText, source, registry, onChange, locale }: BuilderProps) {
   const reg = useMemo(() => registry ?? defaultRegistry(), [registry]);
   const [state, dispatch] = useReducer(reduce, manifest, (m) => initialState(m, manifestText));
   const [exported, setExported] = useState<string | null>(null);
-  const [tab, setTab] = useState<"panels" | "model">("panels");
+  const [tab, setTab] = useState<"panels" | "model" | "colours">("panels");
   const store = useMemo(() => new FilterStore(), []);
 
   /**
@@ -76,15 +117,84 @@ export function Builder({ manifest, manifestText, source, registry, onChange, lo
   const selected = state.manifest.panels.find((p) => p.id === state.selected);
   const spec = selected ? reg.get(selected.type) : undefined;
 
-  // Column ids the selected panel can reference, read straight from the
-  // manifest — no query needed to populate the pickers.
-  const refs = useMemo(() => {
+  // What the selected panel can draw, read straight from the manifest — no
+  // query needed to populate the pickers. Labels come along, because `rtn_rate`
+  // is not something anyone can be expected to guess.
+  const refs = useMemo((): RefOption[] => {
     if (!selected) return [];
     const ds = state.manifest.datasets[selected.dataset];
-    return [...(ds?.dimensions ?? []), ...(ds?.measures ?? [])];
+    const label = (id: string, from: { id: string; label?: string }[]): string =>
+      from.find((m) => m.id === id)?.label ?? id;
+    return [
+      ...(ds?.dimensions ?? []).map((id) => ({
+        id, label: label(id, state.manifest.model.dimensions), kind: "dimension" as const,
+      })),
+      ...(ds?.measures ?? []).map((id) => ({
+        id, label: label(id, state.manifest.model.measures), kind: "measure" as const,
+      })),
+    ];
   }, [selected, state.manifest]);
 
-  const columns = state.manifest.grid?.columns ?? 12;
+  const columns = gridColumns(state.manifest);
+
+  /**
+   * A dropped panel takes its cells outright and pushes whatever was under it
+   * down, then everything settles upwards into the space that leaves. Doing both
+   * as one action keeps the whole gesture a single undo step — a drag that took
+   * three presses of undo to reverse would be worse than no drag.
+   */
+  const place = useCallback(
+    (id: string, to: Rect) => {
+      const panels = compact(resolveCollisions(state.manifest.panels, id, to));
+      const settled = panels.every((p, i) => p === state.manifest.panels[i]);
+      if (settled) return;
+      apply({ type: "replace", manifest: { ...state.manifest, panels } });
+      dispatch({ type: "select", id });
+    },
+    [state.manifest],
+  );
+
+  const drag = useDrag({
+    manifest: state.manifest,
+    minSize: (p) => reg.get(p.type)?.minSize ?? { w: 1, h: 1 },
+    onCommit: place,
+    onSelect: (id) => apply({ type: "select", id }),
+  });
+
+  /**
+   * The same moves from the keyboard. A layout you can only change by dragging
+   * is one a keyboard user cannot change at all, and arrows are the faster way
+   * to nudge something one cell anyway.
+   */
+  const onGridKeyDown = (e: React.KeyboardEvent) => {
+    if (!selected) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const step: Record<string, [number, number]> = {
+      ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1],
+    };
+    const d = step[e.key];
+    if (!d) return;
+    e.preventDefault();
+    const [dx, dy] = d;
+    const min = reg.get(selected.type)?.minSize ?? { w: 1, h: 1 };
+    const to = e.shiftKey
+      ? resizeTo(selected.layout, "se", dx, dy, columns, min)
+      : {
+          ...selected.layout,
+          x: Math.min(Math.max(0, selected.layout.x + dx), columns - selected.layout.w),
+          y: Math.max(0, selected.layout.y + dy),
+        };
+    place(selected.id, to);
+  };
+
+  // Escape closes the export dialog. It covers the editor, so there has to be
+  // a way out that is not hunting for the button.
+  useEffect(() => {
+    if (exported === null) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setExported(null); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [exported]);
 
   return (
     <div className="gwb-root">
@@ -135,19 +245,31 @@ export function Builder({ manifest, manifestText, source, registry, onChange, lo
       </header>
 
       <div className="gwb-body">
-        <main className="gwb-preview">
+        <main
+          className={`gwb-preview${drag.gesture ? " gwb-gesturing" : ""}`}
+          onKeyDown={onGridKeyDown}
+        >
           <Dashboard
             manifest={preview}
             source={source}
             registry={reg}
             store={store}
             {...(locale ? { locale } : {})}
+            panelOverlay={(p) => (
+              <PanelChrome
+                panel={p}
+                selected={p.id === state.selected}
+                drag={drag}
+                label={p.title ?? describePanel(p, state.manifest, reg.get(p.type))}
+              />
+            )}
+            gridOverlay={<DropGhost gesture={drag.gesture} />}
           />
         </main>
 
         <aside className="gwb-inspector" aria-label="Inspector">
           <div className="gwb-tabs" role="tablist">
-            {(["panels", "model"] as const).map((t) => (
+            {(["panels", "model", "colours"] as const).map((t) => (
               <button
                 key={t}
                 type="button"
@@ -156,7 +278,7 @@ export function Builder({ manifest, manifestText, source, registry, onChange, lo
                 className={`gwb-tab${tab === t ? " gwb-on" : ""}`}
                 onClick={() => setTab(t)}
               >
-                {t === "panels" ? "Panels" : "Model"}
+                {t === "panels" ? "Panels" : t === "model" ? "Model" : "Colours"}
               </button>
             ))}
           </div>
@@ -178,6 +300,11 @@ export function Builder({ manifest, manifestText, source, registry, onChange, lo
 
           {tab === "model" ? (
             <ModelEditor manifest={state.manifest} apply={apply} columns={sourceColumns} />
+          ) : tab === "colours" ? (
+            <ThemeEditor
+              manifest={state.manifest}
+              apply={(theme) => apply({ type: "setTheme", theme })}
+            />
           ) : (
           <>
           <h2 className="gwb-heading">Panels</h2>
@@ -191,18 +318,24 @@ export function Builder({ manifest, manifestText, source, registry, onChange, lo
                   aria-pressed={p.id === state.selected}
                 >
                   <span className="gwb-listtype">{p.type}</span>
-                  <span>{p.title ?? p.id}</span>
+                  <span>{p.title ?? describePanel(p, state.manifest, reg.get(p.type))}</span>
                 </button>
               </li>
             ))}
           </ul>
 
-          {!selected && <p className="gwb-hint">Select a panel to edit it.</p>}
+          {!selected && (
+            <p className="gwb-hint">
+              Pick a panel to change what it shows. The fields it can draw from —
+              what you can group by, and what gets measured — live under{" "}
+              <strong>Model</strong>.
+            </p>
+          )}
 
           {selected && (
             <>
               <h2 className="gwb-heading">
-                {selected.title ?? selected.id}
+                {selected.title ?? describePanel(selected, state.manifest, spec)}
                 <button
                   type="button"
                   className="gwb-mini gwb-danger"
@@ -212,75 +345,98 @@ export function Builder({ manifest, manifestText, source, registry, onChange, lo
                 </button>
               </h2>
 
-              <div className="gwb-row">
-                <label className="gwb-label" htmlFor="gwb-title">Title</label>
-                <div className="gwb-control">
-                  <input
-                    id="gwb-title"
-                    className="gwb-input"
-                    value={selected.title ?? ""}
-                    onChange={(e) =>
-                      apply({ type: "updatePanel", id: selected.id, patch: { title: e.target.value || undefined } })
-                    }
-                  />
-                </div>
-              </div>
+              {/* What the panel draws comes first, because it is the question
+                  the panel is asking. Everything below it is presentation. */}
+              {spec ? (
+                <>
+                  {spec.primary?.length ? (
+                    <PropertyForm
+                      schema={spec.schema.jsonSchema() as JsonSchema}
+                      value={selected.props ?? {}}
+                      suggestions={{ refs }}
+                      only={spec.primary}
+                      onChange={(next) =>
+                        apply({ type: "updateProps", id: selected.id, props: (next ?? {}) as Record<string, unknown> })
+                      }
+                    />
+                  ) : null}
 
-              <div className="gwb-row">
-                <label className="gwb-label" htmlFor="gwb-dataset">Dataset</label>
-                <div className="gwb-control">
-                  <select
-                    id="gwb-dataset"
-                    className="gwb-input"
-                    value={selected.dataset}
-                    onChange={(e) =>
-                      apply({ type: "updatePanel", id: selected.id, patch: { dataset: e.target.value } })
-                    }
-                  >
-                    {Object.keys(state.manifest.datasets).map((d) => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <fieldset className="gwb-fieldset">
-                <legend>Layout</legend>
-                {(["x", "y", "w", "h"] as const).map((k) => (
-                  <div className="gwb-row" key={k}>
-                    <label className="gwb-label" htmlFor={`gwb-${k}`}>{k.toUpperCase()}</label>
+                  <div className="gwb-row">
+                    <label className="gwb-label" htmlFor="gwb-title">Title</label>
                     <div className="gwb-control">
                       <input
-                        id={`gwb-${k}`}
+                        id="gwb-title"
                         className="gwb-input"
-                        type="number"
-                        min={k === "w" || k === "h" ? 1 : 0}
-                        max={k === "x" || k === "w" ? columns : undefined}
-                        value={selected.layout[k]}
-                        onChange={(e) => {
-                          const n = Number(e.target.value);
-                          if (!Number.isFinite(n)) return;
-                          const layout = { ...selected.layout, [k]: Math.trunc(n) };
-                          apply({ type: "updatePanel", id: selected.id, patch: { layout } });
-                        }}
+                        placeholder={describePanel(selected, state.manifest, spec)}
+                        value={selected.title ?? ""}
+                        onChange={(e) =>
+                          apply({ type: "updatePanel", id: selected.id, patch: { title: e.target.value || undefined } })
+                        }
                       />
                     </div>
                   </div>
-                ))}
-              </fieldset>
 
-              {spec ? (
-                <fieldset className="gwb-fieldset">
-                  <legend>{spec.label} settings</legend>
-                  <PropertyForm
-                    schema={spec.schema.jsonSchema() as JsonSchema}
-                    value={selected.props ?? {}}
-                    suggestions={{ refs }}
-                    onChange={(next) =>
-                      apply({ type: "updateProps", id: selected.id, props: (next ?? {}) as Record<string, unknown> })
-                    }
-                  />
-                </fieldset>
+                  <details className="gwb-section">
+                    <summary>More settings</summary>
+
+                    <PropertyForm
+                      schema={spec.schema.jsonSchema() as JsonSchema}
+                      value={selected.props ?? {}}
+                      suggestions={{ refs }}
+                      {...(spec.primary?.length ? { except: spec.primary } : {})}
+                      onChange={(next) =>
+                        apply({ type: "updateProps", id: selected.id, props: (next ?? {}) as Record<string, unknown> })
+                      }
+                    />
+
+                    <div className="gwb-row">
+                      <label className="gwb-label" htmlFor="gwb-dataset">Reads from</label>
+                      <div className="gwb-control">
+                        <select
+                          id="gwb-dataset"
+                          className="gwb-input"
+                          value={selected.dataset}
+                          onChange={(e) =>
+                            apply({ type: "updatePanel", id: selected.id, patch: { dataset: e.target.value } })
+                          }
+                        >
+                          {Object.keys(state.manifest.datasets).map((d) => (
+                            <option key={d} value={d}>{d}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <fieldset className="gwb-fieldset">
+                      <legend>Position</legend>
+                      <p className="gwb-hint">
+                        Drag the panel to move it, or its corners to resize. Arrow keys nudge
+                        the selected panel; hold shift to resize.
+                      </p>
+                      {LAYOUT_KEYS.map(([k, name]) => (
+                        <div className="gwb-row" key={k}>
+                          <label className="gwb-label" htmlFor={`gwb-${k}`}>{name}</label>
+                          <div className="gwb-control">
+                            <input
+                              id={`gwb-${k}`}
+                              className="gwb-input"
+                              type="number"
+                              min={k === "w" || k === "h" ? 1 : 0}
+                              max={k === "x" || k === "w" ? columns : undefined}
+                              value={selected.layout[k]}
+                              onChange={(e) => {
+                                const n = Number(e.target.value);
+                                if (!Number.isFinite(n)) return;
+                                const layout = { ...selected.layout, [k]: Math.trunc(n) };
+                                apply({ type: "updatePanel", id: selected.id, patch: { layout } });
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </fieldset>
+                  </details>
+                </>
               ) : (
                 <p className="gwb-hint">No editor for panel type “{selected.type}”.</p>
               )}
@@ -292,7 +448,10 @@ export function Builder({ manifest, manifestText, source, registry, onChange, lo
       </div>
 
       {exported !== null && (
-        <div className="gwb-export" role="dialog" aria-label="Exported manifest">
+        <div className="gwb-scrim" onClick={() => setExported(null)} />
+      )}
+      {exported !== null && (
+        <div className="gwb-export" role="dialog" aria-modal="true" aria-label="Exported manifest">
           <header>
             <strong>Manifest</strong>
             <button type="button" className="gwb-mini" onClick={() => setExported(null)}>Close</button>

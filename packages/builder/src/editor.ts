@@ -1,6 +1,6 @@
 import { isMap, isSeq, parseDocument, stringify, type Document } from "yaml";
 import type {
-  DatasetDef, Issue, Manifest, ModelDef, PanelDef, RelationDef,
+  DatasetDef, Issue, Manifest, ModelDef, PanelDef, RelationDef, ThemeDef,
 } from "@gridwright/schema";
 import { validateManifest } from "@gridwright/schema";
 import { analyzeExpression } from "@gridwright/expr";
@@ -46,6 +46,7 @@ export type EditorAction =
   | { type: "setDatasets"; datasets: Record<string, DatasetDef> }
   | { type: "renameDataset"; from: string; to: string }
   | { type: "removeDataset"; name: string }
+  | { type: "setTheme"; theme: ThemeDef | undefined }
   | { type: "setRelations"; relations: RelationDef[] };
 
 const MAX_HISTORY = 50;
@@ -249,6 +250,13 @@ export function reduce(state: EditorState, action: EditorAction): EditorState {
 
     case "setDatasets":
       return commit(state, { ...manifest, datasets: action.datasets });
+
+    case "setTheme": {
+      const next = { ...manifest };
+      if (action.theme) next.theme = action.theme;
+      else delete next.theme;
+      return commit(state, next);
+    }
 
     case "setRelations": {
       const { relations: _drop, ...rest } = manifest.source;

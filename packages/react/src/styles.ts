@@ -27,6 +27,20 @@ export const styles = `
   --gw-series-6: #008300;
   --gw-series-7: #4a3aa7;
   --gw-series-8: #e34948;
+  --gw-ramp-1: #bedaff;
+  --gw-ramp-2: #9bc2f4;
+  --gw-ramp-3: #7ea9e3;
+  --gw-ramp-4: #6091d1;
+  --gw-ramp-5: #4379c0;
+  --gw-ramp-6: #2362ae;
+  --gw-ramp-7: #004b97;
+  --gw-ramp-1-ink: #000000;
+  --gw-ramp-2-ink: #000000;
+  --gw-ramp-3-ink: #000000;
+  --gw-ramp-4-ink: #000000;
+  --gw-ramp-5-ink: #000000;
+  --gw-ramp-6-ink: #ffffff;
+  --gw-ramp-7-ink: #ffffff;
 
   color: var(--gw-ink);
   background: var(--gw-surface-2);
@@ -58,6 +72,20 @@ export const styles = `
     --gw-series-6: #008300;
     --gw-series-7: #9085e9;
     --gw-series-8: #e66767;
+    --gw-ramp-1: #1e395b;
+    --gw-ramp-2: #2e507c;
+    --gw-ramp-3: #3f689e;
+    --gw-ramp-4: #5282c1;
+    --gw-ramp-5: #659ce5;
+    --gw-ramp-6: #82b8ff;
+    --gw-ramp-7: #b3d4ff;
+    --gw-ramp-1-ink: #ffffff;
+    --gw-ramp-2-ink: #ffffff;
+    --gw-ramp-3-ink: #ffffff;
+    --gw-ramp-4-ink: #000000;
+    --gw-ramp-5-ink: #000000;
+    --gw-ramp-6-ink: #000000;
+    --gw-ramp-7-ink: #000000;
   }
 }
 
@@ -81,11 +109,25 @@ export const styles = `
   --gw-series-6: #008300;
   --gw-series-7: #9085e9;
   --gw-series-8: #e66767;
+  --gw-ramp-1: #1e395b;
+  --gw-ramp-2: #2e507c;
+  --gw-ramp-3: #3f689e;
+  --gw-ramp-4: #5282c1;
+  --gw-ramp-5: #659ce5;
+  --gw-ramp-6: #82b8ff;
+  --gw-ramp-7: #b3d4ff;
+  --gw-ramp-1-ink: #ffffff;
+  --gw-ramp-2-ink: #ffffff;
+  --gw-ramp-3-ink: #ffffff;
+  --gw-ramp-4-ink: #000000;
+  --gw-ramp-5-ink: #000000;
+  --gw-ramp-6-ink: #000000;
+  --gw-ramp-7-ink: #000000;
 }
 
 .gw-root *, .gw-root *::before, .gw-root *::after { box-sizing: border-box; }
 
-.gw-title { font-size: 20px; font-weight: 650; letter-spacing: -0.01em; margin: 0 0 12px; }
+.gw-title { font-size: 22px; font-weight: 650; letter-spacing: -0.022em; margin: 0 0 14px; }
 
 .gw-filterbar {
   display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
@@ -108,18 +150,37 @@ export const styles = `
 
 .gw-grid { display: grid; }
 
+/* On a dark ground a black shadow does nothing — the lift has to come from the
+   edge instead, so the border carries it and the shadow steps out of the way. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .gw-panel {
+    box-shadow: none; border-color: #303d3b;
+  }
+}
+:root[data-theme="dark"] .gw-panel { box-shadow: none; border-color: #303d3b; }
+
+/* A panel is a card, and a card is mostly air. The old one was a hairline box
+   with 12px of padding, which reads as a table cell — the density said "admin
+   template" before a single mark was drawn. */
 .gw-panel {
+  position: relative;
   background: var(--gw-surface);
   border: 1px solid var(--gw-rule);
-  border-radius: 8px;
-  padding: 12px 14px;
+  border-radius: 10px;
+  padding: 16px 18px 14px;
   min-width: 0; min-height: 0;
   display: flex; flex-direction: column; overflow: hidden;
+  /* Two shadows, both nearly invisible on their own: a tight one that reads as
+     a physical edge and a wide soft one that lifts the card off the ground.
+     One shadow at this opacity just looks like a smudged border. */
+  box-shadow: 0 1px 2px rgb(16 24 22 / 0.04), 0 4px 12px rgb(16 24 22 / 0.03);
 }
+/* Uppercase micro-type in faint grey is the single loudest "dashboard template"
+   signal there is: it shrinks the one piece of text that says what you are
+   looking at, then greys it out. The title is a title. */
 .gw-panel-title {
-  font-size: 12px; font-weight: 600; letter-spacing: 0.02em;
-  text-transform: uppercase; color: var(--gw-ink-faint);
-  margin: 0 0 8px; flex: none;
+  font-size: 13.5px; font-weight: 600; letter-spacing: -0.006em;
+  color: var(--gw-ink); margin: 0 0 12px; flex: none;
 }
 .gw-panel-body { flex: 1 1 auto; min-height: 0; position: relative; }
 
@@ -130,13 +191,13 @@ export const styles = `
 
 .gw-kpi { display: flex; flex-direction: column; justify-content: center; height: 100%; }
 .gw-kpi-label {
-  font-size: 11.5px; font-weight: 600; letter-spacing: 0.03em;
-  text-transform: uppercase; color: var(--gw-ink-faint);
+  font-size: 12.5px; font-weight: 550; letter-spacing: -0.002em;
+  color: var(--gw-ink-soft);
 }
 .gw-kpi-value {
-  font-size: clamp(20px, 2.4vw, 30px); font-weight: 650;
-  letter-spacing: -0.02em; line-height: 1.15; margin-top: 2px;
-  font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis;
+  font-size: clamp(22px, 2.6vw, 34px); font-weight: 640;
+  letter-spacing: -0.025em; line-height: 1.1; margin-top: 3px;
+  overflow: hidden; text-overflow: ellipsis;
 }
 .gw-kpi-foot { display: flex; align-items: baseline; gap: 8px; margin-top: 4px; font-size: 12.5px; }
 .gw-kpi-caption { color: var(--gw-ink-faint); }
@@ -144,6 +205,27 @@ export const styles = `
 .gw-delta-up { color: var(--gw-good); }
 .gw-delta-down { color: var(--gw-bad); }
 .gw-delta-flat { color: var(--gw-ink-faint); }
+
+/* The sparkline is context, not the subject: a hairline in the series colour,
+   stretched to the tile's width so the shape reads at any panel size. It is
+   deliberately unlabelled — the number above it is the value, and a point label
+   on every month is the noise this is meant to replace. */
+.gw-spark { display: block; margin-top: 6px; overflow: visible; }
+/* The series recedes and the last step comes forward, so the tile says "now"
+   in the mark as well as in the number above it. */
+.gw-spark-area { fill: var(--gw-series-1); opacity: 0.1; stroke: none; }
+.gw-spark-latest {
+  stroke: var(--gw-accent); stroke-width: 2.25;
+  stroke-linejoin: round; stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.gw-spark-line {
+  stroke: var(--gw-series-1); opacity: 0.55; stroke-width: 1.5;
+  stroke-linejoin: round; stroke-linecap: round;
+  /* preserveAspectRatio="none" stretches the geometry, which would stretch the
+     stroke with it and leave a line that is thick one way and thin the other. */
+  vector-effect: non-scaling-stroke;
+}
 
 .gw-table-wrap { height: 100%; overflow: auto; }
 .gw-table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -175,9 +257,12 @@ export const styles = `
 
 .gw-chart { position: relative; width: 100%; height: 100%; }
 .gw-svg { display: block; overflow: visible; }
-.gw-grid-line, .gw-grid { stroke: var(--gw-rule); stroke-width: 1; }
+.gw-grid-line { stroke: var(--gw-rule); stroke-width: 1; }
 .gw-axis { fill: var(--gw-ink-faint); font-size: 10.5px; }
 .gw-crosshair { stroke: var(--gw-ink-faint); stroke-width: 1; stroke-dasharray: 3 3; }
+/* A chart you can tab to has to say so when you get there. */
+.gw-focusable:focus { outline: none; }
+.gw-focusable:focus-visible { outline: 2px solid var(--gw-accent); outline-offset: 2px; border-radius: 4px; }
 .gw-series-label { fill: var(--gw-ink-soft); font-size: 11px; font-weight: 600; }
 .gw-marker { stroke: var(--gw-surface); stroke-width: 2; }
 .gw-marker-on { stroke-width: 2.5; }
@@ -189,10 +274,69 @@ export const styles = `
 .gw-bar.gw-dim .gw-bar-fill { opacity: 0.32; }
 .gw-bar:focus-visible { outline: 2px solid var(--gw-accent); outline-offset: 1px; }
 .gw-bar-label { fill: var(--gw-ink); font-size: 11.5px; dominant-baseline: middle; }
+
+/* Dot plot. The mark is a filled dot with a ring in the surface colour, so it
+   stays legible where it sits on its own row rule — a stroke in a data colour
+   would add ink the palette never validated. */
+.gw-dot { cursor: pointer; }
+.gw-dot:focus-visible { outline: 2px solid var(--gw-accent); outline-offset: 1px; }
+.gw-dot-rule { stroke: var(--gw-rule); stroke-width: 1; }
+.gw-dot-mark {
+  fill: var(--gw-series-1);
+  stroke: var(--gw-surface); stroke-width: 2;
+  transition: opacity 120ms ease;
+}
+.gw-dot:hover .gw-dot-mark { opacity: 0.82; }
+.gw-dot.gw-on .gw-dot-mark { fill: var(--gw-accent); }
+.gw-dot.gw-dim .gw-dot-mark { opacity: 0.32; }
 .gw-bar-value {
   fill: var(--gw-ink); font-size: 11.5px; font-weight: 600;
   dominant-baseline: middle; font-variant-numeric: tabular-nums;
 }
+
+/* A heatmap cell carries its number as well as its shade wherever it fits.
+   Colour alone is not a value — two adjacent steps of a ramp are hard to
+   separate at the light end, and a reader with nothing else has no recourse. */
+.gw-cell { cursor: pointer; }
+.gw-cell:focus-visible { outline: 2px solid var(--gw-accent); outline-offset: 1px; }
+.gw-cell-fill { transition: opacity 120ms ease; }
+.gw-cell.gw-dim .gw-cell-fill { opacity: 0.3; }
+.gw-cell:hover .gw-cell-fill { opacity: 0.85; }
+.gw-cell.gw-on .gw-cell-fill { stroke: var(--gw-accent); stroke-width: 2; }
+/* The fill is set per cell from the ramp step's own ink variable, which was
+   chosen by measuring contrast against that step rather than by a threshold on
+   the step index — the ramp runs the other way in dark mode, so one threshold
+   cannot serve both. */
+.gw-cell-value {
+  font-size: 10.5px; font-weight: 600;
+  dominant-baseline: middle; font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+/* A combination the query returned no row for is an absence, not a zero. It is
+   drawn as a recess so the grid still reads as a grid. */
+.gw-cell-empty { fill: var(--gw-surface-2); }
+
+.gw-scale {
+  display: flex; align-items: center; gap: 8px; margin-top: 6px;
+  font-size: 10.5px; color: var(--gw-ink-faint); font-variant-numeric: tabular-nums;
+}
+.gw-scale-ramp {
+  flex: 1; height: 8px; border-radius: 4px;
+  background: linear-gradient(
+    to right,
+    var(--gw-ramp-1), var(--gw-ramp-2), var(--gw-ramp-3), var(--gw-ramp-4),
+    var(--gw-ramp-5), var(--gw-ramp-6), var(--gw-ramp-7)
+  );
+}
+
+/* Stacked bars: the whole bar is the click target, the segments are the hover
+   targets. A segment carries no stroke — the 2px surface gap between them is
+   the separator, because a border would add a colour nothing validated. */
+.gw-stack { cursor: pointer; }
+.gw-stack:focus-visible { outline: 2px solid var(--gw-accent); outline-offset: 1px; }
+.gw-stack-seg { transition: opacity 120ms ease; }
+.gw-stack.gw-dim .gw-stack-seg { opacity: 0.32; }
+.gw-stack:hover .gw-stack-seg { opacity: 0.88; }
 
 .gw-legend {
   display: flex; flex-wrap: wrap; gap: 4px 14px; list-style: none;
