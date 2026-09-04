@@ -27,7 +27,10 @@ jobs:
       # Upstream tagged one commit as v4.4.0, v5.0.0 and v5, so this pin is all
       # three at once and the version comment cannot narrow it. The commit is
       # what is being trusted here, which is the point of pinning to one.
-      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      # Held at v5. v6 spends ~85s npm-installing the latest pnpm and then
+      # downgrading to the version `packageManager` pins, and `standalone: true`
+      # was slower still — measured at over 2m46s. v5 does the job in ~2s.
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0 == v5.0.0
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
