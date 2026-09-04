@@ -1,0 +1,68 @@
+# The demo the README has been promising.
+#
+# The front door says "No account, no install" and then, three lines later,
+# gives a pnpm install command — because until now the only way to open the
+# playground was to build it. A tool whose whole pitch is "drop a CSV in your
+# browser" cannot be evaluated by a stranger without a URL.
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Read the code, write a Pages deployment, and mint the id-token deploy-pages
+# exchanges for one. Nothing here can write to the repository itself.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One live site, so a queued run waits rather than racing the one deploying.
+# `cancel-in-progress: false` because cancelling a half-finished deploy is how
+# a site ends up serving an incomplete build.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      # Pinned to commits for the reason given in ci.yml: a tag can be moved.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0 == v5.0.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # The playground imports the packages from source, but the type project
+      # references still have to resolve, and a build that typechecks is the
+      # only kind worth publishing.
+      - name: Build the library
+        run: pnpm build
+
+      - name: Build the playground
+        run: pnpm --filter @gridwright/playground build
+
+      # `enablement` turns Pages on the first time this runs, so publishing
+      # does not depend on someone having found the setting first.
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: apps/playground/dist
+
+      - id: deploy
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

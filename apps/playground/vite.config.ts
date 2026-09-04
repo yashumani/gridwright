@@ -24,5 +24,11 @@ export default defineConfig({
   // served was three days behind the one the tests and the CLI validate — and
   // a second source of truth for a file nobody edits twice is a bug waiting.
   publicDir: fileURLToPath(new URL("../../examples", import.meta.url)),
+  // Relative asset URLs, so one build runs anywhere: at the root of a domain,
+  // under a project path like /gridwright/ on GitHub Pages, in a subdirectory
+  // of someone's own server, or opened straight off disk with file://. An
+  // absolute /assets/... reference works only at a domain root, and the demo
+  // this project most needs to publish is not at one.
+  base: "./",
   build: { outDir: "dist", emptyOutDir: true },
 });

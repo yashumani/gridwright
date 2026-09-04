@@ -33,7 +33,7 @@ describe("reference manifest", () => {
     expect(Object.keys(m.datasets))
       .toEqual(["totals", "by_region", "by_month", "by_channel", "region_channel"]);
     expect(m.panels.map((p: any) => p.type).sort()).toEqual(
-      ["bar", "kpi", "kpi", "kpi", "kpi", "line", "table"].sort(),
+      ["dot", "kpi", "kpi", "kpi", "kpi", "line", "table"].sort(),
     );
   });
 });
