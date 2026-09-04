@@ -125,13 +125,22 @@ rather than implied. → [Data sources](docs/data-sources.md#measured-scale)
 
 ## Install
 
+> **Not on npm yet.** The packages are prepared for publishing and the names are
+> unclaimed, so the command below does not work today. Use the repository
+> directly until a release is cut — this note comes first because the caveat
+> under a copy-pasteable command is a caveat nobody reads.
+
+```bash
+git clone https://github.com/yashumani/gridwright.git
+cd gridwright && pnpm install && pnpm build
+```
+
+Once published:
+
 ```bash
 pnpm add @gridwright/react @gridwright/engine @gridwright/panels
 pnpm add -D gridwright        # the CLI
 ```
-
-> **Not on npm yet.** The packages are prepared for publishing but the names are
-> not claimed. Until then, use the repository directly.
 
 ```tsx
 import { loadBundle } from "@gridwright/engine";

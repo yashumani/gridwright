@@ -211,8 +211,16 @@ export const styles = `
    deliberately unlabelled — the number above it is the value, and a point label
    on every month is the noise this is meant to replace. */
 .gw-spark { display: block; margin-top: 6px; overflow: visible; }
+/* The series recedes and the last step comes forward, so the tile says "now"
+   in the mark as well as in the number above it. */
+.gw-spark-area { fill: var(--gw-series-1); opacity: 0.1; stroke: none; }
+.gw-spark-latest {
+  stroke: var(--gw-accent); stroke-width: 2.25;
+  stroke-linejoin: round; stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
 .gw-spark-line {
-  stroke: var(--gw-series-1); stroke-width: 1.5;
+  stroke: var(--gw-series-1); opacity: 0.55; stroke-width: 1.5;
   stroke-linejoin: round; stroke-linecap: round;
   /* preserveAspectRatio="none" stretches the geometry, which would stretch the
      stroke with it and leave a line that is thick one way and thin the other. */
@@ -266,6 +274,21 @@ export const styles = `
 .gw-bar.gw-dim .gw-bar-fill { opacity: 0.32; }
 .gw-bar:focus-visible { outline: 2px solid var(--gw-accent); outline-offset: 1px; }
 .gw-bar-label { fill: var(--gw-ink); font-size: 11.5px; dominant-baseline: middle; }
+
+/* Dot plot. The mark is a filled dot with a ring in the surface colour, so it
+   stays legible where it sits on its own row rule — a stroke in a data colour
+   would add ink the palette never validated. */
+.gw-dot { cursor: pointer; }
+.gw-dot:focus-visible { outline: 2px solid var(--gw-accent); outline-offset: 1px; }
+.gw-dot-rule { stroke: var(--gw-rule); stroke-width: 1; }
+.gw-dot-mark {
+  fill: var(--gw-series-1);
+  stroke: var(--gw-surface); stroke-width: 2;
+  transition: opacity 120ms ease;
+}
+.gw-dot:hover .gw-dot-mark { opacity: 0.82; }
+.gw-dot.gw-on .gw-dot-mark { fill: var(--gw-accent); }
+.gw-dot.gw-dim .gw-dot-mark { opacity: 0.32; }
 .gw-bar-value {
   fill: var(--gw-ink); font-size: 11.5px; font-weight: 600;
   dominant-baseline: middle; font-variant-numeric: tabular-nums;

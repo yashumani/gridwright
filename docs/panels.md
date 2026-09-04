@@ -20,6 +20,7 @@ side by side.
 |---|---|---|
 | Read one current number | `kpi`, with `sparkline` for the shape behind it | a one-bar bar chart |
 | Compare magnitudes across a category | `bar` | a pie |
+| Compare values that sit close together | `dot` | a bar chart with a truncated axis |
 | Follow a change over time | `line` | a bar per month |
 | Notice that **one** of them is the point | `bar` with `emphasise` | eight competing hues |
 | See what each category is made of | `stack` | a pie per category |
@@ -107,6 +108,36 @@ nobody reads. A live selection overrides it, since both mean the same thing:
 one mark forward, the rest back.
 
 Minimum size 3×3.
+
+### `dot` — the same comparison, when the values sit close together
+
+```yaml
+props: { category: channel, value: orders }
+```
+
+| Prop | Type | Notes |
+|---|---|---|
+| `category` | string | The dimension. |
+| `value` | string | The measure. |
+| `showValues` | boolean | Direct value labels. |
+| `maxRows` | integer 1–200 | Keep only the first N. |
+| `zero` | boolean | Force the axis to include zero. Off by default. |
+| `emphasise` | string | One category value in the accent colour, the rest recessed. |
+
+**Why this exists.** A bar's length *is* the measurement, so its axis has to
+start at zero — and that means values within a few percent of each other draw
+bars of visibly the same size. Orders of 690, 676, 680 and 648 are four
+full-width blocks in a bar chart: the 6% spread anyone came for is invisible,
+and truncating the bar axis to reveal it would overstate every difference at
+once.
+
+A dot is read *against* the axis rather than measured from an origin, so the
+domain can close in on the data without lying. The axis is always drawn and
+always labelled, because that is the whole basis on which the truncation is
+fair. Set `zero: true` if you want the bar chart's trade instead — but then
+you probably want a bar chart.
+
+Minimum size 3×2.
 
 ### `line` — change over an ordered dimension
 

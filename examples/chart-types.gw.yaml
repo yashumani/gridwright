@@ -83,10 +83,13 @@ panels:
     layout: { x: 0, y: 2, w: 8, h: 4 }
     props: { x: month, y: [revenue], area: true }
 
-  # Magnitude across one dimension, sorted. Horizontal because the labels are
-  # words, and rotating words is how a bar chart becomes unreadable.
+  # Four values within 6% of each other. As bars from zero these are four
+  # blocks of visibly the same size — the chart draws the total, not the
+  # difference, and the difference is what anyone came for. A dot is read
+  # against the axis rather than measured from an origin, so the scale can
+  # close in on the data without overstating anything.
   - id: ranked
-    type: bar
+    type: dot
     dataset: by_channel
     title: Orders by channel
     layout: { x: 8, y: 2, w: 4, h: 4 }

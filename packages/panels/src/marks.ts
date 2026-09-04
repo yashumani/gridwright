@@ -143,3 +143,40 @@ export function axisLabel(value: unknown, monthly: boolean, locale?: string): st
     timeZone: "UTC",
   }).format(date);
 }
+
+/**
+ * A domain and ticks for a scale that need not start at zero.
+ *
+ * Only legitimate where position, not length, carries the value. A bar's length
+ * is the measurement, so truncating its axis overstates every difference — but
+ * a dot's position is read against the axis, and holding four values within a
+ * point of each other at the far end of a zero-based scale hides the very
+ * difference the chart exists to show.
+ */
+export function niceRange(
+  lo: number,
+  hi: number,
+  target = 4,
+): { lo: number; hi: number; ticks: number[] } {
+  if (!Number.isFinite(lo) || !Number.isFinite(hi) || hi < lo) return { lo: 0, hi: 1, ticks: [0, 1] };
+
+  if (hi === lo) {
+    const pad = Math.abs(hi) * 0.1 || 1;
+    lo -= pad;
+    hi += pad;
+  }
+
+  const rough = (hi - lo) / Math.max(1, target);
+  const magnitude = 10 ** Math.floor(Math.log10(rough));
+  const normalised = rough / magnitude;
+  const step =
+    (normalised <= 1 ? 1 : normalised <= 2 ? 2 : normalised <= 2.5 ? 2.5 : normalised <= 5 ? 5 : 10) *
+    magnitude;
+  if (!(step > 0)) return { lo, hi, ticks: [lo, hi] };
+
+  const niceLo = Math.floor(lo / step) * step;
+  const niceHi = Math.ceil(hi / step) * step;
+  const ticks: number[] = [];
+  for (let t = niceLo; t <= niceHi + step / 2; t += step) ticks.push(Number(t.toFixed(10)));
+  return { lo: niceLo, hi: niceHi, ticks };
+}

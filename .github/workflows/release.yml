@@ -47,6 +47,7 @@ jobs:
         run: |
           node packages/cli/dist/bin.js validate examples/sales-overview.gw.yaml --data
           node packages/cli/dist/bin.js validate examples/orders-star.gw.yaml --data
+          node packages/cli/dist/bin.js validate examples/chart-types.gw.yaml --data
 
       - name: Publish
         run: |

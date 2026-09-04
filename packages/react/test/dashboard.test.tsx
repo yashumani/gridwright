@@ -551,7 +551,7 @@ describe("accessibility", () => {
 describe("registry", () => {
   it("lists the built-in panel types", () => {
     expect(defaultRegistry().types())
-      .toEqual(["bar", "heatmap", "kpi", "line", "stack", "table"]);
+      .toEqual(["bar", "dot", "heatmap", "kpi", "line", "stack", "table"]);
   });
 
   it("accepts a custom panel type", () => {

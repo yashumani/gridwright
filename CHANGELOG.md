@@ -29,6 +29,13 @@ documented types, and the internals of every package below `@gridwright/react`.
 
 ### Added
 
+- **A `dot` panel.** The form a bar chart cannot be: a bar's length *is* the
+  measurement, so its axis must start at zero, and values within a few percent
+  of each other draw bars of visibly the same size. A dot is read against the
+  axis rather than measured from an origin, so the domain closes in on the data
+  — the axis is always drawn and labelled, which is the whole basis on which
+  that is fair. `zero: true` opts back into the bar chart's trade. See
+  [Panels](docs/panels.md).
 - **Drag panels around the canvas.** A grip to move, eight handles to resize,
   snapping to the grid, a ghost showing where a panel will land, and a drop that
   pushes what it lands on down then settles everything up into the space that
