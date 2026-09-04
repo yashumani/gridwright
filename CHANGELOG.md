@@ -74,7 +74,7 @@ documented types, and the internals of every package below `@gridwright/react`.
   and saving it beside the data reopens the dashboard exactly as it was. See
   [Getting started](docs/getting-started.md#starting-from-a-csv-with-no-manifest-at-all).
 - **The playground opens on the outcome**, not on a file picker: what you get,
-  how to get it, and the two worked examples underneath.
+  how to get it, and the worked examples underneath.
 - **Model editing in the builder.** The inspector now has two tabs: panels, and
   the model behind them — fields, dimensions, measures, datasets (including
   their filters and sort) and relations. Expressions validate as you type,
