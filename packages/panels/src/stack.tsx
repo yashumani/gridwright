@@ -101,7 +101,7 @@ function Stack({ result, props, size, select, selected, locale }: PanelProps<Sta
   const plotH = (horizontal ? height : height - 26) - LEGEND_H;
   // Capped and centred: a stacked bar that fills its band reads as two blocks
   // of colour rather than as a comparison of lengths.
-  const { band, thickness, offset: bandOffset } = bandLayout(horizontal ? plotH : plotW, count);
+  const { band, thickness, offset: bandOffset, origin } = bandLayout(horizontal ? plotH : plotW, count);
 
   /**
    * Stacking only means something when the segments are parts of one whole.
@@ -169,8 +169,8 @@ function Stack({ result, props, size, select, selected, locale }: PanelProps<Sta
                 // A gap of surface between segments rather than a stroke around
                 // them: a border adds a colour the palette never validated.
                 const drawn = Math.max(0.5, length - GAP);
-                const x = horizontal ? LABEL_GUTTER + start : i * band + bandOffset;
-                const y = horizontal ? i * band + bandOffset : plotH - start - drawn;
+                const x = horizontal ? LABEL_GUTTER + start : origin + i * band + bandOffset;
+                const y = horizontal ? origin + i * band + bandOffset : plotH - start - drawn;
 
                 return (
                   <rect
@@ -191,7 +191,7 @@ function Stack({ result, props, size, select, selected, locale }: PanelProps<Sta
                 <>
                   <text
                     x={LABEL_GUTTER - 8}
-                    y={i * band + bandOffset + thickness / 2}
+                    y={origin + i * band + bandOffset + thickness / 2}
                     className="gw-bar-label"
                     textAnchor="end"
                   >
@@ -199,7 +199,7 @@ function Stack({ result, props, size, select, selected, locale }: PanelProps<Sta
                   </text>
                   <text
                     x={LABEL_GUTTER + (share ? plotW : (totals[i]! / scaleMax) * plotW) + 8}
-                    y={i * band + bandOffset + thickness / 2}
+                    y={origin + i * band + bandOffset + thickness / 2}
                     className="gw-bar-value"
                     textAnchor="start"
                   >
@@ -215,7 +215,7 @@ function Stack({ result, props, size, select, selected, locale }: PanelProps<Sta
           rows.map((_, i) => (
             <text
               key={`x${i}`}
-              x={i * band + band / 2}
+              x={origin + i * band + band / 2}
               y={plotH + 17}
               className="gw-bar-label"
               textAnchor="middle"

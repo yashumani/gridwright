@@ -36,12 +36,20 @@ export interface Band {
   band: number;
   thickness: number;
   offset: number;
+  /** Where the group starts, so a short group sits centred in a tall panel. */
+  origin: number;
 }
 
 export function bandLayout(extent: number, count: number, max = MARKS.maxBar): Band {
-  const band = count > 0 ? extent / count : 0;
-  const thickness = Math.max(2, Math.min(max, band - MARKS.gap));
-  return { band, thickness, offset: (band - thickness) / 2 };
+  const raw = count > 0 ? extent / count : 0;
+  const thickness = Math.max(2, Math.min(max, raw - MARKS.gap));
+  // Capping the mark is only half of it. Four bars in a panel sized for ten
+  // leaves bands far taller than their marks, and the bars scatter down the
+  // card as separate stripes instead of reading as one set. Cap the rhythm too
+  // and centre what is left, so the group stays a group.
+  const band = Math.min(raw, thickness * 2.75);
+  const origin = Math.max(0, (extent - band * count) / 2);
+  return { band, thickness, offset: (band - thickness) / 2, origin };
 }
 
 /**
@@ -92,4 +100,46 @@ export function notablePoints(values: readonly number[]): Set<number> {
     if (point[0] > hi[0]) hi = point;
   }
   return new Set([usable[0]![1], usable[usable.length - 1]![1], lo[1], hi[1]]);
+}
+
+/**
+ * Evenly spaced tick positions across `n` points, both ends always included.
+ * Two labels across two years of months tells a reader where the series starts
+ * and stops and nothing about what is in between.
+ */
+export function tickIndices(n: number, max = 6): number[] {
+  if (n <= 0) return [];
+  if (n <= max) return Array.from({ length: n }, (_, i) => i);
+  const step = (n - 1) / (max - 1);
+  const seen = new Set<number>();
+  for (let i = 0; i < max; i++) seen.add(Math.round(i * step));
+  return [...seen].sort((a, b) => a - b);
+}
+
+const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/** True when every label is the first of a month — a monthly series. */
+export function isMonthly(labels: readonly unknown[]): boolean {
+  return (
+    labels.length > 0 &&
+    labels.every((l) => typeof l === "string" && /^\d{4}-\d{2}-01$/.test(l))
+  );
+}
+
+/**
+ * An axis label a person would write. A monthly series axis reading
+ * "2024-01-01" is a database value on display: the day is noise, and the ISO
+ * ordering that makes it sortable is exactly what makes it hard to read.
+ */
+export function axisLabel(value: unknown, monthly: boolean, locale?: string): string {
+  const text = value === null || value === undefined ? "" : String(value);
+  if (!ISO_DATE.test(text)) return text;
+
+  const date = new Date(`${text}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return text;
+
+  return new Intl.DateTimeFormat(locale, {
+    ...(monthly ? { month: "short", year: "numeric" } : { day: "numeric", month: "short" }),
+    timeZone: "UTC",
+  }).format(date);
 }

@@ -7,7 +7,9 @@ describe("bandLayout", () => {
     // a band of ~140px and a bar of ~138px, which reads as a block of colour.
     const { thickness, band } = bandLayout(560, 4);
     expect(thickness).toBe(MARKS.maxBar);
-    expect(band).toBeCloseTo(140);
+    // The band is capped too, so the leftover becomes air around the group
+    // rather than gaps inside it. 560/4 would be 140.
+    expect(band).toBeCloseTo(MARKS.maxBar * 2.75);
   });
 
   it("centres the mark, so the leftover air is shared", () => {
@@ -19,6 +21,22 @@ describe("bandLayout", () => {
   it("falls back to the band when it is tighter than the cap", () => {
     const { thickness } = bandLayout(100, 10); // band 10 → 8 after the gap
     expect(thickness).toBe(10 - MARKS.gap);
+  });
+
+  it("centres a short group instead of scattering it down a tall panel", () => {
+    // Four bars in a panel sized for ten: the bands are far taller than the
+    // marks, so the rhythm is capped and the group is centred rather than
+    // spread as four separate stripes.
+    const { band, origin, thickness } = bandLayout(600, 4);
+    expect(band).toBeCloseTo(thickness * 2.75);
+    expect(origin).toBeCloseTo((600 - band * 4) / 2);
+    // Top air and bottom air match.
+    const groupEnd = origin + band * 4;
+    expect(600 - groupEnd).toBeCloseTo(origin);
+  });
+
+  it("does not shift the group when the bands already fill the panel", () => {
+    expect(bandLayout(200, 8).origin).toBe(0);
   });
 
   it("stays positive on a collapsed or zero-count panel", () => {

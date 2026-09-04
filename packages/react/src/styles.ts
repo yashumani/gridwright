@@ -127,7 +127,7 @@ export const styles = `
 
 .gw-root *, .gw-root *::before, .gw-root *::after { box-sizing: border-box; }
 
-.gw-title { font-size: 20px; font-weight: 650; letter-spacing: -0.01em; margin: 0 0 12px; }
+.gw-title { font-size: 22px; font-weight: 650; letter-spacing: -0.022em; margin: 0 0 14px; }
 
 .gw-filterbar {
   display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
@@ -150,19 +150,37 @@ export const styles = `
 
 .gw-grid { display: grid; }
 
+/* On a dark ground a black shadow does nothing — the lift has to come from the
+   edge instead, so the border carries it and the shadow steps out of the way. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .gw-panel {
+    box-shadow: none; border-color: #303d3b;
+  }
+}
+:root[data-theme="dark"] .gw-panel { box-shadow: none; border-color: #303d3b; }
+
+/* A panel is a card, and a card is mostly air. The old one was a hairline box
+   with 12px of padding, which reads as a table cell — the density said "admin
+   template" before a single mark was drawn. */
 .gw-panel {
   position: relative;
   background: var(--gw-surface);
   border: 1px solid var(--gw-rule);
-  border-radius: 8px;
-  padding: 12px 14px;
+  border-radius: 10px;
+  padding: 16px 18px 14px;
   min-width: 0; min-height: 0;
   display: flex; flex-direction: column; overflow: hidden;
+  /* Two shadows, both nearly invisible on their own: a tight one that reads as
+     a physical edge and a wide soft one that lifts the card off the ground.
+     One shadow at this opacity just looks like a smudged border. */
+  box-shadow: 0 1px 2px rgb(16 24 22 / 0.04), 0 4px 12px rgb(16 24 22 / 0.03);
 }
+/* Uppercase micro-type in faint grey is the single loudest "dashboard template"
+   signal there is: it shrinks the one piece of text that says what you are
+   looking at, then greys it out. The title is a title. */
 .gw-panel-title {
-  font-size: 12px; font-weight: 600; letter-spacing: 0.02em;
-  text-transform: uppercase; color: var(--gw-ink-faint);
-  margin: 0 0 8px; flex: none;
+  font-size: 13.5px; font-weight: 600; letter-spacing: -0.006em;
+  color: var(--gw-ink); margin: 0 0 12px; flex: none;
 }
 .gw-panel-body { flex: 1 1 auto; min-height: 0; position: relative; }
 
@@ -173,8 +191,8 @@ export const styles = `
 
 .gw-kpi { display: flex; flex-direction: column; justify-content: center; height: 100%; }
 .gw-kpi-label {
-  font-size: 11.5px; font-weight: 600; letter-spacing: 0.03em;
-  text-transform: uppercase; color: var(--gw-ink-faint);
+  font-size: 12.5px; font-weight: 550; letter-spacing: -0.002em;
+  color: var(--gw-ink-soft);
 }
 .gw-kpi-value {
   font-size: clamp(22px, 2.6vw, 34px); font-weight: 640;

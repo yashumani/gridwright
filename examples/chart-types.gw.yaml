@@ -55,13 +55,13 @@ panels:
   - id: kpi_now
     type: kpi
     dataset: by_month
-    layout: { x: 0, y: 0, w: 4, h: 3 }
+    layout: { x: 0, y: 0, w: 4, h: 2 }
     props: { measure: revenue, sparkline: true, caption: Latest month }
 
   - id: kpi_rate
     type: kpi
     dataset: by_month
-    layout: { x: 4, y: 0, w: 4, h: 3 }
+    layout: { x: 4, y: 0, w: 4, h: 2 }
     # Down is good here, so the arrow's colour has to be told that.
     props: { measure: rtn_rate, sparkline: true, invertTrend: true, caption: Latest month }
 
@@ -72,7 +72,7 @@ panels:
     type: bar
     dataset: by_channel
     title: Direct leads on revenue
-    layout: { x: 8, y: 0, w: 4, h: 3 }
+    layout: { x: 8, y: 0, w: 4, h: 2 }
     props: { category: channel, value: revenue, emphasise: Direct }
 
   # Change over an ordered dimension. One y-axis, always.
@@ -80,7 +80,7 @@ panels:
     type: line
     dataset: by_month
     title: Revenue by month
-    layout: { x: 0, y: 3, w: 8, h: 4 }
+    layout: { x: 0, y: 2, w: 8, h: 4 }
     props: { x: month, y: [revenue], area: true }
 
   # Magnitude across one dimension, sorted. Horizontal because the labels are
@@ -89,7 +89,7 @@ panels:
     type: bar
     dataset: by_channel
     title: Orders by channel
-    layout: { x: 8, y: 3, w: 4, h: 4 }
+    layout: { x: 8, y: 2, w: 4, h: 4 }
     props: { category: channel, value: orders }
 
   # Part-to-whole. The segments share a unit, which is what makes the stack mean
@@ -98,7 +98,7 @@ panels:
     type: stack
     dataset: by_channel
     title: Orders and returns
-    layout: { x: 0, y: 7, w: 6, h: 5 }
+    layout: { x: 0, y: 6, w: 6, h: 4 }
     props: { category: channel, values: [orders, returns] }
 
   # The same bars normalised, which throws the totals away and makes the mix the
@@ -107,7 +107,7 @@ panels:
     type: stack
     dataset: by_channel
     title: The same, as a share
-    layout: { x: 6, y: 7, w: 6, h: 5 }
+    layout: { x: 6, y: 6, w: 6, h: 4 }
     props: { category: channel, values: [orders, returns], mode: share }
 
   # One number across two dimensions. Sequential colour — one hue, more is
@@ -116,7 +116,7 @@ panels:
     type: heatmap
     dataset: region_channel
     title: Revenue by region and channel
-    layout: { x: 0, y: 12, w: 12, h: 6 }
+    layout: { x: 0, y: 10, w: 12, h: 6 }
     props: { x: channel, y: region, value: revenue }
 
 interactions:

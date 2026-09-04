@@ -2,7 +2,7 @@ import { useId, useState } from "react";
 import { arr, bool, described, obj, opt, str } from "@gridwright/schema";
 import type { ColumnMeta } from "@gridwright/engine";
 import { formatCompact, formatValue } from "./format.js";
-import { niceScale, notablePoints } from "./marks.js";
+import { axisLabel, isMonthly, niceScale, notablePoints, tickIndices } from "./marks.js";
 import { foldSeries, seriesVar } from "./theme.js";
 import {
   columnValues, firstDimension, firstMeasure, requireColumn,
@@ -73,6 +73,10 @@ function Line({ result, props, size, locale }: PanelProps<LineProps>) {
   // A dot on every point turns two years of months into a row of beads. The
   // ends and the extremes are what a reader looks for; the rest is the line.
   const allMarkers = props.markers === true;
+  const monthly = isMonthly(labels);
+  // Roughly one label per 130px, so a narrow panel thins them out rather than
+  // overlapping — the ends are always among them.
+  const xTicks = tickIndices(n, Math.max(2, Math.min(6, Math.floor(plotW / 130) + 1)));
 
   return (
     <div className="gw-chart">
@@ -176,14 +180,17 @@ function Line({ result, props, size, locale }: PanelProps<LineProps>) {
           );
         })}
 
-        <text x={PAD.left} y={height - 6} className="gw-axis" textAnchor="start">
-          {String(labels[0] ?? "")}
-        </text>
-        {n > 1 && (
-          <text x={width - PAD.right} y={height - 6} className="gw-axis" textAnchor="end">
-            {String(labels[n - 1] ?? "")}
+        {xTicks.map((i) => (
+          <text
+            key={`x${i}`}
+            x={px(i)}
+            y={height - 6}
+            className="gw-axis"
+            textAnchor={i === 0 ? "start" : i === n - 1 ? "end" : "middle"}
+          >
+            {axisLabel(labels[i], monthly, locale)}
           </text>
-        )}
+        ))}
       </svg>
 
       {/* Identity is never colour-alone: a legend whenever there are two or more series. */}

@@ -87,6 +87,14 @@ documented types, and the internals of every package below `@gridwright/react`.
 
 ### Changed
 
+- **Panels are cards, not table cells.** More padding, a larger radius and two
+  near-invisible shadows that give the card an edge and lift it off the ground
+  (a border carries that on dark, where a black shadow does nothing). Panel and
+  stat-tile titles lose the uppercase faint-grey micro-type — the loudest
+  "dashboard template" signal there is — for sentence case at readable weight.
+  A hero figure loses `tabular-nums`, which makes a number look gappy at
+  display size and belongs only in columns that align.
+
 - **Selecting a panel asks its own question first, in words.** A bar chart
   offered eleven controls in schema order — X, Y, W, H, "Category", "Value",
   "Orientation", "Show Values", "Max Bars" — all weighted the same. It now leads
@@ -113,6 +121,28 @@ documented types, and the internals of every package below `@gridwright/react`.
 
 ### Fixed
 
+- **Every label in every chart was being outlined.** `.gw-grid` named both the
+  dashboard's panel layout and a chart's gridline stroke. `stroke` inherits
+  through SVG, so every text node and every transparent hit rect inside every
+  panel carried a 1px rule-grey outline — which is what made chart labels look
+  washed out and drew phantom boxes around plot areas. The mark is
+  `.gw-grid-line` now. (Second collision of this shape; `.gw-bar` was the
+  first.)
+- **Bars filled their band.** Four categories in a four-row panel produced
+  140px bars, and at that size a bar reads as a block of colour rather than a
+  length. Marks are capped at 24px and centred, and the band is capped too, so
+  a short group sits centred in a tall panel instead of scattering down it.
+- **Chart axes were arithmetic rather than a scale.** Halving the data maximum
+  gave ticks of 232.7K and 116.3K. The domain now rounds up to a step of 1, 2,
+  2.5 or 5 times a power of ten, over five intervals — which also cut the
+  wasted headroom above the data from 22% to 7%.
+- **A line chart drew a marker on every point** and filled its area with a flat
+  wash held down to zero, putting more ink under the data than the line had in
+  it. Markers ride the ends and the extremes; the fill is a gradient that fades
+  out with distance from the line.
+- **A monthly axis read `2024-01-01`, twice.** Dates are formatted by grain
+  (`Jan 2024`), and the axis carries as many labels as the panel has room for
+  rather than only its two ends.
 - **`theme.colors` accepted hex the palette could not read.** The schema pattern
   allowed 3 to 8 digits, but a colour is measured by a parser that takes 3 or 6;
   a four- or eight-digit value carries alpha, which the palette maths has no way

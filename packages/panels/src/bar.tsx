@@ -104,7 +104,7 @@ function Bar({ result, props, size, select, selected, locale }: PanelProps<BarPr
   // The bar is capped and centred in its band. Filling the band is what made a
   // four-category chart in a tall panel read as a stack of coloured blocks
   // rather than as four measurements.
-  const { band, thickness, offset } = bandLayout(horizontal ? plotH : plotW, count);
+  const { band, thickness, offset, origin } = bandLayout(horizontal ? plotH : plotW, count);
 
   const tip = hover !== null ? {
     label: String(labels[hover] ?? "—"),
@@ -131,8 +131,8 @@ function Bar({ result, props, size, select, selected, locale }: PanelProps<BarPr
           const dim = anySelected ? !on : props.emphasise !== undefined && !highlighted;
           const lead = anySelected ? on : highlighted;
           const length = (v / max) * (horizontal ? plotW : plotH);
-          const x = horizontal ? LABEL_GUTTER : i * band + offset;
-          const y = horizontal ? i * band + offset : plotH - length;
+          const x = horizontal ? LABEL_GUTTER : origin + i * band + offset;
+          const y = horizontal ? origin + i * band + offset : plotH - length;
           const w = horizontal ? length : thickness;
           const h = horizontal ? thickness : length;
 
@@ -155,8 +155,8 @@ function Bar({ result, props, size, select, selected, locale }: PanelProps<BarPr
             >
               {/* Hit target spans the whole band, not just the drawn bar. */}
               <rect
-                x={horizontal ? LABEL_GUTTER : i * band}
-                y={horizontal ? i * band : 0}
+                x={horizontal ? LABEL_GUTTER : origin + i * band}
+                y={horizontal ? origin + i * band : 0}
                 width={horizontal ? plotW : band}
                 height={horizontal ? band : plotH}
                 fill="transparent"
@@ -184,7 +184,7 @@ function Bar({ result, props, size, select, selected, locale }: PanelProps<BarPr
           numbers.map((_, i) => (
             <text
               key={`x${i}`}
-              x={i * band + band / 2}
+              x={origin + i * band + band / 2}
               y={plotH + 18}
               className="gw-bar-label"
               textAnchor="middle"
