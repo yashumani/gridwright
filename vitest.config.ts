@@ -10,6 +10,7 @@ export default defineConfig({
       "@gridwright/schema": pkg("schema"),
       "@gridwright/expr": pkg("expr"),
       "@gridwright/engine": pkg("engine"),
+      "@gridwright/bridge": pkg("bridge"),
       "@gridwright/panels": pkg("panels"),
       "@gridwright/react": pkg("react"),
       "@gridwright/builder": pkg("builder"),
