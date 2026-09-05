@@ -126,7 +126,7 @@ behind.
 
 ## Testing
 
-525 tests across node and jsdom projects. Component tests opt into jsdom, which
+529 tests across node and jsdom projects. Component tests opt into jsdom, which
 doubles as a check that the core packages carry no DOM assumptions.
 
 Two conventions the history of this repo earned the hard way:
