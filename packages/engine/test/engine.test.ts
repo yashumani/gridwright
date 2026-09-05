@@ -882,6 +882,22 @@ describe("inferring a manifest from bare data", () => {
     expect(sniffType(["NA", "NULL", "-"])).toBe("string");
   });
 
+  it("keeps a count whole when the column has gaps written as words", () => {
+    // Found by dropping a real-shaped export on the playground and reading the
+    // tile: a units column carrying a few NAs summed to "11,720.00". Typing it
+    // as a number is right; formatting it as money because "NA" is not a whole
+    // number is not, and the two rules have to agree about what a blank is.
+    const t = loadDelimited(
+      "orders",
+      "region,units,revenue\nNorth,10,12.50\nSouth,NA,8.25\nEast,30,4.00\n",
+    );
+    const { manifest } = inferManifest(t);
+    const fmt = (id: string) => manifest.model.measures.find((m) => m.id === id)?.format;
+    expect(fmt("total_units")).toBe("#,##0");
+    // And a column that genuinely has decimals still keeps them.
+    expect(fmt("total_revenue")).toBe("#,##0.00");
+  });
+
   it("reads an identifier header the way a person wrote it", () => {
     // The test ran against the raw header with an underscore-only pattern, so
     // `Order ID` and `orderId` fell through and were summed — producing exactly

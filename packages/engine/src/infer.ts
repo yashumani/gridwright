@@ -149,11 +149,19 @@ function humanise(raw: string): string {
   return words ? words[0]!.toUpperCase() + words.slice(1).toLowerCase() : raw;
 }
 
-/** Whether every sampled value is a whole number, so decimals would be noise. */
+/**
+ * Whether every sampled value is a whole number, so decimals would be noise.
+ *
+ * Blanks are skipped by the same rule that types the column, and they have to
+ * be: a count column carrying three NAs is still a count column, but reading
+ * "NA" here as "not whole" formats it as money and a tally of units comes out
+ * as "11,720.00".
+ */
 function allWholeNumbers(values: readonly Value[]): boolean {
   let seen = 0;
   for (const v of values) {
     if (v === null || v === "") continue;
+    if (BLANK_WORDS.has(String(v).trim().toLowerCase())) continue;
     const n = Number(v);
     if (!Number.isFinite(n) || !Number.isInteger(n)) return false;
     if (++seen >= SAMPLE) break;

@@ -105,7 +105,9 @@ documented types, and the internals of every package below `@gridwright/react`.
 - **A number column with gaps stays a number column.** `NA`, `N/A`, `NULL`,
   `NaN` and `-` are read as absent while sniffing a column's type rather than
   forcing it to text. They coerced to null already, so only the type changes —
-  but the type was the difference between a chart and a list of strings.
+  but the type was the difference between a chart and a list of strings. The
+  format rule follows the same definition of a blank, so a units column with a
+  few NAs in it totals to `11,720` rather than `11,720.00`.
 
 ### Changed
 
