@@ -26,3 +26,11 @@ Background:
   enforces, and how to report a problem.
 - **[Contributing](../CONTRIBUTING.md)** — setup, the verification bar, and
   conventions.
+
+Cross-project requirements and handoff:
+
+- **[Shared orchestrator and metadata-bridge requirements](../PROJECT_REQUIREMENTS.md)** —
+  the clarified Excel/SQL bridge and domain-chat integration with knowledge,
+  verified analytics and MCP governance. Includes source boundaries, proposed
+  contracts, twenty delivery tasks and acceptance gates. Documentation only;
+  this is not a claim that the shared platform is implemented.
