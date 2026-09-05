@@ -29,6 +29,17 @@ documented types, and the internals of every package below `@gridwright/react`.
 
 ### Added
 
+- **Explicit view bindings, validated before anything is computed** (task T07).
+  Skeleton rows are bound to a business-data view by stable id and never by
+  label — a heading is not an identity, and a report that re-binds itself
+  because someone corrected a typo is not reproducible. Uniqueness, grain, unit,
+  cardinality and additivity are all checked up front, and every problem is
+  reported at once with the workbook cell responsible.
+
+  A disagreement between the workbook and the SQL metadata snapshot is
+  **refused, not resolved**: which of the two is authoritative is decision D01
+  and still open, so the bridge names both sides and stops rather than picking a
+  silent precedence in either direction.
 - **`@gridwright/bridge`, the first piece of the metadata bridge** (tasks T02
   and T05 of the delivery plan). Reads bounded `.xlsx` configuration tables
   with workbook/sheet/address/row provenance on every value. Nothing is
