@@ -1,0 +1,27 @@
+{
+  "$comment": "Explicit skeleton-to-view bindings (R12). Stable IDs on both sides; nothing is matched by label. Excel/SQL precedence stays unresolved per D01, so this file records which side each fact came from rather than assuming a master.",
+  "workbook": "skeleton.xlsx",
+  "skeletonSheet": "Skeleton",
+  "keyColumn": "RowKey",
+  "view": "vw_closed_cases_by_queue",
+  "metric": "closed_cases",
+  "grain": "queue",
+  "unit": "cases",
+  "rows": [
+    { "rowKey": "queue_a", "viewKey": "queue_a", "kind": "data" },
+    { "rowKey": "queue_b", "viewKey": "queue_b", "kind": "data" },
+    {
+      "rowKey": "queue_c",
+      "viewKey": "queue_c",
+      "kind": "data",
+      "$comment": "Bound, and the view has no matching rows. Expected to render as not-available, never as zero and never dropped (R14)."
+    },
+    {
+      "rowKey": "total",
+      "kind": "total",
+      "over": ["queue_a", "queue_b", "queue_c"],
+      "$comment": "A configured total over the bound rows, not a re-query. Additivity comes from the metric's declared additive:true, not from the row being called Total."
+    }
+  ],
+  "periods": { "actual": "actual", "comparison": "comparison" }
+}

@@ -1,0 +1,48 @@
+{
+  "name": "@gridwright/bridge",
+  "version": "0.1.0",
+  "description": "The deterministic metadata bridge: reads bounded Excel and SQL configuration into a validated report definition with provenance.",
+  "license": "MIT",
+  "author": "yashumani (https://github.com/yashumani)",
+  "homepage": "https://github.com/yashumani/gridwright#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yashumani/gridwright.git",
+    "directory": "packages/bridge"
+  },
+  "bugs": "https://github.com/yashumani/gridwright/issues",
+  "keywords": [
+    "xlsx",
+    "spreadsheetml",
+    "metadata",
+    "configuration",
+    "provenance",
+    "report",
+    "bridge",
+    "gridwright"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "dependencies": {
+    "@gridwright/schema": "workspace:*"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
