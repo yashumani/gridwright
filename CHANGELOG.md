@@ -29,6 +29,23 @@ documented types, and the internals of every package below `@gridwright/react`.
 
 ### Added
 
+- **A deterministic bridge compiler** (task T08). A resolved binding becomes a
+  report definition: every configured row in the skeleton's order, what each
+  row reads or derives, what must be fetched to fill it, and the workbook cell
+  behind each fact. It fetches nothing and computes no value.
+
+  Calculations go through `@gridwright/expr` — the same governed parser the
+  manifest uses — so reference resolution, cycle detection and evaluation
+  order come from one place rather than a second semantic registry. That also
+  settles "no raw JavaScript or unrestricted SQL from metadata" by
+  construction: the expression system is a parser over a fixed grammar and
+  never an evaluator, so code in a configuration cell is a syntax error, not a
+  payload.
+
+  The blank/zero/not-available policy is read from configuration and refused
+  when undeclared or unrecognised. A row with no data and a row measuring zero
+  are different claims about the business, and choosing between them is not
+  the compiler's to do.
 - **Explicit view bindings, validated before anything is computed** (task T07).
   Skeleton rows are bound to a business-data view by stable id and never by
   label — a heading is not an identity, and a report that re-binds itself

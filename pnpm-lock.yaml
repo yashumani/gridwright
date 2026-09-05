@@ -80,6 +80,9 @@ importers:
 
   packages/bridge:
     dependencies:
+      '@gridwright/expr':
+        specifier: workspace:*
+        version: link:../expr
       '@gridwright/schema':
         specifier: workspace:*
         version: link:../schema
