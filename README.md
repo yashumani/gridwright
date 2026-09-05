@@ -156,7 +156,7 @@ if (r.ok) return <Dashboard manifest={r.manifest} source={r.source} />;
 
 ## Status
 
-**Pre-1.0, and honest about it.** 525 tests, three worked examples, and a
+**Pre-1.0, and honest about it.** 529 tests, three worked examples, and a
 [changelog](CHANGELOG.md) that says what you can rely on. What is deliberately
 not here:
 
@@ -168,6 +168,13 @@ not here:
 - **Many-to-many joins, self-joins, one-to-many traversal.** Refused by name
   rather than approximated.
 - **Scale far past a few million rows in-browser.** See the measured table.
+- **Numbers wearing their formatting.** `$1,234.50`, `12.5%` and `(500)` are
+  read as text, not as 1234.5, 0.125 and -500. Stripping the decoration is easy;
+  agreeing what a percent column *means* is not, and guessing wrong silently is
+  worse than leaving it to you.
+- **Non-ASCII column headers.** A column named `région` is skipped, by name, in
+  the note the importer shows you — the identifier grammar the manifest format
+  holds `field.from` to is ASCII.
 
 **It has never met a real dataset.** Three synthetic schemas so far. If you
 point it at a production extract and it breaks, that is the most useful bug
