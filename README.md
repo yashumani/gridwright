@@ -10,11 +10,14 @@ dashboard — cross-filtering, joins and all — without writing a component.
 
 ## Start with a CSV, not a manifest
 
-Open the playground and drop a spreadsheet on it. Gridwright reads the columns,
-works out which ones group and which ones add up, and builds a dashboard you can
-click through — then shows you the manifest it wrote, which you can edit, save
-and reopen. No account, no install, and nothing is uploaded: every byte is read
-and every query runs inside the tab.
+**[Open the playground →](https://yashumani.github.io/gridwright/)** and drop a
+spreadsheet on it. Gridwright reads the columns, works out which ones group and
+which ones add up, and builds a dashboard you can click through — then shows you
+the manifest it wrote, which you can edit, save and reopen. No account, no
+install, and nothing is uploaded: every byte is read and every query runs inside
+the tab. Open the network panel and watch it stay empty.
+
+Or run the same thing locally:
 
 ```bash
 pnpm install && pnpm build
@@ -153,7 +156,7 @@ if (r.ok) return <Dashboard manifest={r.manifest} source={r.source} />;
 
 ## Status
 
-**Pre-1.0, and honest about it.** 524 tests, three worked examples, and a
+**Pre-1.0, and honest about it.** 525 tests, three worked examples, and a
 [changelog](CHANGELOG.md) that says what you can rely on. What is deliberately
 not here:
 

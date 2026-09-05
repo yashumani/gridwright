@@ -280,7 +280,13 @@ export const styles = `
    would add ink the palette never validated. */
 .gw-dot { cursor: pointer; }
 .gw-dot:focus-visible { outline: 2px solid var(--gw-accent); outline-offset: 1px; }
-.gw-dot-rule { stroke: var(--gw-rule); stroke-width: 1; }
+/* Dotted, and lighter than a gridline, because the two lines do different
+   jobs. The gridline is the scale — on a dot plot the axis need not start at
+   zero, so the scale is the whole basis on which the truncation is fair, and
+   it has to stay readable. The row rule only carries the eye from a label
+   across to its mark. Drawn at the same weight, as they first were, four rows
+   and four ticks read as a grid and neither line says what it is for. */
+.gw-dot-rule { stroke: var(--gw-rule); stroke-width: 1; stroke-dasharray: 1 3; opacity: 0.85; }
 .gw-dot-mark {
   fill: var(--gw-series-1);
   stroke: var(--gw-surface); stroke-width: 2;

@@ -29,6 +29,13 @@ documented types, and the internals of every package below `@gridwright/react`.
 
 ### Added
 
+- **A hosted playground**, at
+  [yashumani.github.io/gridwright](https://yashumani.github.io/gridwright/).
+  The pitch has always been "drop a CSV in your browser"; until now the only
+  way to reach it was to clone the repository and build it, which is the
+  opposite of that. Deployed from `main` on every push. The build now emits
+  relative asset URLs, so the same output runs at a domain root, under a
+  project path, or opened straight off disk.
 - **A `dot` panel.** The form a bar chart cannot be: a bar's length *is* the
   measurement, so its axis must start at zero, and values within a few percent
   of each other draw bars of visibly the same size. A dot is read against the
@@ -93,6 +100,13 @@ documented types, and the internals of every package below `@gridwright/react`.
 - Documentation split out of the README into [`docs/`](docs/).
 
 ### Changed
+
+- **The reference dashboard draws channels as a dot plot, not bars.** Its four
+  channels sit within 11% of each other, so a zero-based bar axis drew four
+  blocks of the same visible length and hid the only thing the panel was there
+  to say. The chart-types example now shows the same numbers in both forms,
+  side by side, which is a better answer to "what is each chart for" than
+  either panel alone.
 
 - **Panels are cards, not table cells.** More padding, a larger radius and two
   near-invisible shadows that give the card an edge and lift it off the ground
