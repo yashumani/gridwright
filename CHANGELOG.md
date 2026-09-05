@@ -29,6 +29,25 @@ documented types, and the internals of every package below `@gridwright/react`.
 
 ### Added
 
+- **`@gridwright/bridge`, the first piece of the metadata bridge** (tasks T02
+  and T05 of the delivery plan). Reads bounded `.xlsx` configuration tables
+  with workbook/sheet/address/row provenance on every value. Nothing is
+  evaluated: a formula cell carries Excel's own cached result and the formula
+  is recorded as text beside it, and a formula with no cached value stays blank
+  with a diagnostic rather than becoming a number nobody computed. Macros and
+  external links are refused at the container; a DOCTYPE is refused outright.
+  The ZIP layer is written against `node:zlib` rather than a dependency
+  precisely so R24's bound on file expansion is enforceable — a zip bomb is
+  caught on its declared ratio before its output is allocated, and per-entry,
+  archive-wide and entry-count budgets are separate limits.
+- **A synthetic support-operations fixture** (`fixtures/support-ops/`) —
+  skeleton workbook, SQL configuration metadata, explicit view bindings, a
+  prepared view and the expected structure and results. Invented data, per
+  decisions D01 and D02, with no claim of workplace compatibility. The third
+  queue returns no rows on purpose: R14 says the skeleton survives whatever the
+  query returns, so it must render with its heading and a not-available marker,
+  never dropped and never as a zero.
+
 - **A hosted playground**, at
   [yashumani.github.io/gridwright](https://yashumani.github.io/gridwright/).
   The pitch has always been "drop a CSV in your browser"; until now the only

@@ -1,0 +1,34 @@
+{
+  "$comment": "Synthetic. Shaped as a read-only configuration connector would return it (R11). No credentials, no live connection, no workplace schema.",
+  "snapshot": {
+    "source": "synthetic://support-ops",
+    "capturedAt": "2026-09-05T00:00:00Z",
+    "version": "0.1"
+  },
+  "metrics": [
+    {
+      "id": "closed_cases",
+      "label": "Closed cases",
+      "unit": "cases",
+      "grain": "queue",
+      "additive": true,
+      "aggregation": "sum",
+      "polarity": "unset",
+      "definitionRef": "ukb://unavailable",
+      "$comment": "definitionRef is deliberately unresolvable: R07 wants metric definitions traceable to approved knowledge, and no approved knowledge service is wired yet. Recording the gap beats implying one exists."
+    }
+  ],
+  "views": [
+    {
+      "id": "vw_closed_cases_by_queue",
+      "$comment": "The prepared business-data view. Described here, supplied as prepared-view.csv until a real read-only connector lands in T06.",
+      "grain": ["queue_key", "period"],
+      "columns": [
+        { "name": "queue_key", "type": "string", "role": "key" },
+        { "name": "period", "type": "string", "role": "key", "domain": ["actual", "comparison"] },
+        { "name": "closed_cases", "type": "number", "role": "measure", "unit": "cases" }
+      ],
+      "cardinality": "one-row-per-queue-per-period"
+    }
+  ]
+}

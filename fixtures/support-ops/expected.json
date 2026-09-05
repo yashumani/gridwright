@@ -1,0 +1,38 @@
+{
+  "$comment": "Required structure and results for the support-ops fixture. Every number here is arithmetic from prepared-view.csv; none is a judgement about the business.",
+  "structure": {
+    "$comment": "R14: this order and these headings come from the skeleton, not from what the query returned.",
+    "rows": [
+      { "rowKey": "queue_a", "heading": "Queue A", "rowType": "data", "indent": 1 },
+      { "rowKey": "queue_b", "heading": "Queue B", "rowType": "data", "indent": 1 },
+      { "rowKey": "queue_c", "heading": "Queue C", "rowType": "data", "indent": 1 },
+      { "rowKey": "total", "heading": "Total", "rowType": "total", "indent": 0 }
+    ]
+  },
+  "values": [
+    { "rowKey": "queue_a", "actual": 70, "comparison": 60, "variance": 10 },
+    { "rowKey": "queue_b", "actual": 50, "comparison": 40, "variance": 10 },
+    {
+      "rowKey": "queue_c",
+      "actual": null,
+      "comparison": null,
+      "variance": null,
+      "availability": "not_available",
+      "$comment": "Null, not 0. The view returned no rows for this queue; that is an absence of data, not a measurement of zero."
+    },
+    { "rowKey": "total", "actual": 120, "comparison": 100, "variance": 20 }
+  ],
+  "contributions": {
+    "$comment": "The queues are non-overlapping, so contributions sum to the total variance exactly. Queue C contributes nothing because it has no data, which is different from contributing zero.",
+    "queue_a": 10,
+    "queue_b": 10,
+    "total": 20
+  },
+  "invariants": [
+    "Total actual equals the sum of contributing queue actuals (70 + 50 = 120).",
+    "Total variance equals the sum of contributing queue variances (10 + 10 = 20).",
+    "Queue C appears in the output with its heading and a not-available marker.",
+    "No row is dropped because the view returned no matching records.",
+    "Polarity is unset: the fixture asserts +20, never that +20 is good."
+  ]
+}

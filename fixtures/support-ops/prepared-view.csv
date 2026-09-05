@@ -1,0 +1,5 @@
+queue_key,period,closed_cases
+queue_a,actual,70
+queue_b,actual,50
+queue_a,comparison,60
+queue_b,comparison,40
