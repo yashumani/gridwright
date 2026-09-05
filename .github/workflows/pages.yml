@@ -4,6 +4,11 @@
 # gives a pnpm install command — because until now the only way to open the
 # playground was to build it. A tool whose whole pitch is "drop a CSV in your
 # browser" cannot be evaluated by a stranger without a URL.
+#
+# One-time setup, by a repository administrator:
+#   Settings -> Pages -> Build and deployment -> Source: GitHub Actions
+# Until that is set, every run here stops at configure-pages with
+# "Get Pages site failed: Not Found". See the note on that step.
 name: Pages
 
 on:
@@ -54,11 +59,17 @@ jobs:
       - name: Build the playground
         run: pnpm --filter @gridwright/playground build
 
-      # `enablement` turns Pages on the first time this runs, so publishing
-      # does not depend on someone having found the setting first.
+      # Pages must already be switched on for this repository, once, by hand:
+      #   Settings -> Pages -> Build and deployment -> Source: GitHub Actions
+      #
+      # `enablement: true` was here to spare someone that click, and it cannot
+      # work. Creating a Pages site is a repository-administration call, and a
+      # workflow's GITHUB_TOKEN is not an administrator however its permissions
+      # are declared — the first run failed with "Create Pages site failed:
+      # Resource not accessible by integration". Asking for a right the token
+      # can never hold turns one honest "Pages is not enabled" into a confusing
+      # pair of errors, so the ask is gone and the requirement is written down.
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
-        with:
-          enablement: true
 
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
