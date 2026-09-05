@@ -92,6 +92,21 @@ documented types, and the internals of every package below `@gridwright/react`.
   Dependabot, and a gated release workflow publishing with provenance.
 - Documentation split out of the README into [`docs/`](docs/).
 
+### Fixed
+
+- **An identifier made of digits is no longer read as a number.** A ZIP code,
+  SKU or account number written `00123` was becoming `123` — the leading zeros
+  gone from every row, chart and export — and an id past 2^53 such as
+  `9007199254740993` came back as `...992`, so two ids one apart could land on
+  the same value and merge into a single row. Both were silent, which is what
+  made them worse than a file that refuses to load. `0x10`, `1_000` and
+  `Infinity` are no longer numbers either; `0.5`, `-500`, `1e3`, `1.50` and
+  `9007199254740991` still are.
+- **A number column with gaps stays a number column.** `NA`, `N/A`, `NULL`,
+  `NaN` and `-` are read as absent while sniffing a column's type rather than
+  forcing it to text. They coerced to null already, so only the type changes —
+  but the type was the difference between a chart and a list of strings.
+
 ### Changed
 
 - **Panels are cards, not table cells.** More padding, a larger radius and two

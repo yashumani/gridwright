@@ -29,6 +29,47 @@ const ISO_DAY = /^\d{4}-\d{2}-\d{2}/;
 const TRUE_WORDS = new Set(["true", "yes", "y", "t"]);
 const FALSE_WORDS = new Set(["false", "no", "n", "f"]);
 
+/**
+ * How real exports write "no value". A column of numbers with three NAs in it
+ * is a column of numbers; typing it as text because of them turns every chart
+ * that column could have drawn into a list of strings. These coerce to null
+ * anyway, so treating them as absent while sniffing only changes the type.
+ */
+const BLANK_WORDS = new Set(["na", "n/a", "nan", "null", "-"]);
+
+/**
+ * A plain decimal, and nothing else. `Number()` also accepts `0x10`, `0b11`,
+ * `1_000` and `Infinity`, none of which is a number somebody typed into a
+ * spreadsheet cell meaning a quantity.
+ */
+const PLAIN_NUMBER = /^[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?$/;
+
+/**
+ * Whether a string is a measurement, as opposed to an identifier that happens
+ * to be made of digits.
+ *
+ * The distinction is not pedantic — getting it wrong loses data with no error
+ * anywhere. A ZIP code `00123` read as a number is `123`, and the leading
+ * zeros are gone from every row, chart and export. An order id of
+ * `9007199254740993` is past `Number.MAX_SAFE_INTEGER`, so it comes back as
+ * `...992`: the value is wrong, and two ids that differ by one can land on the
+ * same number and merge into one row. Both are silent, which is what makes
+ * them worse than a file that simply fails to load.
+ */
+function measuresSomething(raw: string): boolean {
+  const s = raw.trim();
+  if (!PLAIN_NUMBER.test(s)) return false;
+  // A leading zero is how a code is written, not a quantity: nobody records a
+  // hundred and twenty-three as 00123.
+  if (/^[+-]?0\d/.test(s)) return false;
+  const n = Number(s);
+  if (!Number.isFinite(n)) return false;
+  // Past 2^53 the parse itself is lossy, so the number on screen is not the
+  // number in the file.
+  if (Number.isInteger(n) && Math.abs(n) > Number.MAX_SAFE_INTEGER) return false;
+  return true;
+}
+
 /** Columns whose name says they identify a row rather than measure it. */
 const ID_NAME = /(^|_)(id|uuid|guid|key|code|no|num|number)$/i;
 
@@ -61,7 +102,9 @@ export function sniffType(values: readonly Value[]): FieldType {
   const seen: string[] = [];
   for (const v of values) {
     if (v === null || v === "") continue;
-    seen.push(String(v));
+    const s = String(v);
+    if (BLANK_WORDS.has(s.trim().toLowerCase())) continue;
+    seen.push(s);
     if (seen.length >= SAMPLE) break;
   }
   if (!seen.length) return "string";
@@ -79,7 +122,7 @@ export function sniffType(values: readonly Value[]): FieldType {
     return "date";
   }
 
-  if (every((s) => Number.isFinite(Number(s.trim())))) return "number";
+  if (every(measuresSomething)) return "number";
 
   return "string";
 }

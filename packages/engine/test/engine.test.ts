@@ -839,6 +839,49 @@ describe("inferring a manifest from bare data", () => {
     expect(sniffType(["yes", "N"])).toBe("boolean");
   });
 
+  it("does not turn an identifier made of digits into a number", () => {
+    // Both of these lose data with no error anywhere, which is what makes them
+    // worse than a file that simply refuses to load.
+    //
+    // A ZIP code, SKU or account number written 00123 is 123 once it is a
+    // number, and the leading zeros are gone from every row, chart and export.
+    expect(sniffType(["00123", "00456"])).toBe("string");
+    expect(sniffType(["007"])).toBe("string");
+    // Past 2^53 the parse itself is lossy: 9007199254740993 comes back as
+    // ...992, so the number on screen is not the number in the file — and two
+    // ids one apart can land on the same value and merge into a single row.
+    expect(sniffType(["9007199254740993", "9007199254740994"])).toBe("string");
+    // Number() also accepts these; a spreadsheet cell holding them does not
+    // mean a quantity.
+    expect(sniffType(["0x10", "0x20"])).toBe("string");
+    expect(sniffType(["Infinity"])).toBe("string");
+    expect(sniffType(["1_000"])).toBe("string");
+  });
+
+  it("still reads the numbers a person actually types", () => {
+    // The guard above must not cost the ordinary cases.
+    expect(sniffType(["0", "1", "2"])).toBe("number");
+    expect(sniffType(["0.5", "0.25"])).toBe("number");        // a leading zero before a point is a decimal
+    expect(sniffType(["-500", "+12"])).toBe("number");
+    expect(sniffType(["1.50", "980"])).toBe("number");
+    expect(sniffType([" 42 ", "7"])).toBe("number");
+    expect(sniffType(["1e3", "2.5e-2"])).toBe("number");
+    expect(sniffType([String(Number.MAX_SAFE_INTEGER)])).toBe("number");
+  });
+
+  it("reads a number column that has gaps written as words", () => {
+    // Real exports write "no value" a dozen ways. Typing the column as text
+    // because of them turns every chart it could have drawn into a list of
+    // strings — and these coerce to null regardless, so only the type changes.
+    expect(sniffType(["10", "NA", "30"])).toBe("number");
+    expect(sniffType(["10", "n/a", "30"])).toBe("number");
+    expect(sniffType(["10", "NULL", "30"])).toBe("number");
+    expect(sniffType(["10", "NaN", "30"])).toBe("number");
+    expect(sniffType(["10", "-", "30"])).toBe("number");
+    // With nothing but markers there is no evidence to type on.
+    expect(sniffType(["NA", "NULL", "-"])).toBe("string");
+  });
+
   it("reads an identifier header the way a person wrote it", () => {
     // The test ran against the raw header with an underscore-only pattern, so
     // `Order ID` and `orderId` fell through and were summed — producing exactly
