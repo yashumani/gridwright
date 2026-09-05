@@ -9,22 +9,29 @@ precedence over completion pressure.
 
 ## Approval
 
-**Stop and get explicit human approval** if any apply:
+**Standing authorization, granted 2026-09-05, until withdrawn.** Every pull
+request and every merge into `main` is already approved. Do not pause to ask,
+and do not treat a merge, a green pipeline or a progress update as a place to
+stop and wait — work through to project completion. The owner reviews daily and
+steps in directly when needed.
 
-- The target branch is `main`, `master`, or `release/*` — so **every merge into
-  `main` needs approval each time.** Opening a PR and driving its CI to green
-  does not.
-- The action publishes outward: GitHub Pages, npm, or any shared destination.
-- A resource, endpoint or connection name contains `prod`.
-- The action changes shared infrastructure others depend on.
-- The environment cannot be determined.
+Still stop and report first, because a revert cannot undo these:
 
-Available credentials are not approval. State the target environment once when
-work starts and again only when it changes — not before each action.
+- Publishing to npm. A version is immutable and the package name is claimed
+  permanently.
+- Force-pushing over commits that are not yours, rewriting `main`'s history, or
+  deleting a remote branch holding unmerged work.
+- Writing a credential, token or secret into the repository, a log, or an
+  outward request.
+- A resource, endpoint or connection name containing `prod`, or an environment
+  that cannot be determined.
 
-**Pre-authorized, do not ask:** feature branches (`claude/*`, `codex/*`,
-`feature/*`, `dev*`, `backup/*`) and pushes to them; temporary resources, test
-infrastructure and migrations within the agreed scope.
+Everything else is authorized without asking: feature branches and pushes to
+them, opening and merging pull requests, the GitHub Pages deploy that a merge
+into `main` triggers, temporary resources, test infrastructure and migrations.
+
+State the target environment once when work starts, and again only when it
+changes.
 
 ## Workspace
 
