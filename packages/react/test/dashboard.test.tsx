@@ -27,6 +27,20 @@ async function mount(over: Partial<React.ComponentProps<typeof Dashboard>> = {})
   return { ...view, store, manifest };
 }
 
+/**
+ * The channel panel's selectable marks, and their selected/recessed states.
+ *
+ * Queried by the interaction contract rather than by the mark, because that is
+ * what the tests below are about. Which form the reference example draws that
+ * panel in — bar, dot, anything added later — is not what any of them asserts,
+ * and pinning them to `.gw-bar` made one change of chart type surface as eleven
+ * broken behaviours. A panel whose marks are clickable is the contract; the
+ * shape of the mark is the example's business.
+ */
+const marks = () => document.querySelectorAll(".gw-bar, .gw-dot");
+const marksOn = () => document.querySelectorAll(".gw-bar.gw-on, .gw-dot.gw-on");
+const marksDim = () => document.querySelectorAll(".gw-bar.gw-dim, .gw-dot.gw-dim");
+
 beforeEach(cleanup);
 
 describe("rendering the reference manifest", () => {
@@ -63,10 +77,9 @@ describe("rendering the reference manifest", () => {
     expect(within(table as HTMLElement).getAllByRole("button")).toHaveLength(5);
   });
 
-  it("draws bars for every channel", async () => {
+  it("draws one mark for every channel", async () => {
     await mount();
-    const bars = document.querySelectorAll(".gw-bar .gw-bar-fill");
-    expect(bars.length).toBe(4);
+    expect(marks()).toHaveLength(4);
   });
 });
 
@@ -108,8 +121,8 @@ describe("cross-filtering", () => {
 
   it("filters on the dimension the interaction names", async () => {
     const { store } = await mount();
-    const bar = document.querySelectorAll(".gw-bar")[0]!;
-    await act(async () => { fireEvent.click(bar); });
+    const mark = marks()[0]!;
+    await act(async () => { fireEvent.click(mark); });
     // channels.click declares a filter on `channel`, not on whatever was emitted.
     await waitFor(() => expect(Object.keys(store.getSnapshot())).toEqual(["channel"]));
   });
@@ -119,7 +132,7 @@ describe("cross-filtering", () => {
     await act(async () => {
       fireEvent.click(within(document.querySelector(".gw-table") as HTMLElement).getAllByRole("button")[0]!);
     });
-    await act(async () => { fireEvent.click(document.querySelectorAll(".gw-bar")[0]!); });
+    await act(async () => { fireEvent.click(marks()[0]!); });
     await waitFor(() => {
       expect(Object.keys(store.getSnapshot()).sort()).toEqual(["channel", "region"]);
     });
@@ -167,7 +180,7 @@ describe("cross-filtering", () => {
     render(<Dashboard manifest={manifest} source={source} store={store} />);
     await waitFor(() => expect(screen.queryByText("Updating…")).not.toBeInTheDocument());
 
-    await act(async () => { fireEvent.click(document.querySelectorAll(".gw-bar")[0]!); });
+    await act(async () => { fireEvent.click(marks()[0]!); });
     expect(store.isEmpty()).toBe(true);
   });
 
@@ -189,7 +202,7 @@ describe("cross-filtering", () => {
     await act(async () => {
       fireEvent.click(within(document.querySelector(".gw-table") as HTMLElement).getAllByRole("button")[0]!);
     });
-    await act(async () => { fireEvent.click(document.querySelectorAll(".gw-bar")[0]!); });
+    await act(async () => { fireEvent.click(marks()[0]!); });
     await waitFor(() => expect(store.toFilters()).toHaveLength(2));
 
     await act(async () => { fireEvent.click(screen.getByText("Clear all")); });
@@ -198,33 +211,32 @@ describe("cross-filtering", () => {
 
   it("does not filter a panel by its own selection", async () => {
     await mount();
-    const barsBefore = document.querySelectorAll(".gw-bar .gw-bar-fill").length;
-    await act(async () => { fireEvent.click(document.querySelectorAll(".gw-bar")[0]!); });
+    const before = marks().length;
+    await act(async () => { fireEvent.click(marks()[0]!); });
     await waitFor(() => expect(document.querySelector(".gw-chip")).toBeTruthy());
     // Every channel stays on screen, so a second value is still selectable.
-    expect(document.querySelectorAll(".gw-bar .gw-bar-fill")).toHaveLength(barsBefore);
+    expect(marks()).toHaveLength(before);
   });
 
   it("marks the selected mark and dims the rest", async () => {
     await mount();
-    await act(async () => { fireEvent.click(document.querySelectorAll(".gw-bar")[0]!); });
-    await waitFor(() => expect(document.querySelector(".gw-bar.gw-on")).toBeTruthy());
-    expect(document.querySelectorAll(".gw-bar.gw-dim").length).toBeGreaterThan(0);
+    await act(async () => { fireEvent.click(marks()[0]!); });
+    await waitFor(() => expect(marksOn().length).toBe(1));
+    expect(marksDim().length).toBeGreaterThan(0);
   });
 
   it("supports selecting a second value from the same chart", async () => {
     const { store } = await mount();
-    const bars = () => document.querySelectorAll(".gw-bar");
-    await act(async () => { fireEvent.click(bars()[0]!); });
+    await act(async () => { fireEvent.click(marks()[0]!); });
     await waitFor(() => expect(store.getSnapshot()["channel"]).toHaveLength(1));
-    await act(async () => { fireEvent.click(bars()[1]!); });
+    await act(async () => { fireEvent.click(marks()[1]!); });
     await waitFor(() => expect(store.getSnapshot()["channel"]).toHaveLength(2));
   });
 
   it("still narrows a panel by a selection made elsewhere", async () => {
     await mount();
     const before = document.querySelector(".gw-kpi-value")!.textContent;
-    await act(async () => { fireEvent.click(document.querySelectorAll(".gw-bar")[0]!); });
+    await act(async () => { fireEvent.click(marks()[0]!); });
     await waitFor(() => {
       expect(document.querySelector(".gw-kpi-value")!.textContent).not.toBe(before);
     });
@@ -324,6 +336,24 @@ describe("the newer chart forms", () => {
     await withPanel("bar", { category: "channel", value: "revenue" });
     expect(document.querySelectorAll(".gw-bar.gw-dim")).toHaveLength(0);
     expect(document.querySelectorAll(".gw-bar.gw-on")).toHaveLength(0);
+  });
+
+  it("cross-filters from a bar, not only from the form the example happens to use", async () => {
+    // The reference example draws channels as a dot plot, because four values
+    // within 11% of each other are what that form is for. Without this test the
+    // bar's own selection path would only ever be exercised on a panel with no
+    // interactions wired to it, and a regression there would reach a user
+    // before it reached CI.
+    const { manifest, source } = fixture();
+    manifest.panels.find((p) => p.id === "channels")!.type = "bar";
+    const store = new FilterStore();
+    render(<Dashboard manifest={manifest} source={source} store={store} />);
+    await waitFor(() => expect(screen.queryByText("Updating…")).not.toBeInTheDocument());
+
+    await act(async () => { fireEvent.click(document.querySelectorAll(".gw-bar")[0]!); });
+    await waitFor(() => expect(Object.keys(store.getSnapshot())).toEqual(["channel"]));
+    expect(document.querySelectorAll(".gw-bar.gw-on")).toHaveLength(1);
+    expect(document.querySelectorAll(".gw-bar.gw-dim").length).toBeGreaterThan(0);
   });
 
   it("draws a sparkline from the measure's own series", async () => {
@@ -539,15 +569,15 @@ describe("accessibility", () => {
 
   it("makes clickable marks keyboard reachable", async () => {
     await mount();
-    const bar = document.querySelector(".gw-bar")!;
-    expect(bar.getAttribute("tabindex")).toBe("0");
-    expect(bar.getAttribute("role")).toBe("button");
+    const mark = marks()[0]!;
+    expect(mark.getAttribute("tabindex")).toBe("0");
+    expect(mark.getAttribute("role")).toBe("button");
   });
 
   it("selects with the keyboard as well as the mouse", async () => {
     const { store } = await mount();
-    const bar = document.querySelector(".gw-bar")!;
-    await act(async () => { fireEvent.keyDown(bar, { key: "Enter" }); });
+    const mark = marks()[0]!;
+    await act(async () => { fireEvent.keyDown(mark, { key: "Enter" }); });
     await waitFor(() => expect(store.isEmpty()).toBe(false));
   });
 

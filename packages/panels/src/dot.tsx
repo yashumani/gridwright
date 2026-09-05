@@ -186,13 +186,11 @@ function Dot({ result, props, size, select, selected, locale }: PanelProps<DotPr
                 {truncate(String(labels[i] ?? "—"), Math.floor((LABEL_GUTTER - 12) / (FONT * 0.56)))}
               </text>
               <circle cx={cx} cy={y} r={MARKS.dot + 1} className="gw-dot-mark" />
+              {/* Right-aligned, so the digits line up down the column whatever
+                  their magnitude. Anchored left, a seven-figure value above a
+                  four-figure one puts the thousands under the units. */}
               {showValues && (
-                <text
-                  x={LABEL_GUTTER + plotW + 8}
-                  y={y}
-                  className="gw-bar-value"
-                  textAnchor="start"
-                >
+                <text x={width - 2} y={y} className="gw-bar-value" textAnchor="end">
                   {formatted[i]}
                 </text>
               )}

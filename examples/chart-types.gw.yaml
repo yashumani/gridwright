@@ -65,13 +65,19 @@ panels:
     # Down is good here, so the arrow's colour has to be told that.
     props: { measure: rtn_rate, sparkline: true, invertTrend: true, caption: Latest month }
 
-  # One series is the point and the rest are context: highlight it, recess the
-  # others. The most underused form there is — eight competing hues say "these
-  # are eight different things" when the story was "look at this one".
+  # Two panels, one set of numbers, two forms — this one and `ranked` below it.
+  #
+  # Read as bars, the four channels are blocks of visibly the same length: a
+  # bar's length *is* its value, so the axis has to start at zero, and 90% of
+  # every bar is the 1.0M they all share. The title claims Direct leads and the
+  # chart cannot show it. Highlighting one series and recessing the rest — the
+  # most underused move there is, since eight competing hues say "eight
+  # different things" when the story was "look at this one" — is what makes the
+  # claim readable at all here, and it is still the wrong form for the data.
   - id: leader
     type: bar
     dataset: by_channel
-    title: Direct leads on revenue
+    title: Revenue by channel, as bars
     layout: { x: 8, y: 0, w: 4, h: 2 }
     props: { category: channel, value: revenue, emphasise: Direct }
 
@@ -83,17 +89,18 @@ panels:
     layout: { x: 0, y: 2, w: 8, h: 4 }
     props: { x: month, y: [revenue], area: true }
 
-  # Four values within 6% of each other. As bars from zero these are four
-  # blocks of visibly the same size — the chart draws the total, not the
-  # difference, and the difference is what anyone came for. A dot is read
-  # against the axis rather than measured from an origin, so the scale can
-  # close in on the data without overstating anything.
+  # The same revenue as the bars above, and now the ranking is legible.
+  #
+  # A dot is read *against* the axis rather than measured from an origin, so the
+  # scale can close in on the data without overstating anything — which is the
+  # one thing a bar may never do. The axis is drawn and labelled precisely
+  # because that is the whole basis on which closing in is fair.
   - id: ranked
     type: dot
     dataset: by_channel
-    title: Orders by channel
+    title: The same revenue, as a dot plot
     layout: { x: 8, y: 2, w: 4, h: 4 }
-    props: { category: channel, value: orders }
+    props: { category: channel, value: revenue }
 
   # Part-to-whole. The segments share a unit, which is what makes the stack mean
   # anything: revenue on top of a count is metres plus seconds.

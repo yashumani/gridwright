@@ -94,8 +94,13 @@ panels:
     layout: { x: 0, y: 2, w: 8, h: 4 }
     props: { x: month, y: [revenue], area: true }
 
+  # A dot plot, not a bar chart, and the data is the reason. The four channels
+  # sit within 11% of each other, and a bar's length *is* its value — so a
+  # zero-based axis draws four blocks of near-identical width and hides the
+  # only thing this panel is here to say. A dot is read against the axis, so
+  # the domain can close in and the ranking becomes legible.
   - id: channels
-    type: bar
+    type: dot
     dataset: by_channel
     title: Revenue by channel
     layout: { x: 8, y: 2, w: 4, h: 4 }
