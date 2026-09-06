@@ -29,6 +29,34 @@ documented types, and the internals of every package below `@gridwright/react`.
 
 ### Added
 
+- **`@gridwright/contracts`** (task T03): the versioned envelope two products
+  hand each other, the descriptor that gates a tool call, and a conformance
+  suite an adapter in another repository runs against itself.
+
+  Three things it refuses to do carry most of the value. **Identity does not
+  travel in an envelope** — tenant, user and scope come from authenticated
+  service context, so a field claiming one is refused rather than quietly
+  dropped, because the only reason to send it is to have it believed.
+  **Receipts are copied, never minted**: a receipt is an issuer, an id and a
+  timestamp, and an unknown key on one — `certified: true`, say — is a
+  rejection. **A policy adviser cannot grant access**: `Advice` has a `deny`
+  field and no counterpart, so a permission handed in by a model or a policy
+  service has nowhere to go.
+
+  A handoff is also refused when it is expired, when its window closes before
+  it opens, when it names a domain the receiver does not admit, when its
+  semantic version is not the receiver's, when it cites a definition the
+  receiver has not approved, or when its contract version is not this one —
+  refused by name, never read on a best-effort basis. Capability checks run in
+  a fixed, tested order: registration, version, identity provenance, scope,
+  arguments, budget, output classification, then advice last, so an advised
+  denial can never hide a real failure.
+
+  `fixtures/contracts/conformance.json` holds 19 cases, each one deviation from
+  a single well-formed handoff, each stating why it exists. Expected problem
+  codes must match exactly — an extra failure is not a pass, and neither is a
+  subset.
+
 - **A read-only SQL connector** (task T06), at `@gridwright/bridge/sql`. It is
   deliberately unreachable from the package index and loads `node:sqlite` at
   call time, so a browser bundle importing `@gridwright/bridge` cannot pull it
