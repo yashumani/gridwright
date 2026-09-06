@@ -1,3 +1,4 @@
+import { describeFinding, scanText, type Finding } from "@gridwright/contracts";
 import type { Cell, CellRef, SheetRead, WorkbookRead } from "./xlsx.js";
 
 /**
@@ -70,8 +71,16 @@ export interface SkeletonRow {
   heading: string;
   rowType: RowType;
   indent: number;
-  /** Where in the workbook this row came from. */
+  /** Where in the workbook this row came from — the key cell. */
   ref: CellRef;
+  /**
+   * The heading's own cell.
+   *
+   * Separate from `ref` because a diagnostic about the heading has to name the
+   * cell somebody opens to fix it. Pointing at the key cell one column over is
+   * the kind of small wrongness that makes a warning worth ignoring.
+   */
+  headingRef: CellRef;
 }
 
 export interface RowBinding {
@@ -139,6 +148,13 @@ export interface BindingResolution {
   snapshot: { source: string; capturedAt: string; version: string };
   periods: Record<string, string>;
   diagnostics: string[];
+  /**
+   * Configuration text that looks like an instruction rather than a label
+   * (R24). Empty in the ordinary case. Carried as structure as well as prose
+   * so a caller can act on the kind and confidence rather than parse a
+   * sentence — a model-facing caller drops the value, a renderer draws it.
+   */
+  untrusted: Finding[];
 }
 
 export type BindingOutcome =
@@ -198,6 +214,7 @@ export function readSkeleton(sheet: SheetRead, keyColumn: string): SkeletonRow[]
       rowType,
       indent: typeof indentCell?.value === "number" ? indentCell.value : 0,
       ref: row[keyAt]!.ref,
+      headingRef: row[headingAt]?.ref ?? row[keyAt]!.ref,
     });
   }
   return rows;
@@ -213,6 +230,92 @@ export function readConfigTable(sheet: SheetRead): Map<string, { value: Cell; re
     out.set(key, { value, ref: row[0]!.ref });
   }
   return out;
+}
+
+/**
+ * Configuration text, checked for text that is trying to be read as an
+ * instruction rather than a label (R24).
+ *
+ * Every string here came out of a workbook or a metadata snapshot, which are
+ * files somebody else can write. Today they are only ever drawn on a screen,
+ * so an imperative in a heading is odd rather than dangerous — but a metric
+ * label is exactly the sort of thing a later answer quotes, and by then the
+ * flag has to already exist.
+ *
+ * It is a **diagnostic, not a refusal.** A queue legitimately named "Ignore"
+ * must not break a report, and R14 is explicit that configured structure
+ * survives whatever anything else says. A caller about to put this text in
+ * front of a model reads the diagnostics and decides; a renderer draws the
+ * label either way.
+ *
+ * The limits differ by field because the shape of the value is itself a
+ * signal: a heading is a few words, a note is a sentence or two, and either
+ * one arriving as four hundred characters is worth saying out loud.
+ */
+const TEXT_LIMITS = { heading: 120, value: 200, note: 500 } as const;
+
+function scanConfiguration(
+  workbook: WorkbookRead,
+  metadata: MetadataSnapshot,
+  skeleton: SkeletonRow[],
+  spec: BindingSpec,
+): Finding[] {
+  const findings: Finding[] = [];
+  const where = (ref: CellRef) => `${ref.sheet}!${ref.address}`;
+
+  for (const row of skeleton) {
+    findings.push(
+      ...scanText(row.heading, where(row.headingRef), { maxLength: TEXT_LIMITS.heading }),
+    );
+    findings.push(...scanText(row.rowKey, where(row.ref), { maxLength: TEXT_LIMITS.value }));
+  }
+
+  // The Config sheet's own cells, including the note column, which is the one
+  // place in the workbook where prose is expected and so the easiest to hide in.
+  const config = workbook.sheets.find((s) => s.name === "Config");
+  if (config) {
+    for (const row of config.rows) {
+      for (const cell of row) {
+        if (!cell || typeof cell.value !== "string") continue;
+        findings.push(
+          ...scanText(cell.value, where(cell.ref), { maxLength: TEXT_LIMITS.note }),
+        );
+      }
+    }
+  }
+
+  // The metadata snapshot is the other authored source, and the side a
+  // database administrator rather than a spreadsheet author can write.
+  const metric = metadata.metrics.find((m) => m.id === spec.metric);
+  if (metric) {
+    for (const [key, limit] of [
+      ["label", TEXT_LIMITS.heading],
+      ["unit", TEXT_LIMITS.value],
+      ["grain", TEXT_LIMITS.value],
+      ["polarity", TEXT_LIMITS.value],
+      ["definitionRef", TEXT_LIMITS.value],
+    ] as const) {
+      findings.push(
+        ...scanText(metric[key], `metadata.metrics[${metric.id}].${key}`, { maxLength: limit }),
+      );
+    }
+  }
+
+  const view = metadata.views.find((v) => v.id === spec.view);
+  if (view) {
+    findings.push(
+      ...scanText(view.id, `metadata.views[${view.id}].id`, { maxLength: TEXT_LIMITS.value }),
+    );
+    for (const column of view.columns) {
+      findings.push(
+        ...scanText(column.name, `metadata.views[${view.id}].columns.name`, {
+          maxLength: TEXT_LIMITS.value,
+        }),
+      );
+    }
+  }
+
+  return findings;
 }
 
 // ---------------------------------------------------------------- resolution
@@ -248,6 +351,12 @@ export function resolveBindings(
   const skeletonOrProblem = readSkeleton(sheet, spec.keyColumn);
   if (!Array.isArray(skeletonOrProblem)) return { ok: false, problems: [skeletonOrProblem] };
   const skeleton = skeletonOrProblem;
+
+  // R24. Before anything reads these values for meaning, note the ones that
+  // are asking to be obeyed. `describeFinding` never quotes the matched text,
+  // so a diagnostic built from a hostile cell cannot itself carry the payload.
+  const untrusted = scanConfiguration(workbook, metadata, skeleton, spec);
+  for (const finding of untrusted) diagnostics.push(describeFinding(finding));
 
   // --- the metric and the view exist, by id ---------------------------------
   const metric = metadata.metrics.find((m) => m.id === spec.metric);
@@ -473,6 +582,7 @@ export function resolveBindings(
       },
       periods: spec.periods,
       diagnostics,
+      untrusted,
     },
   };
 }

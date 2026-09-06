@@ -1,3 +1,4 @@
+import { scanText, type Finding } from "@gridwright/contracts";
 import { analyzeExpression, evalPostColumn, type Value } from "@gridwright/expr";
 import type { BlankPolicy, DefinitionRow, ReportDefinition } from "./compile.js";
 
@@ -209,4 +210,53 @@ export function fillReport(definition: ReportDefinition, input: FillInput): Repo
   });
 
   return { rows, periods, blankPolicy: definition.blankPolicy, diagnostics };
+}
+
+export interface ViewScanOptions {
+  /** Most rows to look at. Default 1000. */
+  maxRows?: number;
+  /** Columns to scan. Default: every column present on the first row. */
+  columns?: readonly string[];
+  /** Longest a single value should be. Default 500. */
+  maxLength?: number;
+  /** Include the matched text in each finding. Off by default. */
+  sample?: boolean;
+}
+
+/**
+ * Scans view data for text that is trying to be read as an instruction (R24).
+ *
+ * Separate from `fillReport`, and deliberately not called by it. Configuration
+ * is small and authored, so it is scanned every time; a prepared view can
+ * return a hundred thousand rows that are almost entirely numbers, and running
+ * a pattern set over all of them on every render would be real work for very
+ * little signal.
+ *
+ * So this is the call a caller makes when the values are about to go somewhere
+ * that reads them — an answer, a summary, a model's context — rather than
+ * somewhere that only draws them. It is bounded by row count for the same
+ * reason every other read here is: an attacker should not get to choose how
+ * much work a scan does.
+ */
+export function scanViewRows(
+  rows: readonly ViewRow[],
+  options: ViewScanOptions = {},
+): Finding[] {
+  const maxRows = options.maxRows ?? 1000;
+  const maxLength = options.maxLength ?? 500;
+  const findings: Finding[] = [];
+
+  const looked = rows.slice(0, maxRows);
+  const columns = options.columns ?? Object.keys(looked[0] ?? {});
+
+  looked.forEach((row, i) => {
+    for (const column of columns) {
+      const scanOptions = options.sample
+        ? { maxLength, sample: true }
+        : { maxLength };
+      findings.push(...scanText(row[column], `row[${i}].${column}`, scanOptions));
+    }
+  });
+
+  return findings;
 }
