@@ -94,6 +94,8 @@ that were checked against the unfixed behaviour, and a green pipeline.
 | T13 | Delivered | `packages/adapters/src/variance.ts` and `semantics.ts` — golden reconciliation, unsupported-operation rejection, and the R07 mapping across three vocabularies |
 | T14 | Delivered | `packages/coordinator/src/gate.ts` — scope frozen into the invocation, output classified again on the way back, and privileged execution failing closed without a policy |
 | T15 | Delivered | `packages/coordinator/src/run.ts` — one parent run, one budget pool, cancellation that reaches a call in flight, and a specialist shape with no recursion in it |
+| T17 | Delivered | `packages/runtime/src/sessions.ts` — authorization rechecked on every read, a cache key that is the whole boundary, revocation, retention and observable deletion |
+| T18 | Delivered | `packages/runtime/src/approvals.ts` — approvals bound to actor, action and input digest, single-use, expiring, with an immutable published version and a read-only mode that cannot be argued with |
 
 ### Acceptance scenarios, recorded against evidence
 
