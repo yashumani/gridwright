@@ -29,6 +29,21 @@ documented types, and the internals of every package below `@gridwright/react`.
 
 ### Added
 
+- **A definition can now be filled from view data** (task T09, numerical half).
+  The golden fixture runs end to end — workbook, bindings, definition, data —
+  and `expected.json` is asserted rather than described: 120 against 100 for a
+  variance of +20, splitting +10 and +10.
+
+  Availability and value are kept apart, because collapsing them is how a
+  report starts lying. `availability` records what the source said; `value` is
+  what the blank policy shows for it. A queue the view returned nothing for
+  keeps its heading, contributes nothing to the total rather than contributing
+  a zero, and stays marked not-available even under a policy that supplies a
+  number.
+
+  Arithmetic runs through `@gridwright/expr`'s post-aggregation evaluator, with
+  a period as a position in its column, so nulls and division follow the
+  library's semantics rather than a second set written for the bridge.
 - **A deterministic bridge compiler** (task T08). A resolved binding becomes a
   report definition: every configured row in the skeleton's order, what each
   row reads or derives, what must be fetched to fill it, and the workbook cell
