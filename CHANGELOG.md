@@ -29,6 +29,23 @@ documented types, and the internals of every package below `@gridwright/react`.
 
 ### Added
 
+- **A read-only SQL connector** (task T06), at `@gridwright/bridge/sql`. It is
+  deliberately unreachable from the package index and loads `node:sqlite` at
+  call time, so a browser bundle importing `@gridwright/bridge` cannot pull it
+  in even by accident — that is how "no browser credentials" is enforced rather
+  than promised. It takes an already-open handle, never a path or connection
+  string from a request.
+
+  Values are bound as parameters, so a key containing `'; DROP TABLE …` is a
+  key that matches nothing. Identifiers cannot be parameterised in SQL, so
+  every table and column name is looked up in the approved metadata snapshot
+  and re-checked against a strict pattern — an allowlist, not an escape
+  function. Reads are bounded by key count and row count, and a result over the
+  limit is refused rather than truncated, because a truncated read is a wrong
+  total that looks like a right one.
+
+  Validated against a real SQLite database built from the same fixture files.
+  Per decision D05 that establishes nothing about SQL Server or Qlik.
 - **Configuration revisions: revise, preview, roll back, export, reopen**
   (task T10). A revision stores what a person authors — workbook, metadata,
   bindings — and the definition is always derived from it, so a generated
