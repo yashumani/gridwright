@@ -36,3 +36,14 @@ export {
   type ConformanceCase,
   type ConformanceReport,
 } from "./conformance.js";
+
+export {
+  DETECTION_LIMITS,
+  describeFinding,
+  hasHighConfidence,
+  scanRecord,
+  scanText,
+  type Finding,
+  type FindingKind,
+  type ScanOptions,
+} from "./untrusted.js";

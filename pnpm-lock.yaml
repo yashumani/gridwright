@@ -80,6 +80,9 @@ importers:
 
   packages/bridge:
     dependencies:
+      '@gridwright/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@gridwright/expr':
         specifier: workspace:*
         version: link:../expr

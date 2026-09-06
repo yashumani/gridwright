@@ -41,6 +41,7 @@
     "README.md"
   ],
   "dependencies": {
+    "@gridwright/contracts": "workspace:*",
     "@gridwright/expr": "workspace:*",
     "@gridwright/schema": "workspace:*"
   },
