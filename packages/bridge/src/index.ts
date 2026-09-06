@@ -68,3 +68,15 @@ export {
   type ReportResult,
   type ViewRow,
 } from "./fill.js";
+
+export {
+  Revisions,
+  RevisionError,
+  validateConfiguration,
+  type ConfigurationPackage,
+  type ConfigurationSource,
+  type ExportOptions,
+  type Revision,
+  type RevisionStatus,
+  type RevisionsOptions,
+} from "./revisions.js";
