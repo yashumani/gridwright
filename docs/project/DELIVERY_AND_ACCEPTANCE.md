@@ -92,6 +92,8 @@ that were checked against the unfixed behaviour, and a green pipeline.
 | T11 | Delivered | `packages/adapters/src/ukb.ts` — context packs, with denied access, missing context and unpublished drafts kept as three different outcomes |
 | T12 | Delivered | `packages/adapters/src/talk2data.ts` — all ten admission verdicts, the compiled query and receipt-backed claims |
 | T13 | Delivered | `packages/adapters/src/variance.ts` and `semantics.ts` — golden reconciliation, unsupported-operation rejection, and the R07 mapping across three vocabularies |
+| T14 | Delivered | `packages/coordinator/src/gate.ts` — scope frozen into the invocation, output classified again on the way back, and privileged execution failing closed without a policy |
+| T15 | Delivered | `packages/coordinator/src/run.ts` — one parent run, one budget pool, cancellation that reaches a call in flight, and a specialist shape with no recursion in it |
 
 ### Acceptance scenarios, recorded against evidence
 

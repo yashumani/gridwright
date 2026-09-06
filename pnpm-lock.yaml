@@ -140,6 +140,15 @@ importers:
 
   packages/contracts: {}
 
+  packages/coordinator:
+    dependencies:
+      '@gridwright/adapters':
+        specifier: workspace:*
+        version: link:../adapters
+      '@gridwright/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+
   packages/engine:
     dependencies:
       '@gridwright/expr':
