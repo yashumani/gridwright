@@ -74,7 +74,37 @@ Use a generic support workload, not a workplace or finance-planning example. Sup
 
 ## 5. Next cycle and evidence record
 
-Next cycle: T01-T03 contract/fixture preparation, plus reproduction of T04 findings where needed for the chosen report. Do not begin with a generic chatbot wrapper or a new gallery. The first new product capability is the bridge, connected later to governed services.
+## 6. Delivered so far
+
+Recorded against evidence, not intent. Every row below has merged code, tests
+that were checked against the unfixed behaviour, and a green pipeline.
+
+| Task | Status | Where |
+|---|---|---|
+| T02 | Delivered | `fixtures/support-ops/` — skeleton workbook, SQL metadata, bindings, prepared view, expected results |
+| T05 | Delivered | `packages/bridge` — bounded `.xlsx` reading with cell provenance |
+| T06 | Delivered | `packages/bridge/src/sql.ts`, exported at `@gridwright/bridge/sql` — read-only connector against a real SQLite fixture |
+| T07 | Delivered | Explicit bindings, validated before computation |
+| T08 | Delivered | Deterministic compile to a report definition |
+| T09 | Delivered | Fill from view data, and `<Report>` in `@gridwright/react` |
+| T10 | Delivered | Revisions: revise, preview, roll back, export, reopen |
+| T04 | Not started | The remaining gap in G1 |
+
+**G1 is not met.** It requires T02 and T04-T10; T04 is outstanding, so the gate
+stays closed. The golden fixture does run end to end — workbook, bindings,
+definition, data, screen — and `expected.json` is asserted rather than
+described.
+
+Not established by any of the above: Qlik or Vizlib compatibility, SQL Server
+equivalence (D05 limits the SQLite work to first validation), any live
+connector, or any integration with the knowledge, chat or variance products.
+Excel-to-SQL precedence remains open as D01, and the bridge refuses a conflict
+rather than resolving one.
+
+Next cycle: T04 — reproduce the prior Gridwright integration-review findings and
+fix the confirmed failures. Do not begin with a generic chatbot wrapper or a new
+gallery. The first new product capability is the bridge, connected later to
+governed services.
 
 Record task, requirement IDs, source commit(s), fixture version, adapter/model/policy versions, commands/checks, results, evidence location, blockers and next task in each PR. Preserve source boundaries and mark mocked versus live integrations clearly.
 
