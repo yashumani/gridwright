@@ -221,6 +221,24 @@ documented types, and the internals of every package below `@gridwright/react`.
   but the type was the difference between a chart and a list of strings. The
   format rule follows the same definition of a blank, so a units column with a
   few NAs in it totals to `11,720` rather than `11,720.00`.
+- **Arrow keys inside a chart no longer move the panel around it** (task T04).
+  A bar, dot or cell is focusable and interactive — Enter selects its value —
+  but an arrow pressed on one bubbled to the canvas, which read it as "nudge
+  the selected panel". Navigating a chart with the keyboard silently rearranged
+  the report. The canvas now takes an arrow key only when nothing interactive
+  inside it holds the keyboard.
+- **Replacing the `manifest` prop opens the new document** (task T04). The
+  editor built its state once, on mount, so opening a second file left the
+  first one on the canvas and under the inspector — every subsequent edit
+  applied to a document nobody was looking at. A replaced prop now loads, while
+  an edit of the editor's own making, arriving back through `onChange`, still
+  does not reset the undo history.
+- **A newly opened document that does not compile shows nothing, not the last
+  one** (task T04). The preview holds the last manifest that compiled so a
+  half-typed expression cannot take the editor down; that fallback belonged to
+  the document being edited and was carried across a replacement, drawing the
+  previous file's panels under the new file's name. The canvas is now empty
+  with the problems listed beside it.
 
 ### Changed
 

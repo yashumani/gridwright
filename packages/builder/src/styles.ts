@@ -34,6 +34,10 @@ export const builderStyles = `
 
 .gwb-body { display: flex; flex: 1 1 auto; min-height: 0; }
 .gwb-preview { flex: 1 1 auto; min-width: 0; overflow: auto; }
+.gwb-blank {
+  margin: 0; padding: 48px 32px; max-width: 42ch;
+  color: var(--gwb-faint); font-size: 13.5px; line-height: 1.6;
+}
 .gwb-inspector {
   flex: none; width: 320px; overflow: auto; padding: 14px;
   background: var(--gwb-surface); border-left: 1px solid var(--gwb-rule);

@@ -532,6 +532,101 @@ describe("the builder shell", () => {
     expect(seen.at(-1)!.panels.find((p) => p.id === "kpi_rev")!.layout.h).toBe(3);
   });
 
+  it("shows the new document when the manifest prop is replaced", async () => {
+    // T04 / A10, document replacement. Opening a second file must not leave
+    // the first one on the canvas — an editor that keeps editing a document
+    // nobody is looking at is worse than one that refuses to switch.
+    const first = manifest();
+    const second = manifest();
+    second.title = "Second document";
+    second.panels = second.panels.filter((p) => p.id === "kpi_rev");
+    // Interactions name panels, so a document with fewer panels has fewer of
+    // them; keeping the originals would make the second file invalid.
+    second.interactions = [];
+
+    const view = render(<Builder manifest={first} source={source()} />);
+    await waitFor(() => expect(screen.queryByText("Updating…")).not.toBeInTheDocument());
+    expect(document.querySelectorAll("[data-panel]").length).toBeGreaterThan(1);
+
+    view.rerender(<Builder manifest={second} source={source()} />);
+    await waitFor(() => expect(screen.queryByText("Updating…")).not.toBeInTheDocument());
+
+    expect(document.querySelectorAll("[data-panel]")).toHaveLength(1);
+    expect(document.querySelector('[data-panel="kpi_rev"]')).toBeTruthy();
+  });
+
+  it("does not draw the previous document when the new one does not compile", async () => {
+    // T04 / A10, the same concern one step further. The preview holds the last
+    // manifest that compiled so a half-typed expression cannot take the editor
+    // down — but that fallback belongs to the document being edited. Carried
+    // across a replacement it draws file A's panels under file B's name, which
+    // is a report showing numbers from a file nobody opened.
+    const first = manifest();
+    const broken = manifest();
+    broken.panels = broken.panels.filter((p) => p.id === "kpi_rev");
+    // Interactions still naming the removed panels: invalid on arrival.
+
+    const view = render(<Builder manifest={first} source={source()} />);
+    await waitFor(() => expect(screen.queryByText("Updating…")).not.toBeInTheDocument());
+    expect(document.querySelectorAll("[data-panel]").length).toBeGreaterThan(1);
+
+    view.rerender(<Builder manifest={broken} source={source()} />);
+
+    expect(document.querySelectorAll("[data-panel]")).toHaveLength(0);
+    expect(document.querySelector('[role="alert"]')).toBeTruthy();
+  });
+
+  it("does not carry a selection into a document that has no such panel", async () => {
+    const first = manifest();
+    const second = manifest();
+    second.panels = second.panels.filter((p) => p.id !== "kpi_rev");
+
+    const view = render(<Builder manifest={first} source={source()} />);
+    await waitFor(() => expect(screen.queryByText("Updating…")).not.toBeInTheDocument());
+    await act(async () => { fireEvent.click(document.querySelectorAll(".gwb-listitem")[0]!); });
+
+    view.rerender(<Builder manifest={second} source={source()} />);
+    await waitFor(() => expect(screen.queryByText("Updating…")).not.toBeInTheDocument());
+
+    // Nothing is selected, rather than a selection pointing at a panel that is
+    // not there — which is how an inspector ends up editing a ghost.
+    expect(document.querySelector(".gwb-chrome.gwb-on")).toBeNull();
+  });
+
+  it("does not move a panel when a chart mark inside it has the keyboard", async () => {
+    // T04 / A10, keyboard ownership. A mark is focusable and interactive — it
+    // selects a value on Enter — so arrow keys pressed on it belong to the
+    // chart, not to the canvas that happens to contain it. Moving the panel
+    // under someone navigating a chart is the report editing itself.
+    const seen: Manifest[] = [];
+    render(<Builder manifest={manifest()} source={source()} onChange={(m) => seen.push(m)} />);
+    await waitFor(() => expect(screen.queryByText("Updating…")).not.toBeInTheDocument());
+    await act(async () => { fireEvent.click(document.querySelectorAll(".gwb-listitem")[0]!); });
+
+    const mark = document.querySelector(".gw-bar, .gw-dot, .gw-cell") as HTMLElement | null;
+    expect(mark, "the reference dashboard should draw a focusable mark").not.toBeNull();
+
+    await act(async () => {
+      mark!.focus();
+      fireEvent.keyDown(mark!, { key: "ArrowRight", bubbles: true });
+    });
+
+    // Nothing committed: the layout is untouched.
+    expect(seen).toHaveLength(0);
+  });
+
+  it("still moves the panel when the canvas itself has the keyboard", async () => {
+    // The other half of the same rule — the guard must not cost the feature.
+    const seen: Manifest[] = [];
+    render(<Builder manifest={manifest()} source={source()} onChange={(m) => seen.push(m)} />);
+    await waitFor(() => expect(screen.queryByText("Updating…")).not.toBeInTheDocument());
+    await act(async () => { fireEvent.click(document.querySelectorAll(".gwb-listitem")[0]!); });
+
+    const canvas = document.querySelector(".gwb-preview")!;
+    await act(async () => { fireEvent.keyDown(canvas, { key: "ArrowRight" }); });
+    expect(seen.at(-1)!.panels.find((p) => p.id === "kpi_rev")!.layout.x).toBe(1);
+  });
+
   it("will not walk a panel off the edge of the grid", async () => {
     const seen: Manifest[] = [];
     render(<Builder manifest={manifest()} source={source()} onChange={(m) => seen.push(m)} />);

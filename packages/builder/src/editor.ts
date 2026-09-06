@@ -30,6 +30,13 @@ export type EditorAction =
   | { type: "movePanel"; id: string; x: number; y: number }
   | { type: "resizePanel"; id: string; w: number; h: number }
   | { type: "replace"; manifest: Manifest }
+  /**
+   * A different document entirely, not an edit to this one. History and
+   * selection are dropped rather than carried: undoing into a document nobody
+   * has open, or inspecting a panel that only exists in the previous one, are
+   * both worse than starting clean.
+   */
+  | { type: "load"; manifest: Manifest; source?: string }
   | { type: "undo" }
   | { type: "redo" }
   // ---- the model layer ----
@@ -244,6 +251,9 @@ export function reduce(state: EditorState, action: EditorAction): EditorState {
 
     case "replace":
       return commit(state, action.manifest, null);
+
+    case "load":
+      return initialState(action.manifest, action.source);
 
     case "setModel":
       return commit(state, { ...manifest, model: action.model });
