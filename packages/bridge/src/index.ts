@@ -44,3 +44,17 @@ export {
   type ViewColumn,
   type ViewDefinition,
 } from "./bindings.js";
+
+export {
+  compileReport,
+  type BlankPolicy,
+  type CalculatedRow,
+  type CompileInput,
+  type CompileOutcome,
+  type CompileProblemCode,
+  type DefinitionRow,
+  type DefinitionRowKind,
+  type ExecutionRequirement,
+  type ReportDefinition,
+  type RowProvenance,
+} from "./compile.js";

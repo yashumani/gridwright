@@ -37,6 +37,7 @@
     "README.md"
   ],
   "dependencies": {
+    "@gridwright/expr": "workspace:*",
     "@gridwright/schema": "workspace:*"
   },
   "publishConfig": {
