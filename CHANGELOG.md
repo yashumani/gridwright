@@ -29,6 +29,15 @@ documented types, and the internals of every package below `@gridwright/react`.
 
 ### Added
 
+- **A browser check for acceptance scenario A11** (`scripts/verify-a11.mjs`).
+  Drives the built demo in Chromium at desktop, tablet and phone sizes, served
+  under a project subpath the way GitHub Pages serves it: horizontal overflow,
+  panels rendered, Tab reaching a visibly focused control, no external network
+  requests, no page errors, and an unreadable file reported rather than
+  swallowed. Deliberately a script rather than a test — it needs a browser
+  binary and a server, and putting a check in the pipeline that silently never
+  runs is worse than not having one.
+
 - **Acceptance scenario A03, calculation correctness, as one readable suite**
   (`packages/bridge/test/acceptance-a03.test.ts`). Missing values, zero
   denominators, negative adjustments, period boundaries, aggregation rules,
@@ -242,6 +251,21 @@ documented types, and the internals of every package below `@gridwright/react`.
 
 ### Fixed
 
+- **The demo no longer scrolls sideways on a phone** (scenario A11). The header
+  holds a brand and five controls that need about 600px on one line; a nowrap
+  row does not shrink, it overflows — and it took the whole document with it,
+  so every screen below scrolled sideways because of a control bar at the top.
+  It wraps now, which costs nothing at any other width.
+- **A dashboard is readable on a phone** (scenario A11). A twelve-column layout
+  does not shrink into 390px: it rendered four KPI panels about 85px wide and
+  truncated every figure to `$...`. Below 640px panels stack full-bleed in
+  manifest order and keep the heights the author gave them. Wider layouts are
+  untouched.
+- **Dot-plot axis labels no longer overlap.** The scale picked round numbers
+  without knowing how wide their labels are, and four of `$1,150,000` across a
+  280px panel ran together into one grey smear — on every screen size, not just
+  small ones. Ticks whose labels would collide are dropped, both ends kept,
+  because the ends of an axis are what a reader looks at.
 - **A metric is combined by its own rule, not by habit** (scenario A03). A
   prepared view can return more than one row for the same key and period, and
   the bridge folded them together by adding — whatever the metric's declared

@@ -22,12 +22,19 @@ html, body, #root { height: 100%; margin: 0; }
 
 .pg-root *, .pg-root *::before, .pg-root *::after { box-sizing: border-box; }
 
+/* Wraps rather than pushing the page sideways.
+   The header holds the brand and five controls, which need about 600px to sit
+   on one line. On a phone they do not have it, and a nowrap row does not
+   shrink — it overflows, and takes the whole document with it, so every
+   screen below scrolls sideways because of a control bar at the top. Wrapping
+   is the only option here that costs nothing at any other width. */
 .pg-head {
-  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px 16px;
+  flex-wrap: wrap;
   padding: 10px 16px; background: var(--pg-surface);
   border-bottom: 1px solid var(--pg-rule); flex: none;
 }
-.pg-brand { display: flex; align-items: center; gap: 8px; }
+.pg-brand { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .pg-brand strong { font-size: 15px; letter-spacing: -0.015em; font-weight: 650; }
 .pg-brand span {
   color: var(--pg-faint); font-size: 11px; letter-spacing: 0.08em;
@@ -39,7 +46,10 @@ html, body, #root { height: 100%; margin: 0; }
 .pg-mark { width: 17px; height: 17px; flex: none; display: block; }
 .pg-mark rect { fill: var(--pg-rule); }
 .pg-mark .pg-mark-on { fill: var(--pg-accent); }
-.pg-actions { display: flex; align-items: center; gap: 8px; }
+.pg-actions {
+  display: flex; align-items: center; gap: 8px;
+  flex-wrap: wrap; justify-content: flex-end; min-width: 0;
+}
 
 .pg-seg { display: inline-flex; border: 1px solid var(--pg-rule); border-radius: 6px; overflow: hidden; }
 .pg-seg button {

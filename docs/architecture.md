@@ -128,7 +128,7 @@ behind.
 
 ## Testing
 
-774 tests across node and jsdom projects. Component tests opt into jsdom, which
+779 tests across node and jsdom projects. Component tests opt into jsdom, which
 doubles as a check that the core packages carry no DOM assumptions.
 
 Two conventions the history of this repo earned the hard way:
@@ -138,6 +138,20 @@ Two conventions the history of this repo earned the hard way:
   layout, so clipped labels, collapsed panels and contrast problems are
   invisible to it. Every visual bug found here so far was found by looking at a
   page.
+
+`scripts/verify-a11.mjs` is the repeatable half of that. It builds nothing
+itself — run it against a fresh build — and drives the demo in Chromium at
+1440×900, 834×1112 and 390×844, served under a project subpath the way GitHub
+Pages serves it:
+
+```bash
+pnpm build && pnpm --filter @gridwright/playground build
+node scripts/verify-a11.mjs
+```
+
+It is a script rather than a test because it needs a browser binary and a
+server, and CI installs neither; a check in the pipeline that silently never
+runs is worse than no check.
 
 The chunk-boundary suite is worth a look: it re-parses the same awkward CSV
 fixture at every chunk size from one byte upward and demands a single answer.
