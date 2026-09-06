@@ -103,6 +103,47 @@ export function notablePoints(values: readonly number[]): Set<number> {
 }
 
 /**
+ * The ticks that still fit once their labels are drawn.
+ *
+ * A scale picks round numbers without knowing how wide their labels are, and
+ * "$1,150,000" needs about 66 pixels. Four of those across a 280-pixel panel
+ * overlap into one grey smear, which is how a chart ends up with an axis
+ * nobody can read — visible on any width once the labels are long enough.
+ *
+ * Fewer honest labels beat more unreadable ones, so this drops the ones that
+ * would collide. The last tick is reserved first and the walk goes left to
+ * right around it, because the ends of an axis are what a reader looks at:
+ * dropping the top of the scale to make room for a middle value would be the
+ * wrong trade.
+ *
+ * `width` is a caller's estimate in pixels — the SVG text is not measured, and
+ * a slight over-estimate is the safe direction to be wrong in.
+ */
+export function fitTicks<T>(
+  ticks: readonly T[],
+  x: (t: T) => number,
+  width: (t: T) => number,
+  gap = 6,
+): T[] {
+  if (ticks.length <= 2) return [...ticks];
+
+  const last = ticks[ticks.length - 1]!;
+  const lastLeft = x(last) - width(last) / 2;
+
+  const kept: T[] = [];
+  let cursor = -Infinity;
+  for (const t of ticks.slice(0, -1)) {
+    const half = width(t) / 2;
+    if (x(t) - half < cursor + gap) continue;
+    if (x(t) + half + gap > lastLeft) continue;
+    kept.push(t);
+    cursor = x(t) + half;
+  }
+  kept.push(last);
+  return kept;
+}
+
+/**
  * Evenly spaced tick positions across `n` points, both ends always included.
  * Two labels across two years of months tells a reader where the series starts
  * and stops and nothing about what is in between.

@@ -1,4 +1,4 @@
-import { Component, useCallback, useEffect, useId, useMemo, useRef, type ErrorInfo, type ReactNode } from "react";
+import { Component, useCallback, useEffect, useId, useMemo, useRef, type CSSProperties, type ErrorInfo, type ReactNode } from "react";
 import type { Action, Filter, Manifest, PanelDef } from "@gridwright/schema";
 import { formatIssues } from "@gridwright/schema";
 import { Engine, type DataSource, type QueryResult, type Value } from "@gridwright/engine";
@@ -260,10 +260,15 @@ function PanelHost({
 }: PanelHostProps) {
   const [ref, size] = useMeasure<HTMLDivElement>();
 
+  // `--gw-h` duplicates the row span as a custom property so the narrow-screen
+  // rule in the stylesheet can keep a panel's height while dropping its
+  // column. A stylesheet cannot read an inline `grid-row`, and a stacked panel
+  // that falls back to one implicit row is a chart with nowhere to draw.
   const style = {
     gridColumn: `${panel.layout.x + 1} / span ${panel.layout.w}`,
     gridRow: `${panel.layout.y + 1} / span ${panel.layout.h}`,
-  };
+    "--gw-h": String(panel.layout.h),
+  } as CSSProperties;
 
   const issues = useMemo(
     () => registry.validateProps(panel.type, panel.props ?? {}),

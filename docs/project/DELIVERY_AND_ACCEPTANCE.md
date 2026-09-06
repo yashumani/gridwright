@@ -106,7 +106,7 @@ Section 3 lists these as specifications. This is what each one currently has.
 | A07 Tool governance and hostile input | Not met | SQL identifiers are allowlisted and values bound, config cells and payloads are size-bounded, and capability arguments are schema-checked. Retrieved text and model output are not, because there is nothing yet retrieving or generating them (T11, T12, T14) |
 | A08 Bounded agents and failures | Not met | Timeout, step and retry budgets are enforced by the gate that authorises a call (T03). Cancellation and "no delegated run spawns unlimited children" need an orchestrator (T15) |
 | A09 Approval and publication | Not started | Needs T18 |
-| A11 Responsive export and deployment | Not recorded | The demo is built and deployable; desktop/tablet/phone browser evidence has not been captured against the current build (T19) |
+| A11 Responsive export and deployment | **Passed** | `scripts/verify-a11.mjs` drives the built demo in Chromium at 1440×900, 834×1112 and 390×844, hosted under a project subpath — 26 checks: no horizontal overflow before or after loading a dashboard, panels rendered, Tab reaches a visibly focused control, no external network requests, no page errors, and an unreadable file reported rather than swallowed. Two defects found and fixed |
 | A12 Evidence, sessions and handoff | Not met | Export and reopen are reproducible and version metadata travels (T10, T03), but there is no session for a late result to fail to overwrite (T17) |
 | T04 | Delivered | Six named concerns audited; three defects found and closed in `packages/builder` |
 

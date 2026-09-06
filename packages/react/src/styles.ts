@@ -150,6 +150,24 @@ export const styles = `
 
 .gw-grid { display: grid; }
 
+/* One column on a phone.
+   A twelve-column layout does not shrink into 390px — it renders four KPI
+   panels about 85px wide, and every figure on the dashboard truncates to
+   "$...". A number nobody can read is worse than a longer page, so below this
+   width panels stack full-bleed in manifest order and keep their own heights.
+
+   The !important is doing something narrow and deliberate here: the placement it
+   overrides is this library's own inline style on the same elements, which is
+   the one thing a stylesheet cannot otherwise reach. It does not override
+   anything a consumer wrote. */
+@media (max-width: 640px) {
+  .gw-grid { grid-template-columns: minmax(0, 1fr) !important; }
+  .gw-grid > .gw-panel {
+    grid-column: 1 / -1 !important;
+    grid-row: auto / span var(--gw-h, 4) !important;
+  }
+}
+
 /* On a dark ground a black shadow does nothing — the lift has to come from the
    edge instead, so the border carries it and the shadow steps out of the way. */
 @media (prefers-color-scheme: dark) {

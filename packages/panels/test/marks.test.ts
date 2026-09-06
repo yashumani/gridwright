@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MARKS, bandLayout, niceScale, notablePoints } from "../src/marks.js";
+import { MARKS, bandLayout, fitTicks, niceScale, notablePoints } from "../src/marks.js";
 
 describe("bandLayout", () => {
   it("caps the mark so it never fills its band", () => {
@@ -101,5 +101,39 @@ describe("notablePoints", () => {
   it("returns nothing for a series with no usable values", () => {
     expect(notablePoints([NaN, NaN]).size).toBe(0);
     expect(notablePoints([]).size).toBe(0);
+  });
+});
+
+describe("fitTicks", () => {
+  const at = (step: number) => (t: number) => t * step;
+  const wide = (w: number) => () => w;
+
+  it("keeps every tick when they all fit", () => {
+    expect(fitTicks([0, 1, 2, 3], at(60), wide(30))).toEqual([0, 1, 2, 3]);
+  });
+
+  it("drops the ones that would overlap, keeping both ends", () => {
+    // Four ticks 60px apart with 66px labels: the middle two cannot both be
+    // drawn, and the ends are what a reader looks at.
+    const kept = fitTicks([0, 1, 2, 3], at(60), wide(66));
+    expect(kept[0]).toBe(0);
+    expect(kept.at(-1)).toBe(3);
+    expect(kept.length).toBeLessThan(4);
+  });
+
+  it("never drops the last tick to make room for a middle one", () => {
+    // The top of a scale is not a detail. Dropping it to keep an intermediate
+    // value would leave an axis that does not say how far it goes.
+    const kept = fitTicks([0, 1, 2, 3, 4], at(40), wide(70));
+    expect(kept.at(-1)).toBe(4);
+  });
+
+  it("leaves two ticks alone however wide their labels are", () => {
+    // With two, there is nothing to thin: an axis needs both ends.
+    expect(fitTicks([0, 1], at(10), wide(500))).toEqual([0, 1]);
+  });
+
+  it("keeps ticks whose labels are narrow even when they are close together", () => {
+    expect(fitTicks([0, 1, 2, 3, 4], at(20), wide(10))).toEqual([0, 1, 2, 3, 4]);
   });
 });

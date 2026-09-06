@@ -2,7 +2,7 @@ import { useState } from "react";
 import { bool, described, num, obj, opt, str } from "@gridwright/schema";
 import type { Value } from "@gridwright/engine";
 import { formatValue } from "./format.js";
-import { MARKS, bandLayout, niceRange, niceScale } from "./marks.js";
+import { MARKS, bandLayout, fitTicks, niceRange, niceScale } from "./marks.js";
 import { resultRow } from "./rules.js";
 import {
   columnValues, firstDimension, firstMeasure, isSelected, requireColumn,
@@ -51,6 +51,8 @@ const schema = obj({
 });
 
 const FONT = 11.5;
+/** Matches `.gw-axis` in the stylesheet. */
+const AXIS_FONT = 10.5;
 
 function estimateWidth(text: string, fontSize: number, bold: boolean): number {
   return text.length * fontSize * (bold ? 0.62 : 0.56);
@@ -108,6 +110,12 @@ function Dot({ result, props, size, select, selected, locale }: PanelProps<DotPr
   const span = hi - lo || 1;
   const px = (v: number) => LABEL_GUTTER + ((v - lo) / span) * plotW;
 
+  // Ticks a reader can actually read. A currency scale hands back four values
+  // whose labels are wider than the space between them, and drawn as they come
+  // they overlap into one grey smear along the bottom of the panel.
+  const tickText = (t: number) => formatValue(t, measure.format, locale);
+  const shownTicks = fitTicks(scale.ticks, px, (t) => estimateWidth(tickText(t), AXIS_FONT, false));
+
   const { band, origin } = bandLayout(plotH, count);
   const rowY = (i: number) => origin + i * band + band / 2;
 
@@ -127,11 +135,11 @@ function Dot({ result, props, size, select, selected, locale }: PanelProps<DotPr
         aria-label={`${measure.label} by ${category.label}`}
         className="gw-svg"
       >
-        {scale.ticks.map((t, i) => (
+        {shownTicks.map((t, i) => (
           <g key={`t${i}`}>
             <line x1={px(t)} x2={px(t)} y1={0} y2={plotH} className="gw-grid-line" />
             <text x={px(t)} y={plotH + 14} className="gw-axis" textAnchor="middle">
-              {formatValue(t, measure.format, locale)}
+              {tickText(t)}
             </text>
           </g>
         ))}
