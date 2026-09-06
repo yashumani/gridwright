@@ -85,6 +85,7 @@ Dependencies only ever point right to left in that list.
 | `@gridwright/adapters` | Read-only clients for the knowledge, conversational and variance services, and the cross-product metric mapping |
 | `@gridwright/coordinator` | The capability gate and the bounded run that spends one budget |
 | `@gridwright/runtime` | Scoped sessions, artifact persistence, cache invalidation and approval records |
+| `@gridwright/workspace` | One analysis snapshot behind the answer and the report |
 | `gridwright` | The CLI |
 
 ### One decision worth calling out
@@ -131,7 +132,7 @@ behind.
 
 ## Testing
 
-1008 tests across node and jsdom projects. Component tests opt into jsdom, which
+1021 tests across node and jsdom projects. Component tests opt into jsdom, which
 doubles as a check that the core packages carry no DOM assumptions.
 
 Two conventions the history of this repo earned the hard way:

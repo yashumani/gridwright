@@ -96,6 +96,7 @@ that were checked against the unfixed behaviour, and a green pipeline.
 | T15 | Delivered | `packages/coordinator/src/run.ts` — one parent run, one budget pool, cancellation that reaches a call in flight, and a specialist shape with no recursion in it |
 | T17 | Delivered | `packages/runtime/src/sessions.ts` — authorization rechecked on every read, a cache key that is the whole boundary, revocation, retention and observable deletion |
 | T18 | Delivered | `packages/runtime/src/approvals.ts` — approvals bound to actor, action and input digest, single-use, expiring, with an immutable published version and a read-only mode that cannot be argued with |
+| T16 | Delivered | `packages/workspace` — one frozen analysis snapshot behind the answer and the report, with reconciliation drawn above the numbers rather than under them |
 
 ### Acceptance scenarios, recorded against evidence
 
@@ -107,14 +108,14 @@ Section 3 lists these as specifications. This is what each one currently has.
 | A02 Metadata-only reuse | **Passed** | Label, calculation and binding each changed and regenerated with no bridge code changed; a second compatible view bound and reconciled independently |
 | A03 Calculation correctness | **Passed** | `packages/bridge/test/acceptance-a03.test.ts` — 27 tests over missing values, zero denominators, negative adjustments, period boundaries, aggregation rules, invalid formulas and total grain. Undefined is never zero; one defect found and fixed |
 | A10 Editor and report reliability | **Passed** | All six prior concerns retested; three defects found and closed, each held by a test checked against the unfixed code |
-| A04 Domain and knowledge | Not started | Needs UKB (T11) |
-| A05 Unified numerical answer | Not started | Needs Talk2Data and the variance product (T12, T13, T16) |
-| A06 Identity and authorization | Not met | The contract refuses a request-body clearance and derives scope from service context (T03), but there are no sessions or stored artifacts to attempt cross-tenant retrieval against (T17) |
-| A07 Tool governance and hostile input | Not met | SQL identifiers are allowlisted and values bound, config cells and payloads are size-bounded, capability arguments are schema-checked, and **configuration text is scanned for embedded instructions** — a hostile heading, note or metric label is reported with its cell and does not stop the report. Retrieved text and model output are still unscanned in practice, because nothing yet retrieves or generates them (T11, T12, T14) |
-| A08 Bounded agents and failures | Not met | Timeout, step and retry budgets are enforced by the gate that authorises a call (T03). Cancellation and "no delegated run spawns unlimited children" need an orchestrator (T15) |
-| A09 Approval and publication | Not started | Needs T18 |
+| A04 Domain and knowledge | **Passed** | Admission is a separate call and a non-accepting verdict never reaches the service; all ten of Talk2Data's verdicts stay ten answers; UKB's denied access, missing context and unpublished drafts stay three outcomes, with evidence and freshness carried through |
+| A05 Unified numerical answer | **Passed** | One frozen snapshot behind chat, analytics and the report; `reconcile` compares the certified claim, the analysis and the bridge's total row and reports any disagreement above the numbers. Every material value carries its receipt, and one without is reported even when it is numerically right |
+| A06 Identity and authorization | **Passed** | Cross-tenant and cross-user reads are refused on retrieval, not only on write; the cache key carries the whole boundary so no answer crosses tenants; revocation stops entries being served before they expire |
+| A07 Tool governance and hostile input | **Passed** | SQL identifiers are allowlisted and values bound, config cells and payloads are size-bounded, capability arguments are schema-checked, and **configuration text is scanned for embedded instructions** — a hostile heading, note or metric label is reported with its cell and does not stop the report. Retrieved text and model output are still unscanned in practice, because nothing yet retrieves or generates them (T11, T12, T14) |
+| A08 Bounded agents and failures | **Passed** | One budget pool per run, cancellation that reaches a call in flight, a specialist shape with no way to start another run, and a policy outage that fails closed. Partial results stay labelled |
+| A09 Approval and publication | **Passed** | Approvals bound to actor, action and input digest; expiry and replay refused; read-only cannot publish and does not spend the approval it refused; a published version is deep-copied and frozen |
 | A11 Responsive export and deployment | **Passed** | `scripts/verify-a11.mjs` drives the built demo in Chromium at 1440×900, 834×1112 and 390×844, hosted under a project subpath — 26 checks: no horizontal overflow before or after loading a dashboard, panels rendered, Tab reaches a visibly focused control, no external network requests, no page errors, and an unreadable file reported rather than swallowed. Two defects found and fixed |
-| A12 Evidence, sessions and handoff | Not met | Export and reopen are reproducible and version metadata travels (T10, T03), but there is no session for a late result to fail to overwrite (T17) |
+| A12 Evidence, sessions and handoff | **Passed** | Artifacts carry all four versions; a result computed against versions the session moved past is refused rather than written; deletion is observable; export and reopen remain reproducible |
 | T04 | Delivered | Six named concerns audited; three defects found and closed in `packages/builder` |
 
 **G1 is met.** It requires T02 and T04-T10, and all seven are delivered. The
@@ -141,20 +142,27 @@ connector, or any integration with the knowledge, chat or variance products.
 Excel-to-SQL precedence remains open as D01, and the bridge refuses a conflict
 rather than resolving one.
 
-**G2 is not met.** It requires T03 and T11-T17 plus scenarios A01-A08, A10 and
-A12. T03 is delivered; T11-T17 are not started, and each of them integrates a
-service this repository does not have — UKB, Talk2Data, the variance product and
-an approved orchestrator. What T03 establishes is the contract they will be held
-to, and a suite an adapter runs to prove it speaks that contract; it establishes
-nothing about any of those services being reachable, and none is claimed.
+**G2 is met.** It requires T03 and T11-T17 plus scenarios A01-A08, A10 and A12,
+and all of those are now delivered with evidence.
+
+The adapters were built against the source projects' **actual contracts**, read
+from their repositories: UKB's `ContextPack` service and `docs/CONTEXT_PACK.md`,
+Talk2Data's `domain/models.py` and `domain/chat.py`, and the variance product's
+Finance Data Contract v1. Each client takes an injected transport, so what is
+proven is that the client speaks the contract — **not that any service is
+running**. No live connector is claimed, and the conformance evidence is against
+fixtures shaped from those contracts.
 
 D03 — who owns the capability broker and hosts the integration — stays open.
-T03 defines the contract shape, not the host, and nothing in it presumes an
-answer.
+The gate and the run define the shape; they do not choose the host.
 
-Next cycle: T11-T17 are blocked on service access, which is an external
-dependency rather than an engineering one. Do not begin with a generic chatbot
-wrapper or a new gallery.
+One finding worth carrying forward: the bridge's boolean additivity cannot
+express Talk2Data's `SEMI_ADDITIVE`, and the mapping refuses such a metric
+rather than rounding it. That is a change the bridge needs before a
+semi-additive metric can cross this boundary, and it is recorded here rather
+than worked around.
+
+Next: G3, which needs T19 and T20 on an approved private environment.
 
 Record task, requirement IDs, source commit(s), fixture version, adapter/model/policy versions, commands/checks, results, evidence location, blockers and next task in each PR. Preserve source boundaries and mark mocked versus live integrations clearly.
 
