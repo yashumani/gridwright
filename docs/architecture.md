@@ -82,6 +82,7 @@ Dependencies only ever point right to left in that list.
 | `@gridwright/builder` | Model and panel editors, comment-preserving YAML export |
 | `@gridwright/bridge` | Bounded `.xlsx` and read-only SQL configuration into a validated report definition, with provenance |
 | `@gridwright/contracts` | Integration envelopes, capability descriptors, untrusted-text detection and the conformance suite |
+| `@gridwright/adapters` | Read-only clients for the knowledge, conversational and variance services, and the cross-product metric mapping |
 | `gridwright` | The CLI |
 
 ### One decision worth calling out
@@ -128,7 +129,7 @@ behind.
 
 ## Testing
 
-861 tests across node and jsdom projects. Component tests opt into jsdom, which
+942 tests across node and jsdom projects. Component tests opt into jsdom, which
 doubles as a check that the core packages carry no DOM assumptions.
 
 Two conventions the history of this repo earned the hard way:
