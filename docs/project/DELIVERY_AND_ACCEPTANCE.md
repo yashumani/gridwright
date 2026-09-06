@@ -89,6 +89,25 @@ that were checked against the unfixed behaviour, and a green pipeline.
 | T09 | Delivered | Fill from view data, and `<Report>` in `@gridwright/react` |
 | T10 | Delivered | Revisions: revise, preview, roll back, export, reopen |
 | T03 | Delivered | `packages/contracts` — versioned envelopes, capability descriptors, and `fixtures/contracts/conformance.json` as the suite another adapter runs against itself |
+
+### Acceptance scenarios, recorded against evidence
+
+Section 3 lists these as specifications. This is what each one currently has.
+
+| Scenario | Status | Evidence, or what is missing |
+|---|---|---|
+| A01 Skeleton + configuration + bindings + data view | **Passed** | The golden fixture runs workbook → bindings → definition → data → screen; `expected.json` is asserted, not described. Order, hierarchy, headings and the configured empty row all survive |
+| A02 Metadata-only reuse | **Passed** | Label, calculation and binding each changed and regenerated with no bridge code changed; a second compatible view bound and reconciled independently |
+| A03 Calculation correctness | **Passed** | `packages/bridge/test/acceptance-a03.test.ts` — 27 tests over missing values, zero denominators, negative adjustments, period boundaries, aggregation rules, invalid formulas and total grain. Undefined is never zero; one defect found and fixed |
+| A10 Editor and report reliability | **Passed** | All six prior concerns retested; three defects found and closed, each held by a test checked against the unfixed code |
+| A04 Domain and knowledge | Not started | Needs UKB (T11) |
+| A05 Unified numerical answer | Not started | Needs Talk2Data and the variance product (T12, T13, T16) |
+| A06 Identity and authorization | Not met | The contract refuses a request-body clearance and derives scope from service context (T03), but there are no sessions or stored artifacts to attempt cross-tenant retrieval against (T17) |
+| A07 Tool governance and hostile input | Not met | SQL identifiers are allowlisted and values bound, config cells and payloads are size-bounded, and capability arguments are schema-checked. Retrieved text and model output are not, because there is nothing yet retrieving or generating them (T11, T12, T14) |
+| A08 Bounded agents and failures | Not met | Timeout, step and retry budgets are enforced by the gate that authorises a call (T03). Cancellation and "no delegated run spawns unlimited children" need an orchestrator (T15) |
+| A09 Approval and publication | Not started | Needs T18 |
+| A11 Responsive export and deployment | Not recorded | The demo is built and deployable; desktop/tablet/phone browser evidence has not been captured against the current build (T19) |
+| A12 Evidence, sessions and handoff | Not met | Export and reopen are reproducible and version metadata travels (T10, T03), but there is no session for a late result to fail to overwrite (T17) |
 | T04 | Delivered | Six named concerns audited; three defects found and closed in `packages/builder` |
 
 **G1 is met.** It requires T02 and T04-T10, and all seven are delivered. The
