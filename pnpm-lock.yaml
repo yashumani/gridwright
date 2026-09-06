@@ -161,6 +161,9 @@ importers:
 
   packages/react:
     dependencies:
+      '@gridwright/bridge':
+        specifier: workspace:*
+        version: link:../bridge
       '@gridwright/engine':
         specifier: workspace:*
         version: link:../engine

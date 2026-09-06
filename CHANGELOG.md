@@ -29,6 +29,19 @@ documented types, and the internals of every package below `@gridwright/react`.
 
 ### Added
 
+- **`<Report>` renders a filled bridge report** (task T09). It draws what it is
+  given and never edits it: no filtering out empty rows, no reordering, no
+  substituting a value for a missing one — R14 survives here or nowhere, since
+  this is the last place it could be broken.
+
+  A missing value is drawn as missing: an em dash with a spoken label, never an
+  empty cell (which reads as a zero somebody forgot to format) and never 0
+  (a measurement the source did not make). Where a policy supplies a number the
+  number shows, and `data-availability` still records what the source said.
+
+  **A variance is not coloured good or bad.** Polarity belongs to the approved
+  metric definition and this fixture's is unset, so a green +20 would assert a
+  verdict nobody approved. The sign is shown; the judgement is not.
 - **A definition can now be filled from view data** (task T09, numerical half).
   The golden fixture runs end to end — workbook, bindings, definition, data —
   and `expected.json` is asserted rather than described: 120 against 100 for a
