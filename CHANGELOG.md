@@ -29,6 +29,20 @@ documented types, and the internals of every package below `@gridwright/react`.
 
 ### Added
 
+- **Configuration revisions: revise, preview, roll back, export, reopen**
+  (task T10). A revision stores what a person authors — workbook, metadata,
+  bindings — and the definition is always derived from it, so a generated
+  runtime definition can never become a second authoring source that drifts.
+
+  An invalid draft is kept apart from the last valid version. The draft and its
+  problems are preserved so its author can see what they broke, while everyone
+  reading the report keeps seeing the version that still compiles. Rollback
+  clears drafts and refuses to eat working history, because abandoning a broken
+  edit and stepping back over a good one are different operations.
+
+  Export leaves business data out unless asked, and writes `dataIncluded`
+  either way — a reader should not have to notice a missing key to learn
+  whether data travelled with a package.
 - **`<Report>` renders a filled bridge report** (task T09). It draws what it is
   given and never edits it: no filtering out empty rows, no reordering, no
   substituting a value for a missing one — R14 survives here or nowhere, since
