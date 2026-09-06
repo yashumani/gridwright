@@ -1,0 +1,1079 @@
+{
+  "contract": 1,
+  "note": "Conformance cases for @gridwright/contracts. Each case is one deviation from the first. An adapter is conformant when every case's expected problem codes match exactly - no extras, no subset.",
+  "cases": [
+    {
+      "name": "a well-formed handoff inside its window",
+      "because": "The positive case. Everything below is a single deviation from this one, so a failure names what changed.",
+      "context": {
+        "tenant": "acme",
+        "user": "u-1042",
+        "scopes": [
+          "report.read",
+          "analysis.read"
+        ],
+        "provenance": "service-token",
+        "domains": [
+          "support-operations"
+        ],
+        "semantics": {
+          "version": "sem-2026-09-01",
+          "admitted": [
+            "metric.closed_cases",
+            "metric.backlog"
+          ]
+        }
+      },
+      "now": "2026-09-06T00:30:00Z",
+      "envelope": {
+        "contract": 1,
+        "kind": "report.definition",
+        "run": "run-7781",
+        "session": "sess-2210",
+        "domain": "support-operations",
+        "issuedAt": "2026-09-06T00:00:00Z",
+        "expiresAt": "2026-09-06T01:00:00Z",
+        "versions": {
+          "source": "src-2026-09-05",
+          "policy": "pol-14",
+          "semantic": "sem-2026-09-01",
+          "configuration": "cfg-3",
+          "result": "res-9"
+        },
+        "receipts": [
+          {
+            "issuer": "talk2data",
+            "id": "t2d-88213",
+            "issuedAt": "2026-09-06T00:00:00Z"
+          }
+        ],
+        "semanticRefs": [
+          "metric.closed_cases"
+        ],
+        "payload": {
+          "rows": []
+        }
+      },
+      "expect": {
+        "ok": true,
+        "codes": []
+      }
+    },
+    {
+      "name": "no receipts is not the same as a malformed receipt",
+      "because": "An adapter that issues none sends an empty list. Absence is legitimate; a fabricated receipt is not.",
+      "context": {
+        "tenant": "acme",
+        "user": "u-1042",
+        "scopes": [
+          "report.read",
+          "analysis.read"
+        ],
+        "provenance": "service-token",
+        "domains": [
+          "support-operations"
+        ],
+        "semantics": {
+          "version": "sem-2026-09-01",
+          "admitted": [
+            "metric.closed_cases",
+            "metric.backlog"
+          ]
+        }
+      },
+      "now": "2026-09-06T00:30:00Z",
+      "envelope": {
+        "contract": 1,
+        "kind": "report.definition",
+        "run": "run-7781",
+        "session": "sess-2210",
+        "domain": "support-operations",
+        "issuedAt": "2026-09-06T00:00:00Z",
+        "expiresAt": "2026-09-06T01:00:00Z",
+        "versions": {
+          "source": "src-2026-09-05",
+          "policy": "pol-14",
+          "semantic": "sem-2026-09-01",
+          "configuration": "cfg-3",
+          "result": "res-9"
+        },
+        "receipts": [],
+        "semanticRefs": [
+          "metric.closed_cases"
+        ],
+        "payload": {
+          "rows": []
+        }
+      },
+      "expect": {
+        "ok": true,
+        "codes": []
+      }
+    },
+    {
+      "name": "a newer contract version is refused by name",
+      "because": "A version mismatch must never be a silently wrong handoff, so a future contract is refused rather than read on a best-effort basis.",
+      "context": {
+        "tenant": "acme",
+        "user": "u-1042",
+        "scopes": [
+          "report.read",
+          "analysis.read"
+        ],
+        "provenance": "service-token",
+        "domains": [
+          "support-operations"
+        ],
+        "semantics": {
+          "version": "sem-2026-09-01",
+          "admitted": [
+            "metric.closed_cases",
+            "metric.backlog"
+          ]
+        }
+      },
+      "now": "2026-09-06T00:30:00Z",
+      "envelope": {
+        "contract": 2,
+        "kind": "report.definition",
+        "run": "run-7781",
+        "session": "sess-2210",
+        "domain": "support-operations",
+        "issuedAt": "2026-09-06T00:00:00Z",
+        "expiresAt": "2026-09-06T01:00:00Z",
+        "versions": {
+          "source": "src-2026-09-05",
+          "policy": "pol-14",
+          "semantic": "sem-2026-09-01",
+          "configuration": "cfg-3",
+          "result": "res-9"
+        },
+        "receipts": [
+          {
+            "issuer": "talk2data",
+            "id": "t2d-88213",
+            "issuedAt": "2026-09-06T00:00:00Z"
+          }
+        ],
+        "semanticRefs": [
+          "metric.closed_cases"
+        ],
+        "payload": {
+          "rows": []
+        }
+      },
+      "expect": {
+        "ok": false,
+        "codes": [
+          "contract-unsupported"
+        ]
+      }
+    },
+    {
+      "name": "an older contract version is refused too",
+      "because": "Reading a retired shape with today's field expectations is guesswork in the other direction.",
+      "context": {
+        "tenant": "acme",
+        "user": "u-1042",
+        "scopes": [
+          "report.read",
+          "analysis.read"
+        ],
+        "provenance": "service-token",
+        "domains": [
+          "support-operations"
+        ],
+        "semantics": {
+          "version": "sem-2026-09-01",
+          "admitted": [
+            "metric.closed_cases",
+            "metric.backlog"
+          ]
+        }
+      },
+      "now": "2026-09-06T00:30:00Z",
+      "envelope": {
+        "contract": 0,
+        "kind": "report.definition",
+        "run": "run-7781",
+        "session": "sess-2210",
+        "domain": "support-operations",
+        "issuedAt": "2026-09-06T00:00:00Z",
+        "expiresAt": "2026-09-06T01:00:00Z",
+        "versions": {
+          "source": "src-2026-09-05",
+          "policy": "pol-14",
+          "semantic": "sem-2026-09-01",
+          "configuration": "cfg-3",
+          "result": "res-9"
+        },
+        "receipts": [
+          {
+            "issuer": "talk2data",
+            "id": "t2d-88213",
+            "issuedAt": "2026-09-06T00:00:00Z"
+          }
+        ],
+        "semanticRefs": [
+          "metric.closed_cases"
+        ],
+        "payload": {
+          "rows": []
+        }
+      },
+      "expect": {
+        "ok": false,
+        "codes": [
+          "contract-unsupported"
+        ]
+      }
+    },
+    {
+      "name": "an envelope carrying a tenant is refused",
+      "because": "R05: tenant comes from authenticated service context. A tenant in the body exists only to be believed.",
+      "context": {
+        "tenant": "acme",
+        "user": "u-1042",
+        "scopes": [
+          "report.read",
+          "analysis.read"
+        ],
+        "provenance": "service-token",
+        "domains": [
+          "support-operations"
+        ],
+        "semantics": {
+          "version": "sem-2026-09-01",
+          "admitted": [
+            "metric.closed_cases",
+            "metric.backlog"
+          ]
+        }
+      },
+      "now": "2026-09-06T00:30:00Z",
+      "envelope": {
+        "contract": 1,
+        "kind": "report.definition",
+        "run": "run-7781",
+        "session": "sess-2210",
+        "domain": "support-operations",
+        "issuedAt": "2026-09-06T00:00:00Z",
+        "expiresAt": "2026-09-06T01:00:00Z",
+        "versions": {
+          "source": "src-2026-09-05",
+          "policy": "pol-14",
+          "semantic": "sem-2026-09-01",
+          "configuration": "cfg-3",
+          "result": "res-9"
+        },
+        "receipts": [
+          {
+            "issuer": "talk2data",
+            "id": "t2d-88213",
+            "issuedAt": "2026-09-06T00:00:00Z"
+          }
+        ],
+        "semanticRefs": [
+          "metric.closed_cases"
+        ],
+        "payload": {
+          "rows": []
+        },
+        "tenant": "other-corp"
+      },
+      "expect": {
+        "ok": false,
+        "codes": [
+          "identity-in-envelope"
+        ]
+      }
+    },
+    {
+      "name": "an envelope carrying scopes is refused",
+      "because": "The same rule, and the one an attacker would actually reach for.",
+      "context": {
+        "tenant": "acme",
+        "user": "u-1042",
+        "scopes": [
+          "report.read",
+          "analysis.read"
+        ],
+        "provenance": "service-token",
+        "domains": [
+          "support-operations"
+        ],
+        "semantics": {
+          "version": "sem-2026-09-01",
+          "admitted": [
+            "metric.closed_cases",
+            "metric.backlog"
+          ]
+        }
+      },
+      "now": "2026-09-06T00:30:00Z",
+      "envelope": {
+        "contract": 1,
+        "kind": "report.definition",
+        "run": "run-7781",
+        "session": "sess-2210",
+        "domain": "support-operations",
+        "issuedAt": "2026-09-06T00:00:00Z",
+        "expiresAt": "2026-09-06T01:00:00Z",
+        "versions": {
+          "source": "src-2026-09-05",
+          "policy": "pol-14",
+          "semantic": "sem-2026-09-01",
+          "configuration": "cfg-3",
+          "result": "res-9"
+        },
+        "receipts": [
+          {
+            "issuer": "talk2data",
+            "id": "t2d-88213",
+            "issuedAt": "2026-09-06T00:00:00Z"
+          }
+        ],
+        "semanticRefs": [
+          "metric.closed_cases"
+        ],
+        "payload": {
+          "rows": []
+        },
+        "scopes": [
+          "admin",
+          "report.write"
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "codes": [
+          "identity-in-envelope"
+        ]
+      }
+    },
+    {
+      "name": "an envelope asking to act as someone is refused",
+      "because": "Delegation is a decision the receiver makes from its own context, never a request-body field.",
+      "context": {
+        "tenant": "acme",
+        "user": "u-1042",
+        "scopes": [
+          "report.read",
+          "analysis.read"
+        ],
+        "provenance": "service-token",
+        "domains": [
+          "support-operations"
+        ],
+        "semantics": {
+          "version": "sem-2026-09-01",
+          "admitted": [
+            "metric.closed_cases",
+            "metric.backlog"
+          ]
+        }
+      },
+      "now": "2026-09-06T00:30:00Z",
+      "envelope": {
+        "contract": 1,
+        "kind": "report.definition",
+        "run": "run-7781",
+        "session": "sess-2210",
+        "domain": "support-operations",
+        "issuedAt": "2026-09-06T00:00:00Z",
+        "expiresAt": "2026-09-06T01:00:00Z",
+        "versions": {
+          "source": "src-2026-09-05",
+          "policy": "pol-14",
+          "semantic": "sem-2026-09-01",
+          "configuration": "cfg-3",
+          "result": "res-9"
+        },
+        "receipts": [
+          {
+            "issuer": "talk2data",
+            "id": "t2d-88213",
+            "issuedAt": "2026-09-06T00:00:00Z"
+          }
+        ],
+        "semanticRefs": [
+          "metric.closed_cases"
+        ],
+        "payload": {
+          "rows": []
+        },
+        "actAs": "u-0001"
+      },
+      "expect": {
+        "ok": false,
+        "codes": [
+          "identity-in-envelope"
+        ]
+      }
+    },
+    {
+      "name": "a payload may contain the word user without that being an identity",
+      "because": "The tripwire is on the envelope, not the data. A view with a user column has to be able to travel.",
+      "context": {
+        "tenant": "acme",
+        "user": "u-1042",
+        "scopes": [
+          "report.read",
+          "analysis.read"
+        ],
+        "provenance": "service-token",
+        "domains": [
+          "support-operations"
+        ],
+        "semantics": {
+          "version": "sem-2026-09-01",
+          "admitted": [
+            "metric.closed_cases",
+            "metric.backlog"
+          ]
+        }
+      },
+      "now": "2026-09-06T00:30:00Z",
+      "envelope": {
+        "contract": 1,
+        "kind": "report.definition",
+        "run": "run-7781",
+        "session": "sess-2210",
+        "domain": "support-operations",
+        "issuedAt": "2026-09-06T00:00:00Z",
+        "expiresAt": "2026-09-06T01:00:00Z",
+        "versions": {
+          "source": "src-2026-09-05",
+          "policy": "pol-14",
+          "semantic": "sem-2026-09-01",
+          "configuration": "cfg-3",
+          "result": "res-9"
+        },
+        "receipts": [
+          {
+            "issuer": "talk2data",
+            "id": "t2d-88213",
+            "issuedAt": "2026-09-06T00:00:00Z"
+          }
+        ],
+        "semanticRefs": [
+          "metric.closed_cases"
+        ],
+        "payload": {
+          "columns": [
+            "user",
+            "scopes"
+          ],
+          "rows": [
+            [
+              "u-1",
+              "admin"
+            ]
+          ]
+        }
+      },
+      "expect": {
+        "ok": true,
+        "codes": []
+      }
+    },
+    {
+      "name": "an expired handoff is refused",
+      "because": "R19: reject stale handoffs. The window is the producer's own claim about how long its numbers hold.",
+      "context": {
+        "tenant": "acme",
+        "user": "u-1042",
+        "scopes": [
+          "report.read",
+          "analysis.read"
+        ],
+        "provenance": "service-token",
+        "domains": [
+          "support-operations"
+        ],
+        "semantics": {
+          "version": "sem-2026-09-01",
+          "admitted": [
+            "metric.closed_cases",
+            "metric.backlog"
+          ]
+        }
+      },
+      "now": "2026-09-06T02:00:00Z",
+      "envelope": {
+        "contract": 1,
+        "kind": "report.definition",
+        "run": "run-7781",
+        "session": "sess-2210",
+        "domain": "support-operations",
+        "issuedAt": "2026-09-06T00:00:00Z",
+        "expiresAt": "2026-09-06T01:00:00Z",
+        "versions": {
+          "source": "src-2026-09-05",
+          "policy": "pol-14",
+          "semantic": "sem-2026-09-01",
+          "configuration": "cfg-3",
+          "result": "res-9"
+        },
+        "receipts": [
+          {
+            "issuer": "talk2data",
+            "id": "t2d-88213",
+            "issuedAt": "2026-09-06T00:00:00Z"
+          }
+        ],
+        "semanticRefs": [
+          "metric.closed_cases"
+        ],
+        "payload": {
+          "rows": []
+        }
+      },
+      "expect": {
+        "ok": false,
+        "codes": [
+          "expired"
+        ]
+      }
+    },
+    {
+      "name": "an envelope that expires before it was issued is refused",
+      "because": "A window that never opened is malformed, not merely stale, and would otherwise read as fresh forever under a clock skew.",
+      "context": {
+        "tenant": "acme",
+        "user": "u-1042",
+        "scopes": [
+          "report.read",
+          "analysis.read"
+        ],
+        "provenance": "service-token",
+        "domains": [
+          "support-operations"
+        ],
+        "semantics": {
+          "version": "sem-2026-09-01",
+          "admitted": [
+            "metric.closed_cases",
+            "metric.backlog"
+          ]
+        }
+      },
+      "now": "2026-09-06T00:30:00Z",
+      "envelope": {
+        "contract": 1,
+        "kind": "report.definition",
+        "run": "run-7781",
+        "session": "sess-2210",
+        "domain": "support-operations",
+        "issuedAt": "2026-09-06T01:00:00Z",
+        "expiresAt": "2026-09-06T00:00:00Z",
+        "versions": {
+          "source": "src-2026-09-05",
+          "policy": "pol-14",
+          "semantic": "sem-2026-09-01",
+          "configuration": "cfg-3",
+          "result": "res-9"
+        },
+        "receipts": [
+          {
+            "issuer": "talk2data",
+            "id": "t2d-88213",
+            "issuedAt": "2026-09-06T00:00:00Z"
+          }
+        ],
+        "semanticRefs": [
+          "metric.closed_cases"
+        ],
+        "payload": {
+          "rows": []
+        }
+      },
+      "expect": {
+        "ok": false,
+        "codes": [
+          "issued-after-expiry"
+        ]
+      }
+    },
+    {
+      "name": "a timestamp that is not RFC 3339 is refused",
+      "because": "Staleness cannot be judged from a string nobody agreed how to read.",
+      "context": {
+        "tenant": "acme",
+        "user": "u-1042",
+        "scopes": [
+          "report.read",
+          "analysis.read"
+        ],
+        "provenance": "service-token",
+        "domains": [
+          "support-operations"
+        ],
+        "semantics": {
+          "version": "sem-2026-09-01",
+          "admitted": [
+            "metric.closed_cases",
+            "metric.backlog"
+          ]
+        }
+      },
+      "now": "2026-09-06T00:30:00Z",
+      "envelope": {
+        "contract": 1,
+        "kind": "report.definition",
+        "run": "run-7781",
+        "session": "sess-2210",
+        "domain": "support-operations",
+        "issuedAt": "2026-09-06T00:00:00Z",
+        "expiresAt": "tomorrow",
+        "versions": {
+          "source": "src-2026-09-05",
+          "policy": "pol-14",
+          "semantic": "sem-2026-09-01",
+          "configuration": "cfg-3",
+          "result": "res-9"
+        },
+        "receipts": [
+          {
+            "issuer": "talk2data",
+            "id": "t2d-88213",
+            "issuedAt": "2026-09-06T00:00:00Z"
+          }
+        ],
+        "semanticRefs": [
+          "metric.closed_cases"
+        ],
+        "payload": {
+          "rows": []
+        }
+      },
+      "expect": {
+        "ok": false,
+        "codes": [
+          "timestamp-malformed"
+        ]
+      }
+    },
+    {
+      "name": "a handoff for a domain this receiver does not admit is refused",
+      "because": "R19: out-of-scope handoffs are rejected. Admitting a domain is a decision, not a default.",
+      "context": {
+        "tenant": "acme",
+        "user": "u-1042",
+        "scopes": [
+          "report.read",
+          "analysis.read"
+        ],
+        "provenance": "service-token",
+        "domains": [
+          "support-operations"
+        ],
+        "semantics": {
+          "version": "sem-2026-09-01",
+          "admitted": [
+            "metric.closed_cases",
+            "metric.backlog"
+          ]
+        }
+      },
+      "now": "2026-09-06T00:30:00Z",
+      "envelope": {
+        "contract": 1,
+        "kind": "report.definition",
+        "run": "run-7781",
+        "session": "sess-2210",
+        "domain": "finance-planning",
+        "issuedAt": "2026-09-06T00:00:00Z",
+        "expiresAt": "2026-09-06T01:00:00Z",
+        "versions": {
+          "source": "src-2026-09-05",
+          "policy": "pol-14",
+          "semantic": "sem-2026-09-01",
+          "configuration": "cfg-3",
+          "result": "res-9"
+        },
+        "receipts": [
+          {
+            "issuer": "talk2data",
+            "id": "t2d-88213",
+            "issuedAt": "2026-09-06T00:00:00Z"
+          }
+        ],
+        "semanticRefs": [
+          "metric.closed_cases"
+        ],
+        "payload": {
+          "rows": []
+        }
+      },
+      "expect": {
+        "ok": false,
+        "codes": [
+          "domain-out-of-scope"
+        ]
+      }
+    },
+    {
+      "name": "a handoff computed against another semantic version is refused",
+      "because": "R07: definitions are versioned and traceable. Numbers from an older definition are not this definition's numbers.",
+      "context": {
+        "tenant": "acme",
+        "user": "u-1042",
+        "scopes": [
+          "report.read",
+          "analysis.read"
+        ],
+        "provenance": "service-token",
+        "domains": [
+          "support-operations"
+        ],
+        "semantics": {
+          "version": "sem-2026-09-01",
+          "admitted": [
+            "metric.closed_cases",
+            "metric.backlog"
+          ]
+        }
+      },
+      "now": "2026-09-06T00:30:00Z",
+      "envelope": {
+        "contract": 1,
+        "kind": "report.definition",
+        "run": "run-7781",
+        "session": "sess-2210",
+        "domain": "support-operations",
+        "issuedAt": "2026-09-06T00:00:00Z",
+        "expiresAt": "2026-09-06T01:00:00Z",
+        "versions": {
+          "source": "src-2026-09-05",
+          "policy": "pol-14",
+          "semantic": "sem-2026-08-01",
+          "configuration": "cfg-3",
+          "result": "res-9"
+        },
+        "receipts": [
+          {
+            "issuer": "talk2data",
+            "id": "t2d-88213",
+            "issuedAt": "2026-09-06T00:00:00Z"
+          }
+        ],
+        "semanticRefs": [
+          "metric.closed_cases"
+        ],
+        "payload": {
+          "rows": []
+        }
+      },
+      "expect": {
+        "ok": false,
+        "codes": [
+          "semantic-version-mismatch"
+        ]
+      }
+    },
+    {
+      "name": "a semantic reference the receiver has not approved is refused",
+      "because": "R07 again: explicit mappings to approved knowledge. There is no label match to fall back on.",
+      "context": {
+        "tenant": "acme",
+        "user": "u-1042",
+        "scopes": [
+          "report.read",
+          "analysis.read"
+        ],
+        "provenance": "service-token",
+        "domains": [
+          "support-operations"
+        ],
+        "semantics": {
+          "version": "sem-2026-09-01",
+          "admitted": [
+            "metric.closed_cases",
+            "metric.backlog"
+          ]
+        }
+      },
+      "now": "2026-09-06T00:30:00Z",
+      "envelope": {
+        "contract": 1,
+        "kind": "report.definition",
+        "run": "run-7781",
+        "session": "sess-2210",
+        "domain": "support-operations",
+        "issuedAt": "2026-09-06T00:00:00Z",
+        "expiresAt": "2026-09-06T01:00:00Z",
+        "versions": {
+          "source": "src-2026-09-05",
+          "policy": "pol-14",
+          "semantic": "sem-2026-09-01",
+          "configuration": "cfg-3",
+          "result": "res-9"
+        },
+        "receipts": [
+          {
+            "issuer": "talk2data",
+            "id": "t2d-88213",
+            "issuedAt": "2026-09-06T00:00:00Z"
+          }
+        ],
+        "semanticRefs": [
+          "metric.closed_cases",
+          "metric.invented_here"
+        ],
+        "payload": {
+          "rows": []
+        }
+      },
+      "expect": {
+        "ok": false,
+        "codes": [
+          "semantic-unknown"
+        ]
+      }
+    },
+    {
+      "name": "a receipt carrying an extra claim is refused",
+      "because": "R19: preserve an issuer's receipt IDs rather than mint claims of certification. 'certified: true' is exactly the claim being guarded against.",
+      "context": {
+        "tenant": "acme",
+        "user": "u-1042",
+        "scopes": [
+          "report.read",
+          "analysis.read"
+        ],
+        "provenance": "service-token",
+        "domains": [
+          "support-operations"
+        ],
+        "semantics": {
+          "version": "sem-2026-09-01",
+          "admitted": [
+            "metric.closed_cases",
+            "metric.backlog"
+          ]
+        }
+      },
+      "now": "2026-09-06T00:30:00Z",
+      "envelope": {
+        "contract": 1,
+        "kind": "report.definition",
+        "run": "run-7781",
+        "session": "sess-2210",
+        "domain": "support-operations",
+        "issuedAt": "2026-09-06T00:00:00Z",
+        "expiresAt": "2026-09-06T01:00:00Z",
+        "versions": {
+          "source": "src-2026-09-05",
+          "policy": "pol-14",
+          "semantic": "sem-2026-09-01",
+          "configuration": "cfg-3",
+          "result": "res-9"
+        },
+        "receipts": [
+          {
+            "issuer": "talk2data",
+            "id": "t2d-88213",
+            "issuedAt": "2026-09-06T00:00:00Z",
+            "certified": true
+          }
+        ],
+        "semanticRefs": [
+          "metric.closed_cases"
+        ],
+        "payload": {
+          "rows": []
+        }
+      },
+      "expect": {
+        "ok": false,
+        "codes": [
+          "receipt-malformed"
+        ]
+      }
+    },
+    {
+      "name": "a receipt without an issuer is refused",
+      "because": "A receipt with nowhere to trace back to is not evidence of anything.",
+      "context": {
+        "tenant": "acme",
+        "user": "u-1042",
+        "scopes": [
+          "report.read",
+          "analysis.read"
+        ],
+        "provenance": "service-token",
+        "domains": [
+          "support-operations"
+        ],
+        "semantics": {
+          "version": "sem-2026-09-01",
+          "admitted": [
+            "metric.closed_cases",
+            "metric.backlog"
+          ]
+        }
+      },
+      "now": "2026-09-06T00:30:00Z",
+      "envelope": {
+        "contract": 1,
+        "kind": "report.definition",
+        "run": "run-7781",
+        "session": "sess-2210",
+        "domain": "support-operations",
+        "issuedAt": "2026-09-06T00:00:00Z",
+        "expiresAt": "2026-09-06T01:00:00Z",
+        "versions": {
+          "source": "src-2026-09-05",
+          "policy": "pol-14",
+          "semantic": "sem-2026-09-01",
+          "configuration": "cfg-3",
+          "result": "res-9"
+        },
+        "receipts": [
+          {
+            "id": "t2d-88213",
+            "issuedAt": "2026-09-06T00:00:00Z"
+          }
+        ],
+        "semanticRefs": [
+          "metric.closed_cases"
+        ],
+        "payload": {
+          "rows": []
+        }
+      },
+      "expect": {
+        "ok": false,
+        "codes": [
+          "field-missing"
+        ]
+      }
+    },
+    {
+      "name": "a missing versions block is refused",
+      "because": "The versions are the whole reason the envelope exists; without them a receiver cannot tell fresh from stale.",
+      "context": {
+        "tenant": "acme",
+        "user": "u-1042",
+        "scopes": [
+          "report.read",
+          "analysis.read"
+        ],
+        "provenance": "service-token",
+        "domains": [
+          "support-operations"
+        ],
+        "semantics": {
+          "version": "sem-2026-09-01",
+          "admitted": [
+            "metric.closed_cases",
+            "metric.backlog"
+          ]
+        }
+      },
+      "now": "2026-09-06T00:30:00Z",
+      "envelope": {
+        "contract": 1,
+        "kind": "report.definition",
+        "run": "run-7781",
+        "session": "sess-2210",
+        "domain": "support-operations",
+        "issuedAt": "2026-09-06T00:00:00Z",
+        "expiresAt": "2026-09-06T01:00:00Z",
+        "receipts": [
+          {
+            "issuer": "talk2data",
+            "id": "t2d-88213",
+            "issuedAt": "2026-09-06T00:00:00Z"
+          }
+        ],
+        "semanticRefs": [
+          "metric.closed_cases"
+        ],
+        "payload": {
+          "rows": []
+        }
+      },
+      "expect": {
+        "ok": false,
+        "codes": [
+          "field-missing"
+        ]
+      }
+    },
+    {
+      "name": "every missing required field is reported at once",
+      "because": "A producer fixing a handoff should learn all of it in one round trip, not one field per attempt.",
+      "context": {
+        "tenant": "acme",
+        "user": "u-1042",
+        "scopes": [
+          "report.read",
+          "analysis.read"
+        ],
+        "provenance": "service-token",
+        "domains": [
+          "support-operations"
+        ],
+        "semantics": {
+          "version": "sem-2026-09-01",
+          "admitted": [
+            "metric.closed_cases",
+            "metric.backlog"
+          ]
+        }
+      },
+      "now": "2026-09-06T00:30:00Z",
+      "envelope": {
+        "contract": 1,
+        "payload": {}
+      },
+      "expect": {
+        "ok": false,
+        "codes": [
+          "field-missing",
+          "field-missing",
+          "field-missing",
+          "field-missing",
+          "field-missing",
+          "field-missing",
+          "field-missing",
+          "field-missing",
+          "field-missing"
+        ]
+      }
+    },
+    {
+      "name": "something that is not an object at all is refused",
+      "because": "The boundary sees whatever arrived on the wire, which is not always an envelope.",
+      "context": {
+        "tenant": "acme",
+        "user": "u-1042",
+        "scopes": [
+          "report.read",
+          "analysis.read"
+        ],
+        "provenance": "service-token",
+        "domains": [
+          "support-operations"
+        ],
+        "semantics": {
+          "version": "sem-2026-09-01",
+          "admitted": [
+            "metric.closed_cases",
+            "metric.backlog"
+          ]
+        }
+      },
+      "now": "2026-09-06T00:30:00Z",
+      "envelope": "report.definition",
+      "expect": {
+        "ok": false,
+        "codes": [
+          "not-an-object"
+        ]
+      }
+    }
+  ]
+}

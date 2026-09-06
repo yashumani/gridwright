@@ -88,6 +88,7 @@ that were checked against the unfixed behaviour, and a green pipeline.
 | T08 | Delivered | Deterministic compile to a report definition |
 | T09 | Delivered | Fill from view data, and `<Report>` in `@gridwright/react` |
 | T10 | Delivered | Revisions: revise, preview, roll back, export, reopen |
+| T03 | Delivered | `packages/contracts` — versioned envelopes, capability descriptors, and `fixtures/contracts/conformance.json` as the suite another adapter runs against itself |
 | T04 | Delivered | Six named concerns audited; three defects found and closed in `packages/builder` |
 
 **G1 is met.** It requires T02 and T04-T10, and all seven are delivered. The
@@ -114,9 +115,20 @@ connector, or any integration with the knowledge, chat or variance products.
 Excel-to-SQL precedence remains open as D01, and the bridge refuses a conflict
 rather than resolving one.
 
-Next cycle: G2. Do not begin with a generic chatbot wrapper or a new gallery.
-The first new product capability is the bridge, connected later to governed
-services.
+**G2 is not met.** It requires T03 and T11-T17 plus scenarios A01-A08, A10 and
+A12. T03 is delivered; T11-T17 are not started, and each of them integrates a
+service this repository does not have — UKB, Talk2Data, the variance product and
+an approved orchestrator. What T03 establishes is the contract they will be held
+to, and a suite an adapter runs to prove it speaks that contract; it establishes
+nothing about any of those services being reachable, and none is claimed.
+
+D03 — who owns the capability broker and hosts the integration — stays open.
+T03 defines the contract shape, not the host, and nothing in it presumes an
+answer.
+
+Next cycle: T11-T17 are blocked on service access, which is an external
+dependency rather than an engineering one. Do not begin with a generic chatbot
+wrapper or a new gallery.
 
 Record task, requirement IDs, source commit(s), fixture version, adapter/model/policy versions, commands/checks, results, evidence location, blockers and next task in each PR. Preserve source boundaries and mark mocked versus live integrations clearly.
 

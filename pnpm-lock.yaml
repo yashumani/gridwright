@@ -129,6 +129,8 @@ importers:
         specifier: workspace:*
         version: link:../schema
 
+  packages/contracts: {}
+
   packages/engine:
     dependencies:
       '@gridwright/expr':
