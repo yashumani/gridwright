@@ -9,6 +9,7 @@
     { "path": "packages/adapters" },
     { "path": "packages/coordinator" },
     { "path": "packages/runtime" },
+    { "path": "packages/workspace" },
     { "path": "packages/panels" },
     { "path": "packages/react" },
     { "path": "packages/builder" },
