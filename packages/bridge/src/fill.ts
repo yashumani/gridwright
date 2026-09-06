@@ -89,7 +89,26 @@ export function fillReport(definition: ReportDefinition, input: FillInput): Repo
   const periods = Object.keys(definition.execution.periods);
   const metricColumn = definition.metric.id;
 
-  // viewKey -> period -> summed value, built once.
+  /**
+   * viewKey -> period -> one value, combined by the metric's own rule.
+   *
+   * A prepared view can return more than one row for a key and period, and the
+   * right way to fold them together is a property of the metric, not of this
+   * function. Adding them is correct for a count of closed cases and wrong for
+   * a backlog reading; the compiler has already refused any rule this build
+   * does not implement, so what arrives here is one of three.
+   */
+  const combine = (a: number, b: number): number => {
+    switch (definition.metric.aggregation) {
+      case "min":
+        return Math.min(a, b);
+      case "max":
+        return Math.max(a, b);
+      default:
+        return a + b;
+    }
+  };
+
   const source = new Map<string, Map<string, number>>();
   for (const row of input.rows) {
     const key = String(row[input.keyColumn] ?? "");
@@ -97,7 +116,8 @@ export function fillReport(definition: ReportDefinition, input: FillInput): Repo
     const n = numberOf(row[metricColumn]);
     if (!key || !period || n === null) continue;
     const byPeriod = source.get(key) ?? new Map<string, number>();
-    byPeriod.set(period, (byPeriod.get(period) ?? 0) + n);
+    const already = byPeriod.get(period);
+    byPeriod.set(period, already === undefined ? n : combine(already, n));
     source.set(key, byPeriod);
   }
 

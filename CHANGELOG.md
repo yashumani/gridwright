@@ -29,6 +29,13 @@ documented types, and the internals of every package below `@gridwright/react`.
 
 ### Added
 
+- **Acceptance scenario A03, calculation correctness, as one readable suite**
+  (`packages/bridge/test/acceptance-a03.test.ts`). Missing values, zero
+  denominators, negative adjustments, period boundaries, aggregation rules,
+  invalid formulas and totals at the right grain — 27 tests in the order the
+  delivery plan states them, so the claim and the evidence can be read
+  together.
+
 - **`@gridwright/contracts`** (task T03): the versioned envelope two products
   hand each other, the descriptor that gates a tool call, and a conformance
   suite an adapter in another repository runs against itself.
@@ -235,6 +242,17 @@ documented types, and the internals of every package below `@gridwright/react`.
 
 ### Fixed
 
+- **A metric is combined by its own rule, not by habit** (scenario A03). A
+  prepared view can return more than one row for the same key and period, and
+  the bridge folded them together by adding — whatever the metric's declared
+  aggregation said. A peak backlog of 70 and 50 came out as 120: the kind of
+  wrong number that looks perfectly reasonable. Duplicate rows now fold by the
+  declared rule, and a rule this bridge does not implement is refused at
+  compile time rather than quietly summed. It implements `sum`, `min` and
+  `max`; an `average` needs the weights it was taken over and a `period_end`
+  reading needs to know which row is last, and neither survives a prepared
+  view, so neither is guessed at. A metric declared non-additive *and* summed
+  is refused as the contradiction it is.
 - **An identifier made of digits is no longer read as a number.** A ZIP code,
   SKU or account number written `00123` was becoming `123` — the leading zeros
   gone from every row, chart and export — and an id past 2^53 such as

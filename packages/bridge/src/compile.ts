@@ -109,7 +109,21 @@ export type CompileProblemCode =
   | "rule-unsupported"
   | "reference-unknown"
   | "dependency-cycle"
-  | "division-by-zero";
+  | "division-by-zero"
+  | "aggregation-unsupported";
+
+/**
+ * The rules for combining several view rows into one cell that this bridge
+ * actually implements.
+ *
+ * Short on purpose. A metric declared `average` needs the weights the average
+ * was taken over, and a `period_end` metric needs to know which row is last —
+ * neither is recoverable from a prepared view alone, so neither is implemented,
+ * and A03 says a metric that is not additive must not inherit sum behaviour.
+ * Summing one anyway would produce a number that looks right and is not.
+ */
+export const SUPPORTED_AGGREGATIONS = ["sum", "min", "max"] as const;
+export type Aggregation = (typeof SUPPORTED_AGGREGATIONS)[number];
 
 /** A calculated row, as configuration declares it. */
 export interface CalculatedRow {
@@ -188,6 +202,31 @@ export function compileReport(
     workbook.sheets.find((s) => s.name === "Config"),
     problems,
   );
+
+  // The metric's own combination rule, checked before anything reads data.
+  //
+  // Two ways this fails, and they are different mistakes. An aggregation this
+  // build does not implement would otherwise be silently summed, which is the
+  // exact behaviour A03 forbids. And `sum` on a metric declared non-additive is
+  // a contradiction in the configuration itself — summing *is* additive — so
+  // the configuration is refused rather than one half of it quietly winning.
+  const aggregation = resolution.metric.aggregation;
+  if (!(SUPPORTED_AGGREGATIONS as readonly string[]).includes(aggregation)) {
+    problems.push({
+      code: "aggregation-unsupported" as ProblemCode,
+      message:
+        `metric "${resolution.metric.id}" declares aggregation "${aggregation}", which this ` +
+        `bridge does not implement (it implements ${SUPPORTED_AGGREGATIONS.join(", ")}). ` +
+        "Summing it instead would report a number the source never computed",
+    });
+  } else if (aggregation === "sum" && !resolution.metric.additive) {
+    problems.push({
+      code: "aggregation-unsupported" as ProblemCode,
+      message:
+        `metric "${resolution.metric.id}" is declared non-additive and aggregated by "sum", ` +
+        "which cannot both be true",
+    });
+  }
 
   const bound = new Map(resolution.rows.map((r) => [r.rowKey, r]));
   const calculated = input.calculated ?? [];
