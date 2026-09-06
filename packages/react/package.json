@@ -38,6 +38,7 @@
     "README.md"
   ],
   "dependencies": {
+    "@gridwright/bridge": "workspace:*",
     "@gridwright/schema": "workspace:*",
     "@gridwright/engine": "workspace:*",
     "@gridwright/panels": "workspace:*"

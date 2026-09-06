@@ -2,5 +2,5 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": { "outDir": "dist", "rootDir": "src", "jsx": "react-jsx" },
   "include": ["src/**/*"],
-  "references": [{ "path": "../schema" }, { "path": "../engine" }, { "path": "../panels" }]
+  "references": [{ "path": "../bridge" }, { "path": "../schema" }, { "path": "../engine" }, { "path": "../panels" }]
 }

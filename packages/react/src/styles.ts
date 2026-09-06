@@ -300,6 +300,45 @@ export const styles = `
   dominant-baseline: middle; font-variant-numeric: tabular-nums;
 }
 
+/* The bridge report. A configured table, not a chart: the skeleton fixed its
+   shape, so the styling's job is legibility and nothing else.
+
+   A missing value is drawn as missing — an em dash in muted ink, never an
+   empty cell (which reads as a zero somebody forgot to format) and never 0
+   (which is a measurement the source did not make).
+
+   There is deliberately no good/bad colour on the variance column. Polarity
+   belongs to the approved metric definition, and colouring +20 green would
+   assert a verdict nobody approved. */
+.gw-rpt-table {
+  width: 100%; border-collapse: collapse; font-size: 13.5px;
+  background: var(--gw-surface); border: 1px solid var(--gw-rule); border-radius: 10px;
+}
+.gw-rpt-table th, .gw-rpt-table td { padding: 9px 12px; }
+.gw-rpt-table thead th {
+  text-align: right; font-weight: 600; color: var(--gw-ink-soft);
+  border-bottom: 1px solid var(--gw-rule); white-space: nowrap;
+}
+.gw-rpt-table thead th.gw-rpt-head-row { text-align: left; width: 40%; }
+.gw-rpt-table tbody th {
+  text-align: left; font-weight: 500; color: var(--gw-ink);
+}
+.gw-rpt-num {
+  text-align: right; font-variant-numeric: tabular-nums; color: var(--gw-ink);
+}
+.gw-rpt-missing { color: var(--gw-ink-faint); }
+.gw-rpt-row + .gw-rpt-row th, .gw-rpt-row + .gw-rpt-row td {
+  border-top: 1px solid var(--gw-rule);
+}
+/* A total is the line people quote, so it is the one row that carries weight. */
+.gw-rpt-total th, .gw-rpt-total td {
+  font-weight: 650; border-top: 2px solid var(--gw-rule);
+}
+.gw-rpt-notes {
+  margin: 12px 0 0; padding-left: 18px;
+  color: var(--gw-ink-faint); font-size: 12.5px;
+}
+
 /* A heatmap cell carries its number as well as its shade wherever it fits.
    Colour alone is not a value — two adjacent steps of a ramp are hard to
    separate at the light end, and a reader with nothing else has no recourse. */

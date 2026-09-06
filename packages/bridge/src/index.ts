@@ -58,3 +58,13 @@ export {
   type ReportDefinition,
   type RowProvenance,
 } from "./compile.js";
+
+export {
+  fillReport,
+  type Availability,
+  type FillInput,
+  type FilledCell,
+  type FilledRow,
+  type ReportResult,
+  type ViewRow,
+} from "./fill.js";
