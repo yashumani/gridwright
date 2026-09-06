@@ -88,12 +88,25 @@ that were checked against the unfixed behaviour, and a green pipeline.
 | T08 | Delivered | Deterministic compile to a report definition |
 | T09 | Delivered | Fill from view data, and `<Report>` in `@gridwright/react` |
 | T10 | Delivered | Revisions: revise, preview, roll back, export, reopen |
-| T04 | Not started | The remaining gap in G1 |
+| T04 | Delivered | Six named concerns audited; three defects found and closed in `packages/builder` |
 
-**G1 is not met.** It requires T02 and T04-T10; T04 is outstanding, so the gate
-stays closed. The golden fixture does run end to end — workbook, bindings,
-definition, data, screen — and `expected.json` is asserted rather than
-described.
+**G1 is met.** It requires T02 and T04-T10, and all seven are delivered. The
+golden fixture runs end to end — workbook, bindings, definition, data, screen —
+and `expected.json` is asserted rather than described.
+
+T04 named six concerns. Four were already covered by tests that pass and were
+checked, not re-implemented; two were live defects, and chasing the second one
+surfaced a third. Each fix is held by a test shown to fail with the fix removed.
+
+| Concern | Finding | Evidence |
+|---|---|---|
+| Filters | Covered | `packages/react/test/dashboard.test.tsx`, `packages/engine/test/engine.test.ts` — cross-filtering, a panel not filtering itself, ANDed filters, post measures against the filtered total |
+| Invalid drafts | Covered | "reports issues rather than emitting an invalid manifest silently" (builder); the revision history keeps a broken draft apart from the last valid version (bridge) |
+| JSON routing | Covered | "loads a declared json table through the upload path" — a declared JSON table is parsed as JSON, not as CSV |
+| Serialization | Covered | Round trip: an untouched export, an edited export and repeated export/import all re-import unchanged |
+| Keyboard ownership | **Defect, fixed** | An arrow key pressed on a focused chart mark moved the panel around it. The canvas now yields to whatever interactive thing holds the keyboard |
+| Document replacement | **Defect, fixed** | A replaced `manifest` prop was ignored entirely — the editor kept editing the file that was closed. It now loads the new document, without resetting on its own edits echoed back through `onChange` |
+| (found while fixing the above) | **Defect, fixed** | The "last manifest that compiled" fallback survived a document replacement, so a new file that does not compile drew the previous file's panels under its name. The canvas is now empty, with the problems beside it |
 
 Not established by any of the above: Qlik or Vizlib compatibility, SQL Server
 equivalence (D05 limits the SQLite work to first validation), any live
@@ -101,10 +114,9 @@ connector, or any integration with the knowledge, chat or variance products.
 Excel-to-SQL precedence remains open as D01, and the bridge refuses a conflict
 rather than resolving one.
 
-Next cycle: T04 — reproduce the prior Gridwright integration-review findings and
-fix the confirmed failures. Do not begin with a generic chatbot wrapper or a new
-gallery. The first new product capability is the bridge, connected later to
-governed services.
+Next cycle: G2. Do not begin with a generic chatbot wrapper or a new gallery.
+The first new product capability is the bridge, connected later to governed
+services.
 
 Record task, requirement IDs, source commit(s), fixture version, adapter/model/policy versions, commands/checks, results, evidence location, blockers and next task in each PR. Preserve source boundaries and mark mocked versus live integrations clearly.
 

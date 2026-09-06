@@ -72,6 +72,39 @@ const LAYOUT_KEYS = [
 export function Builder({ manifest, manifestText, source, registry, onChange, locale }: BuilderProps) {
   const reg = useMemo(() => registry ?? defaultRegistry(), [registry]);
   const [state, dispatch] = useReducer(reduce, manifest, (m) => initialState(m, manifestText));
+
+  /**
+   * A replaced `manifest` prop means a different document was opened, and the
+   * editor has to follow it — an editor still showing the file you closed is
+   * worse than one that refuses to switch.
+   *
+   * Two things make that harder than a plain equality check.
+   *
+   * `useReducer`'s initialiser runs once, on mount, so a later prop is
+   * otherwise ignored outright. And this component's own edits come back
+   * through the same prop: `onChange` hands the caller a new manifest, the
+   * caller stores it, and it arrives here on the next render — reloading on
+   * that would wipe the undo history after every keystroke.
+   *
+   * So what is remembered is the last value that arrived from *outside*. A
+   * prop identical to it is not a new document at all and is ignored; a
+   * genuinely new one reloads, unless it is the very edit we just made, which
+   * the editor is already showing.
+   */
+  const lastProp = useRef(manifest);
+  const lastGood = useRef<Manifest | undefined>(manifest);
+  let loading = false;
+  if (manifest !== lastProp.current) {
+    lastProp.current = manifest;
+    if (manifest !== state.manifest) {
+      // The fallback below belongs to the document being replaced. Carrying it
+      // across would draw the previous file's panels under the new file's
+      // name, which is the worse half of not switching at all.
+      lastGood.current = undefined;
+      loading = true;
+      dispatch({ type: "load", manifest, ...(manifestText ? { source: manifestText } : {}) });
+    }
+  }
   const [exported, setExported] = useState<string | null>(null);
   const [tab, setTab] = useState<"panels" | "model" | "colours">("panels");
   const store = useMemo(() => new FilterStore(), []);
@@ -88,8 +121,13 @@ export function Builder({ manifest, manifestText, source, registry, onChange, lo
    * catches up the instant it makes sense again.
    */
   const health = useMemo(() => checkManifest(state.manifest), [state.manifest]);
-  const lastGood = useRef(manifest);
-  if (health.ok) lastGood.current = state.manifest;
+  // `loading` excludes the pass that just dispatched the load. React finishes
+  // that pass before discarding its output and re-running with the new state,
+  // and a ref written on the way through survives the discard — so without
+  // this the old document would put itself straight back into the fallback.
+  if (health.ok && !loading) lastGood.current = state.manifest;
+  // Undefined when this document has never compiled — a newly opened file that
+  // is broken on arrival. There is then nothing honest to draw.
   const preview = health.ok ? state.manifest : lastGood.current;
 
   /**
@@ -169,6 +207,22 @@ export function Builder({ manifest, manifestText, source, registry, onChange, lo
   const onGridKeyDown = (e: React.KeyboardEvent) => {
     if (!selected) return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+    // An arrow key belongs to whatever has the keyboard. A chart mark is
+    // focusable and interactive — Enter selects its value — so arrows pressed
+    // on one are the chart's to interpret, and the canvas moving the panel
+    // underneath is the report editing itself while somebody reads it. The
+    // canvas only claims the key when focus is on the canvas or on a panel's
+    // own frame, never on something inside a panel's content.
+    const target = e.target as HTMLElement | null;
+    if (target && target !== e.currentTarget) {
+      const interactive = target.closest(
+        '[role="button"], [role="gridcell"], a[href], button, input, select, textarea, [contenteditable="true"]',
+      );
+      // The panel frame is interactive too, and dragging it is exactly what the
+      // arrows are a keyboard alternative to — so it keeps the key.
+      if (interactive && !interactive.closest(".gwb-chrome")) return;
+    }
     const step: Record<string, [number, number]> = {
       ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1],
     };
@@ -249,6 +303,7 @@ export function Builder({ manifest, manifestText, source, registry, onChange, lo
           className={`gwb-preview${drag.gesture ? " gwb-gesturing" : ""}`}
           onKeyDown={onGridKeyDown}
         >
+          {preview ? (
           <Dashboard
             manifest={preview}
             source={source}
@@ -265,6 +320,12 @@ export function Builder({ manifest, manifestText, source, registry, onChange, lo
             )}
             gridOverlay={<DropGhost gesture={drag.gesture} />}
           />
+          ) : (
+            <p className="gwb-blank" role="status">
+              This document does not compile yet, so there is nothing to draw.
+              The problems are listed beside it.
+            </p>
+          )}
         </main>
 
         <aside className="gwb-inspector" aria-label="Inspector">
@@ -294,7 +355,11 @@ export function Builder({ manifest, manifestText, source, registry, onChange, lo
                 ))}
               </ul>
               {health.issues.length > 6 && <p>and {health.issues.length - 6} more.</p>}
-              <p className="gwb-hint">The preview is showing the last version that ran.</p>
+              <p className="gwb-hint">
+                {preview
+                  ? "The preview is showing the last version that ran."
+                  : "Nothing has run yet, so there is no preview to show."}
+              </p>
             </div>
           )}
 
