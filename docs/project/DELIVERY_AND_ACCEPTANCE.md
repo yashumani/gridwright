@@ -89,6 +89,9 @@ that were checked against the unfixed behaviour, and a green pipeline.
 | T09 | Delivered | Fill from view data, and `<Report>` in `@gridwright/react` |
 | T10 | Delivered | Revisions: revise, preview, roll back, export, reopen |
 | T03 | Delivered | `packages/contracts` — versioned envelopes, capability descriptors, and `fixtures/contracts/conformance.json` as the suite another adapter runs against itself |
+| T11 | Delivered | `packages/adapters/src/ukb.ts` — context packs, with denied access, missing context and unpublished drafts kept as three different outcomes |
+| T12 | Delivered | `packages/adapters/src/talk2data.ts` — all ten admission verdicts, the compiled query and receipt-backed claims |
+| T13 | Delivered | `packages/adapters/src/variance.ts` and `semantics.ts` — golden reconciliation, unsupported-operation rejection, and the R07 mapping across three vocabularies |
 
 ### Acceptance scenarios, recorded against evidence
 
