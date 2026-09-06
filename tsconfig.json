@@ -8,6 +8,7 @@
     { "path": "packages/contracts" },
     { "path": "packages/adapters" },
     { "path": "packages/coordinator" },
+    { "path": "packages/runtime" },
     { "path": "packages/panels" },
     { "path": "packages/react" },
     { "path": "packages/builder" },

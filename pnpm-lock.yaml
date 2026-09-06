@@ -200,6 +200,12 @@ importers:
         specifier: '>=18'
         version: 18.3.1(react@18.3.1)
 
+  packages/runtime:
+    dependencies:
+      '@gridwright/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+
   packages/schema:
     dependencies:
       yaml:
