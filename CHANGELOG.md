@@ -29,6 +29,13 @@ documented types, and the internals of every package below `@gridwright/react`.
 
 ### Added
 
+- `scripts/verify-deploy.mjs` — a smoke test for the published demo rather than
+  a local build. It drives the live URL in Chromium and checks that the bundle
+  the page loads is the one this commit built, so a deploy serving a stale
+  artifact is reported with both filenames instead of looking healthy. Run
+  against the local build it passes 7/7; against a deliberately stale copy the
+  same-commit check fails and the script exits 1.
+
 - **An accessibility check** (`scripts/verify-accessibility.mjs`) over both
   built apps, at three sizes, in both themes — 108 checks covering heading
   order, landmarks, table header scope, control labelling, tab order, focus
