@@ -81,6 +81,7 @@ that were checked against the unfixed behaviour, and a green pipeline.
 
 | Task | Status | Where |
 |---|---|---|
+| T01 | Delivered | This table's own source: [`UNIFIED_PLATFORM_REQUIREMENTS.md`](UNIFIED_PLATFORM_REQUIREMENTS.md), [`ARCHITECTURE_AND_CONTRACTS.md`](ARCHITECTURE_AND_CONTRACTS.md) and [`SOURCE_MAP_AND_DECISIONS.md`](SOURCE_MAP_AND_DECISIONS.md), where D01–D09 stay open rather than being quietly assumed |
 | T02 | Delivered | `fixtures/support-ops/` — skeleton workbook, SQL metadata, bindings, prepared view, expected results |
 | T05 | Delivered | `packages/bridge` — bounded `.xlsx` reading with cell provenance |
 | T06 | Delivered | `packages/bridge/src/sql.ts`, exported at `@gridwright/bridge/sql` — read-only connector against a real SQLite fixture |
