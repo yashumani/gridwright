@@ -19,16 +19,16 @@ import type { MetricAdditivity, MetricAggregation } from "./talk2data.js";
  *
  * Three things fall out of that table, and none of them is a naming quibble.
  *
- * **The bridge cannot express `SEMI_ADDITIVE`.** A backlog adds across queues
- * and does not add across time — one number, additive on one axis and not the
- * other. A boolean has no room for that, so a semi-additive metric arriving
- * from Talk2Data cannot be represented faithfully, and the honest thing is to
- * refuse it rather than to round it to `true` and produce a year-to-date
- * backlog that is the sum of twelve month-end readings.
+ * **`SEMI_ADDITIVE` crosses intact, now.** A backlog adds across queues and
+ * does not add across time — one number, additive on one axis and not the
+ * other. Writing this mapping is what showed that the bridge's boolean had no
+ * room for it; the bridge's additivity is three-valued because of this file,
+ * and the value is carried rather than rounded.
  *
  * **`LAST_VALUE` and `period_end` are the same rule** under two names, and the
- * bridge implements neither. Mapping them is a rename; supporting them is not,
- * so they map to a refusal with the reason stated.
+ * bridge implements it — but only where the configuration declares which row
+ * is last. The mapping carries the rule and notes the condition; the compiler
+ * enforces it, because that is where the bindings are.
  *
  * **`AVERAGE` is not one rule.** Variance's is support-weighted; a plain mean
  * of pre-aggregated rows is a different number. The bridge refuses `average`
@@ -45,7 +45,7 @@ import type { MetricAdditivity, MetricAggregation } from "./talk2data.js";
 export type VarianceAggregation = "sum" | "average" | "period_end";
 
 /** What the bridge implements, from `@gridwright/bridge`. */
-export type BridgeAggregation = "sum" | "min" | "max";
+export type BridgeAggregation = "sum" | "min" | "max" | "period_end";
 
 export type SemanticProblemCode =
   | "aggregation-unrepresentable"
@@ -84,9 +84,12 @@ export interface MetricFacts {
   semanticVersion: string;
 }
 
+/** Matches the bridge's own three-valued vocabulary. */
+export type BridgeAdditivity = "additive" | "semi_additive" | "non_additive";
+
 export interface BridgeFacts {
   aggregation: BridgeAggregation;
-  additive: boolean;
+  additivity: BridgeAdditivity;
   unit: string;
   grain: string;
 }
@@ -138,23 +141,14 @@ export function reconcileMetric(
   }
 
   // Additivity first: it is the one the bridge's type system cannot hold.
-  let additive: boolean;
-  if (authoritative.additivity === "ADDITIVE") {
-    additive = true;
-  } else if (authoritative.additivity === "NON_ADDITIVE") {
-    additive = false;
-  } else {
-    additive = false;
-    problems.push({
-      code: "additivity-unrepresentable",
-      source: "talk2data",
-      message:
-        `metric "${mapping.talk2dataId ?? mapping.bridgeId}" is SEMI_ADDITIVE — additive across ` +
-        "dimensions and not across time — and the bridge records additivity as a single " +
-        "boolean, which cannot say that. Rounding it to additive would let a year-to-date " +
-        "total be the sum of month-end readings",
-    });
-  }
+  // The bridge's additivity became three-valued for exactly this reason, so
+  // SEMI_ADDITIVE now crosses the boundary intact instead of being refused.
+  const additivity: BridgeAdditivity =
+    authoritative.additivity === "ADDITIVE"
+      ? "additive"
+      : authoritative.additivity === "SEMI_ADDITIVE"
+        ? "semi_additive"
+        : "non_additive";
 
   let aggregation: BridgeAggregation | undefined;
   switch (authoritative.aggregation) {
@@ -162,14 +156,14 @@ export function reconcileMetric(
       aggregation = "sum";
       break;
     case "LAST_VALUE":
-      problems.push({
-        code: "aggregation-unrepresentable",
-        source: "talk2data",
-        message:
-          "LAST_VALUE (the variance product's `period_end`) needs to know which row is last, " +
-          "and a prepared view does not carry an ordering the bridge can trust. The bridge " +
-          "implements sum, min and max",
-      });
+      // One rule under two names, and the bridge implements it now — but only
+      // where the configuration says which row is last, which is the caller's
+      // to supply and is checked at compile time rather than here.
+      aggregation = "period_end";
+      notes.push(
+        "LAST_VALUE maps to the bridge's period_end, which needs an orderColumn declared in the " +
+        "bindings. Without one the compiler refuses it rather than picking an arbitrary row",
+      );
       break;
     case "AVERAGE":
       problems.push({
@@ -239,7 +233,7 @@ export function reconcileMetric(
     ok: true,
     bridge: {
       aggregation,
-      additive,
+      additivity,
       unit: authoritative.unit,
       grain: authoritative.grain ?? expected?.grain ?? "",
     },

@@ -110,7 +110,20 @@ export function fillReport(definition: ReportDefinition, input: FillInput): Repo
     }
   };
 
+  /**
+   * `period_end` keeps the row the ordering column says is last.
+   *
+   * The compiler has already refused this aggregation unless the bindings
+   * declared an ordering, so by the time a row arrives here there is a real
+   * answer to "which is last" rather than an arbitrary one. Comparison is by
+   * string when the values are not numbers, which is right for ISO dates and
+   * is the only ordering a prepared view reliably carries.
+   */
+  const orderColumn = definition.execution.orderColumn;
+  const isPeriodEnd = definition.metric.aggregation === "period_end";
+
   const source = new Map<string, Map<string, number>>();
+  const rank = new Map<string, string | number>();
   for (const row of input.rows) {
     const key = String(row[input.keyColumn] ?? "");
     const period = String(row[input.periodColumn] ?? "");
@@ -118,7 +131,19 @@ export function fillReport(definition: ReportDefinition, input: FillInput): Repo
     if (!key || !period || n === null) continue;
     const byPeriod = source.get(key) ?? new Map<string, number>();
     const already = byPeriod.get(period);
-    byPeriod.set(period, already === undefined ? n : combine(already, n));
+
+    if (isPeriodEnd && orderColumn) {
+      const at = row[orderColumn];
+      const order = typeof at === "number" ? at : String(at ?? "");
+      const cell = `${key}\u0000${period}`;
+      const best = rank.get(cell);
+      if (best === undefined || order >= best) {
+        rank.set(cell, order);
+        byPeriod.set(period, n);
+      }
+    } else {
+      byPeriod.set(period, already === undefined ? n : combine(already, n));
+    }
     source.set(key, byPeriod);
   }
 

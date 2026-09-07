@@ -74,6 +74,8 @@ export interface ExecutionRequirement {
   /** Distinct view keys the data rows need. */
   keys: string[];
   periods: Record<string, string>;
+  /** The column that orders rows within a key and period, when one is needed. */
+  orderColumn?: string;
 }
 
 export interface RowProvenance {
@@ -122,8 +124,20 @@ export type CompileProblemCode =
  * and A03 says a metric that is not additive must not inherit sum behaviour.
  * Summing one anyway would produce a number that looks right and is not.
  */
-export const SUPPORTED_AGGREGATIONS = ["sum", "min", "max"] as const;
+export const SUPPORTED_AGGREGATIONS = ["sum", "min", "max", "period_end"] as const;
 export type Aggregation = (typeof SUPPORTED_AGGREGATIONS)[number];
+
+/**
+ * `period_end` needs to know which row is last, and only the binding can say.
+ *
+ * It was refused outright until now for exactly that reason: a prepared view
+ * arrives in whatever order the query returned, and picking "the last one" from
+ * an unordered set is picking an arbitrary one. With an explicit ordering
+ * column declared in the bindings there is a real answer, so the rule is
+ * supported *when the configuration supplies the ordering* and refused when it
+ * does not — which is the same standard the rest of this bridge holds to.
+ */
+export const ORDERED_AGGREGATIONS: readonly Aggregation[] = ["period_end"];
 
 /** A calculated row, as configuration declares it. */
 export interface CalculatedRow {
@@ -219,12 +233,23 @@ export function compileReport(
         `bridge does not implement (it implements ${SUPPORTED_AGGREGATIONS.join(", ")}). ` +
         "Summing it instead would report a number the source never computed",
     });
-  } else if (aggregation === "sum" && !resolution.metric.additive) {
+  } else if (aggregation === "sum" && resolution.metric.additivity === "non_additive") {
     problems.push({
       code: "aggregation-unsupported" as ProblemCode,
       message:
         `metric "${resolution.metric.id}" is declared non-additive and aggregated by "sum", ` +
         "which cannot both be true",
+    });
+  } else if (
+    (ORDERED_AGGREGATIONS as readonly string[]).includes(aggregation) &&
+    !resolution.orderColumn
+  ) {
+    problems.push({
+      code: "aggregation-unsupported" as ProblemCode,
+      message:
+        `metric "${resolution.metric.id}" is aggregated by "${aggregation}", which needs to know ` +
+        "which row is last. Declare an `orderColumn` in the bindings; without one, picking a " +
+        "last row from a prepared view is picking an arbitrary one",
     });
   }
 
@@ -340,6 +365,7 @@ export function compileReport(
         grain: resolution.metric.grain,
         keys,
         periods: resolution.periods,
+        ...(resolution.orderColumn ? { orderColumn: resolution.orderColumn } : {}),
       },
       blankPolicy,
       provenance,

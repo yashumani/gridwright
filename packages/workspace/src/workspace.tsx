@@ -191,6 +191,7 @@ export function Workspace({ snapshot, title, locale }: WorkspaceProps) {
         <section className="gww-report" aria-label="Report">
           <h2>Report</h2>
           {snapshot.report ? (
+            <div className="gww-table-scroll">
             <Report
               result={snapshot.report}
               {...(locale ? { locale } : {})}
@@ -199,6 +200,7 @@ export function Workspace({ snapshot, title, locale }: WorkspaceProps) {
                 [snapshot.report.periods[1] ?? "comparison"]: snapshot.scope.comparison.label,
               }}
             />
+            </div>
           ) : (
             <p className="gww-empty" data-testid="no-report">
               No report was configured for this question.

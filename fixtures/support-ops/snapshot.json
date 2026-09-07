@@ -1,0 +1,165 @@
+{
+  "snapshotId": "snap-support-ops-001",
+  "runId": "run-support-ops-001",
+  "question": "How many cases did each queue close, against the prior period?",
+  "scope": {
+    "tenant": "synthetic",
+    "user": "demo",
+    "domain": "support-operations",
+    "period": {
+      "start": "2026-08-01",
+      "end": "2026-08-31",
+      "label": "Actual"
+    },
+    "comparison": {
+      "start": "2026-07-01",
+      "end": "2026-07-31",
+      "label": "Prior period"
+    },
+    "filters": [
+      {
+        "dimension": "queue",
+        "values": [
+          "Queue A",
+          "Queue B",
+          "Queue C"
+        ]
+      }
+    ]
+  },
+  "versions": {
+    "source": "0.1",
+    "policy": "synthetic-policy-1",
+    "semantic": "0.1",
+    "configuration": "support-ops-bindings-1",
+    "result": "res-1"
+  },
+  "values": [
+    {
+      "id": "claim:c-total",
+      "label": "closed_cases",
+      "value": 120,
+      "formatted": "120",
+      "receiptId": "synthetic-receipt-001",
+      "source": "talk2data"
+    },
+    {
+      "id": "analysis:actual",
+      "label": "closed_cases actual",
+      "value": 120,
+      "formatted": "120",
+      "receiptId": "synthetic-receipt-001",
+      "source": "variance"
+    },
+    {
+      "id": "analysis:comparison",
+      "label": "closed_cases comparison",
+      "value": 100,
+      "formatted": "100",
+      "receiptId": "synthetic-receipt-001",
+      "source": "variance"
+    }
+  ],
+  "claims": [
+    {
+      "statement": "Closed cases were 120 against 100 in the prior period, a difference of +20.",
+      "valueId": "claim:c-total",
+      "receiptId": "synthetic-receipt-001"
+    }
+  ],
+  "report": {
+    "rows": [
+      {
+        "rowKey": "queue_a",
+        "heading": "Queue A",
+        "indent": 1,
+        "kind": "data",
+        "cells": {
+          "actual": {
+            "value": 70,
+            "availability": "measured"
+          },
+          "comparison": {
+            "value": 60,
+            "availability": "measured"
+          }
+        },
+        "variance": {
+          "value": 10,
+          "availability": "measured"
+        }
+      },
+      {
+        "rowKey": "queue_b",
+        "heading": "Queue B",
+        "indent": 1,
+        "kind": "data",
+        "cells": {
+          "actual": {
+            "value": 50,
+            "availability": "measured"
+          },
+          "comparison": {
+            "value": 40,
+            "availability": "measured"
+          }
+        },
+        "variance": {
+          "value": 10,
+          "availability": "measured"
+        }
+      },
+      {
+        "rowKey": "queue_c",
+        "heading": "Queue C",
+        "indent": 1,
+        "kind": "data",
+        "cells": {
+          "actual": {
+            "value": null,
+            "availability": "not_available"
+          },
+          "comparison": {
+            "value": null,
+            "availability": "not_available"
+          }
+        },
+        "variance": {
+          "value": null,
+          "availability": "not_available"
+        }
+      },
+      {
+        "rowKey": "total",
+        "heading": "Total",
+        "indent": 0,
+        "kind": "total",
+        "cells": {
+          "actual": {
+            "value": 120,
+            "availability": "measured"
+          },
+          "comparison": {
+            "value": 100,
+            "availability": "measured"
+          }
+        },
+        "variance": {
+          "value": 20,
+          "availability": "measured"
+        }
+      }
+    ],
+    "periods": [
+      "actual",
+      "comparison"
+    ],
+    "blankPolicy": "not_available",
+    "diagnostics": [
+      "metric \"closed_cases\" has no resolvable approved definition (ukb://unavailable); traceability is not established"
+    ]
+  },
+  "diagnostics": [],
+  "complete": true,
+  "completeness": "complete"
+}

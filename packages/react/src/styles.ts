@@ -435,6 +435,15 @@ export const styles = `
   overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
 
+/* A cell is a containing block, so the label above stays inside it.
+   Without this, an absolutely positioned element with no positioned ancestor
+   is placed against the initial containing block — which means it escapes an
+   enclosing overflow:auto box and adds its own width to the document's
+   scrollable area. The symptom is a page that scrolls sideways by the width of
+   an invisible screen-reader label, on a table that is already scrolling
+   correctly inside its own box. */
+.gw-rpt-table td, .gw-rpt-table th { position: relative; }
+
 @media (prefers-reduced-motion: reduce) {
   .gw-root * { transition: none !important; animation: none !important; }
 }
