@@ -1,5 +1,5 @@
 {
-  "name": "@gridwright/expr",
+  "name": "@yashumani/gridwright-expr",
   "version": "0.1.0",
   "description": "The Gridwright expression language: parser, AST, stage analysis, SQL compiler and sandboxed evaluator.",
   "license": "MIT",
@@ -39,7 +39,7 @@
     "README.md"
   ],
   "dependencies": {
-    "@gridwright/schema": "workspace:*"
+    "@yashumani/gridwright-schema": "workspace:*"
   },
   "publishConfig": {
     "access": "public"

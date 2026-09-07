@@ -21,7 +21,7 @@ Or run the same thing locally:
 
 ```bash
 pnpm install && pnpm build
-pnpm --filter @gridwright/playground dev     # then drag a .csv onto the page
+pnpm --filter @yashumani/gridwright-playground dev     # then drag a .csv onto the page
 ```
 
 Guesses are conservative and stated rather than hidden. A column that identifies
@@ -141,13 +141,13 @@ cd gridwright && pnpm install && pnpm build
 Once published:
 
 ```bash
-pnpm add @gridwright/react @gridwright/engine @gridwright/panels
+pnpm add @yashumani/gridwright-react @yashumani/gridwright-engine @yashumani/gridwright-panels
 pnpm add -D gridwright        # the CLI
 ```
 
 ```tsx
-import { loadBundle } from "@gridwright/engine";
-import { Dashboard, injectStyles } from "@gridwright/react";
+import { loadBundle } from "@yashumani/gridwright-engine";
+import { Dashboard, injectStyles } from "@yashumani/gridwright-react";
 
 injectStyles();
 const r = loadBundle(manifestText, [{ name: "sales.csv", text: csv }]);

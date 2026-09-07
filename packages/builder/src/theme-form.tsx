@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
-import type { Manifest, ThemeDef } from "@gridwright/schema";
+import type { Manifest, ThemeDef } from "@yashumani/gridwright-schema";
 import {
   PRESETS, checkPalette, derivePalette, paletteFromBrand, parseHex, parsePalette,
   snapToPassing, type Mode, type PaletteReport,
-} from "@gridwright/panels";
+} from "@yashumani/gridwright-panels";
 
 /**
  * Brand colours, edited.

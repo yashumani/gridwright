@@ -117,7 +117,7 @@ too.
 For a SQL backend, the plan is already compiled for you:
 
 ```ts
-import { planToSqlParams } from "@gridwright/engine";
+import { planToSqlParams } from "@yashumani/gridwright-engine";
 
 async execute(plan) {
   const { sql, params } = planToSqlParams(plan);

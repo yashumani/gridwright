@@ -1,5 +1,5 @@
-import { analyzeModel } from "@gridwright/expr";
-import type { Issue } from "@gridwright/schema";
+import { analyzeModel } from "@yashumani/gridwright-expr";
+import type { Issue } from "@yashumani/gridwright-schema";
 import type { CellRef, SheetRead, WorkbookRead } from "./xlsx.js";
 import { readConfigTable } from "./bindings.js";
 import type {
@@ -32,7 +32,7 @@ import type {
  * this compiler's to do, so an undeclared or unrecognised policy is an error.
  *
  * **R15: calculations go through the governed expression system.** Row formulas
- * are parsed and analysed by `@gridwright/expr` — the same parser the manifest
+ * are parsed and analysed by `@yashumani/gridwright-expr` — the same parser the manifest
  * uses — so `analyzeModel` supplies reference resolution, cycle detection and
  * an evaluation order, and the bridge does not grow a second semantic registry
  * the architecture note explicitly forbids. It also settles R15's "no raw

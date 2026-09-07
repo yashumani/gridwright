@@ -1,6 +1,6 @@
 import { useMemo } from "react";
-import { arr, bool, enum_, obj, opt, str } from "@gridwright/schema";
-import type { Value } from "@gridwright/engine";
+import { arr, bool, enum_, obj, opt, str } from "@yashumani/gridwright-schema";
+import type { Value } from "@yashumani/gridwright-engine";
 import { formatValue } from "./format.js";
 import { compileRule, resultRow, type CompiledRule } from "./rules.js";
 import {

@@ -53,4 +53,4 @@ jobs:
           node packages/cli/dist/bin.js validate examples/chart-types.gw.yaml --data
 
       - name: Build the playground
-        run: pnpm --filter @gridwright/playground build
+        run: pnpm --filter @yashumani/gridwright-playground build

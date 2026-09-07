@@ -1,4 +1,4 @@
-import type { Manifest, PanelDef } from "@gridwright/schema";
+import type { Manifest, PanelDef } from "@yashumani/gridwright-schema";
 
 /**
  * Grid arithmetic for direct manipulation.

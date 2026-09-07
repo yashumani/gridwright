@@ -18,8 +18,8 @@ pnpm test           # vitest, node + jsdom projects
 To see it running:
 
 ```bash
-pnpm --filter @gridwright/playground dev       # drop a manifest and its CSVs
-pnpm --filter @gridwright/playground bundle    # one self-contained HTML file
+pnpm --filter @yashumani/gridwright-playground dev       # drop a manifest and its CSVs
+pnpm --filter @yashumani/gridwright-playground bundle    # one self-contained HTML file
 node packages/cli/dist/bin.js validate examples/orders-star.gw.yaml --data
 ```
 
@@ -32,7 +32,7 @@ pnpm build
 pnpm test
 node packages/cli/dist/bin.js validate examples/sales-overview.gw.yaml --data
 node packages/cli/dist/bin.js validate examples/orders-star.gw.yaml --data
-pnpm --filter @gridwright/playground build
+pnpm --filter @yashumani/gridwright-playground build
 ```
 
 Two habits the codebase already keeps, and which reviews will ask about:
@@ -58,12 +58,12 @@ adding the import.
 
 | Package | Owns |
 |---|---|
-| `@gridwright/schema` | Manifest types, the validator, JSON Schema, migrations |
-| `@gridwright/expr` | Tokenizer, parser, AST, stage analysis, SQL compiler, evaluator |
-| `@gridwright/engine` | Plan compiler, joins, the `DataSource` seam, executor, loaders |
-| `@gridwright/panels` | Panel components, each with a schema for its own props |
-| `@gridwright/react` | `<Dashboard>`, grid layout, filter store, stylesheet |
-| `@gridwright/builder` | Model and panel editors, YAML export |
+| `@yashumani/gridwright-schema` | Manifest types, the validator, JSON Schema, migrations |
+| `@yashumani/gridwright-expr` | Tokenizer, parser, AST, stage analysis, SQL compiler, evaluator |
+| `@yashumani/gridwright-engine` | Plan compiler, joins, the `DataSource` seam, executor, loaders |
+| `@yashumani/gridwright-panels` | Panel components, each with a schema for its own props |
+| `@yashumani/gridwright-react` | `<Dashboard>`, grid layout, filter store, stylesheet |
+| `@yashumani/gridwright-builder` | Model and panel editors, YAML export |
 | `gridwright` | The CLI |
 
 ## Adding a panel type

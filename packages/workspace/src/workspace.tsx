@@ -1,4 +1,4 @@
-import { Report } from "@gridwright/react";
+import { Report } from "@yashumani/gridwright-react";
 import { reconcile, type AnalysisSnapshot } from "./snapshot.js";
 
 /**

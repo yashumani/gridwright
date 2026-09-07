@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import type { Manifest, PanelDef } from "@gridwright/schema";
+import type { Manifest, PanelDef } from "@yashumani/gridwright-schema";
 import {
   cells, dragTo, gridColumns, gridGap, pitchFromPanel, resizeTo,
   type Edge, type Pitch, type Rect,

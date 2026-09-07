@@ -1,4 +1,4 @@
-import type { FieldType, Manifest } from "@gridwright/schema";
+import type { FieldType, Manifest } from "@yashumani/gridwright-schema";
 import type { Table, Value } from "./types.js";
 import { EngineError } from "./types.js";
 

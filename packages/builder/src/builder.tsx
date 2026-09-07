@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
-import type { Manifest, PanelDef } from "@gridwright/schema";
-import type { DataSource } from "@gridwright/engine";
-import { PanelRegistry, defaultRegistry, type PanelSpec } from "@gridwright/panels";
-import { Dashboard, FilterStore } from "@gridwright/react";
+import type { Manifest, PanelDef } from "@yashumani/gridwright-schema";
+import type { DataSource } from "@yashumani/gridwright-engine";
+import { PanelRegistry, defaultRegistry, type PanelSpec } from "@yashumani/gridwright-panels";
+import { Dashboard, FilterStore } from "@yashumani/gridwright-react";
 import { PropertyForm, type JsonSchema, type RefOption } from "./property-form.js";
 import { ModelEditor } from "./model-form.js";
 import { ThemeEditor } from "./theme-form.js";

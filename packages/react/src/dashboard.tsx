@@ -1,8 +1,8 @@
 import { Component, useCallback, useEffect, useId, useMemo, useRef, type CSSProperties, type ErrorInfo, type ReactNode } from "react";
-import type { Action, Filter, Manifest, PanelDef } from "@gridwright/schema";
-import { formatIssues } from "@gridwright/schema";
-import { Engine, type DataSource, type QueryResult, type Value } from "@gridwright/engine";
-import { PanelRegistry, defaultRegistry, seriesCss, type PanelSpec } from "@gridwright/panels";
+import type { Action, Filter, Manifest, PanelDef } from "@yashumani/gridwright-schema";
+import { formatIssues } from "@yashumani/gridwright-schema";
+import { Engine, type DataSource, type QueryResult, type Value } from "@yashumani/gridwright-engine";
+import { PanelRegistry, defaultRegistry, seriesCss, type PanelSpec } from "@yashumani/gridwright-panels";
 import { FilterStore, describeSelections, type Selections } from "./filter-store.js";
 import { useAsync, useMeasure, useSelections } from "./hooks.js";
 

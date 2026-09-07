@@ -18,7 +18,7 @@ function duplicates(ids: string[]): string[] {
 
 export interface SemanticOptions {
   /**
-   * Optional hook so callers that have @gridwright/expr loaded can validate
+   * Optional hook so callers that have @yashumani/gridwright-expr loaded can validate
    * measure expressions here. Kept as a hook to avoid a dependency cycle.
    */
   checkExpression?: (expr: string, measureId: string) => Issue[];

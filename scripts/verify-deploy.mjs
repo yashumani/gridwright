@@ -12,7 +12,7 @@
  * serving this commit's artifact. A matching hash is evidence; a mismatch says
  * the deploy is behind and names both.
  *
- *   pnpm build && pnpm --filter @gridwright/playground build
+ *   pnpm build && pnpm --filter @yashumani/gridwright-playground build
  *   node scripts/verify-deploy.mjs [--origin https://host/path/] [--mirror]
  *
  * `--mirror` exists for one specific reason. In a sandbox whose outbound

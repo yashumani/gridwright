@@ -1,4 +1,4 @@
-import { describeFinding, scanText, type Finding } from "@gridwright/contracts";
+import { describeFinding, scanText, type Finding } from "@yashumani/gridwright-contracts";
 import type { Cell, CellRef, SheetRead, WorkbookRead } from "./xlsx.js";
 
 /**

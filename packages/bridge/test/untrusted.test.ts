@@ -11,7 +11,7 @@ import { fillReport, scanViewRows, type ViewRow } from "../src/fill.js";
 /**
  * R24, embedded instructions, through the whole chain.
  *
- * The unit behaviour lives in `@gridwright/contracts`. What is checked here is
+ * The unit behaviour lives in `@yashumani/gridwright-contracts`. What is checked here is
  * the wiring: that a hostile cell in a workbook is noticed where the workbook
  * is read, that the report is still produced with its structure intact, and
  * that the warning reaches the screen without the payload riding along with it.

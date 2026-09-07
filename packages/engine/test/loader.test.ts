@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   DelimitedParser, EngineError, loadBlob, loadBundleFromBlobs, loadDelimited,
   loadDelimitedStream, parseDelimited,
-} from "@gridwright/engine";
+} from "@yashumani/gridwright-engine";
 
 /**
  * The incremental parser has to behave identically no matter where a chunk

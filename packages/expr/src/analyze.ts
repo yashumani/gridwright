@@ -1,4 +1,4 @@
-import type { Issue } from "@gridwright/schema";
+import type { Issue } from "@yashumani/gridwright-schema";
 import type { Node } from "./ast.js";
 import { FUNCTIONS, FUNCTION_NAMES, MEASURE_REF, describeArity } from "./functions.js";
 import { ExprSyntaxError, parse } from "./parse.js";

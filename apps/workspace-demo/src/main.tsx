@@ -1,7 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { injectStyles } from "@gridwright/react";
-import { Workspace, type AnalysisSnapshot } from "@gridwright/workspace";
+import { injectStyles } from "@yashumani/gridwright-react";
+import { Workspace, type AnalysisSnapshot } from "@yashumani/gridwright-workspace";
 import snapshot from "../../../fixtures/support-ops/snapshot.json";
 import { styles } from "./styles.js";
 

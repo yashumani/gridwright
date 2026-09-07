@@ -4,7 +4,7 @@ import {
   analyzeExpression, analyzeModel, applyWindow, evalAggregate, evalPostColumn,
   parse, quoteIdent, sqlLiteral, toSql, tokenize, truncateDate,
   type Row, type Value,
-} from "@gridwright/expr";
+} from "@yashumani/gridwright-expr";
 
 const sqlCtx = {
   field: (n: string) => `"${n}"`,

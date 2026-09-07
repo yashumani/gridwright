@@ -1,6 +1,6 @@
-import type { Issue } from "@gridwright/schema";
-import { ExprSyntaxError, FUNCTIONS, evalRow, parse, walk, type Node } from "@gridwright/expr";
-import type { QueryResult, Value } from "@gridwright/engine";
+import type { Issue } from "@yashumani/gridwright-schema";
+import { ExprSyntaxError, FUNCTIONS, evalRow, parse, walk, type Node } from "@yashumani/gridwright-expr";
+import type { QueryResult, Value } from "@yashumani/gridwright-engine";
 
 /**
  * Conditional-formatting predicates.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { parseManifest, type Manifest } from "@gridwright/schema";
-import { exportManifest, initialState, reduce, toYaml } from "@gridwright/builder";
+import { parseManifest, type Manifest } from "@yashumani/gridwright-schema";
+import { exportManifest, initialState, reduce, toYaml } from "@yashumani/gridwright-builder";
 
 /**
  * Comment-preserving round trip.

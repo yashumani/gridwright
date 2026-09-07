@@ -1,5 +1,5 @@
-import { scanText, type Finding } from "@gridwright/contracts";
-import { analyzeExpression, evalPostColumn, type Value } from "@gridwright/expr";
+import { scanText, type Finding } from "@yashumani/gridwright-contracts";
+import { analyzeExpression, evalPostColumn, type Value } from "@yashumani/gridwright-expr";
 import type { BlankPolicy, DefinitionRow, ReportDefinition } from "./compile.js";
 
 /**
@@ -22,7 +22,7 @@ import type { BlankPolicy, DefinitionRow, ReportDefinition } from "./compile.js"
  * recover the difference between "no data" and "measured zero" even when the
  * number cannot.
  *
- * Arithmetic goes through `@gridwright/expr`'s post-aggregation evaluator, the
+ * Arithmetic goes through `@yashumani/gridwright-expr`'s post-aggregation evaluator, the
  * same one the engine uses. A period is a position in that evaluator's column,
  * so a calculated row is computed for every period in one pass with the
  * library's own null and division semantics rather than a second set written

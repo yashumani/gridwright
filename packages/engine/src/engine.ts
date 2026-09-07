@@ -1,4 +1,4 @@
-import type { Filter, Manifest } from "@gridwright/schema";
+import type { Filter, Manifest } from "@yashumani/gridwright-schema";
 import { compileDataset, compileModel, hashPlan, type CompiledModel } from "./compile.js";
 import type { DataSource, QueryPlan, QueryResult } from "./types.js";
 

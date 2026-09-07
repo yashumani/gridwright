@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { bool, described, num, obj, opt, str } from "@gridwright/schema";
-import type { Value } from "@gridwright/engine";
+import { bool, described, num, obj, opt, str } from "@yashumani/gridwright-schema";
+import type { Value } from "@yashumani/gridwright-engine";
 import { formatValue } from "./format.js";
 import { resultRow } from "./rules.js";
 import { rampInkVar, rampVar } from "./theme.js";

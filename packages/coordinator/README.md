@@ -1,9 +1,9 @@
-# @gridwright/coordinator
+# @yashumani/gridwright-coordinator
 
 A capability gate and a bounded run — deterministic enforcement at the tool boundary, and one parent that cannot spawn a second.
 
 ```bash
-pnpm add @gridwright/coordinator
+pnpm add @yashumani/gridwright-coordinator
 ```
 
 Scope is frozen into the invocation before the call and the result is classified again on the way back, because a capability that was allowed to run is not a result that is allowed to leave. A privileged call with no reachable policy fails closed. One run owns one budget, cancellation reaches a call already in flight, and a specialist has no way to start another run.

@@ -44,7 +44,7 @@ import type { MetricAdditivity, MetricAggregation } from "./talk2data.js";
 /** The variance product's aggregation vocabulary. */
 export type VarianceAggregation = "sum" | "average" | "period_end";
 
-/** What the bridge implements, from `@gridwright/bridge`. */
+/** What the bridge implements, from `@yashumani/gridwright-bridge`. */
 export type BridgeAggregation = "sum" | "min" | "max" | "period_end";
 
 export type SemanticProblemCode =

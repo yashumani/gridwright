@@ -11,7 +11,7 @@
  * needs a browser binary and a server, CI installs neither, and a check in the
  * pipeline that silently never runs is worse than no check.
  *
- *   pnpm build && pnpm --filter @gridwright/workspace-demo build
+ *   pnpm build && pnpm --filter @yashumani/gridwright-workspace-demo build
  *   node scripts/verify-a05.mjs
  */
 import { chromium } from "playwright";

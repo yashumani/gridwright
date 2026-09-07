@@ -1,4 +1,4 @@
-import type { FieldType } from "@gridwright/schema";
+import type { FieldType } from "@yashumani/gridwright-schema";
 import type { Table, Value } from "./types.js";
 import { EngineError } from "./types.js";
 import { coerce, type LoadOptions } from "./csv.js";

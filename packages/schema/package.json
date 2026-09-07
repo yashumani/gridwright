@@ -1,5 +1,5 @@
 {
-  "name": "@gridwright/schema",
+  "name": "@yashumani/gridwright-schema",
   "version": "0.1.0",
   "description": "Manifest types, validator and JSON Schema for Gridwright dashboards.",
   "license": "MIT",

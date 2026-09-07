@@ -1,5 +1,5 @@
 {
-  "name": "@gridwright/engine",
+  "name": "@yashumani/gridwright-engine",
   "version": "0.1.0",
   "description": "Query engine for Gridwright: plan compiler, star-schema joins, a columnar in-process executor and a DataSource seam for pushdown.",
   "license": "MIT",
@@ -39,8 +39,8 @@
     "README.md"
   ],
   "dependencies": {
-    "@gridwright/schema": "workspace:*",
-    "@gridwright/expr": "workspace:*"
+    "@yashumani/gridwright-schema": "workspace:*",
+    "@yashumani/gridwright-expr": "workspace:*"
   },
   "publishConfig": {
     "access": "public"

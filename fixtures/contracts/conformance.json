@@ -1,6 +1,6 @@
 {
   "contract": 1,
-  "note": "Conformance cases for @gridwright/contracts. Each case is one deviation from the first. An adapter is conformant when every case's expected problem codes match exactly - no extras, no subset.",
+  "note": "Conformance cases for @yashumani/gridwright-contracts. Each case is one deviation from the first. An adapter is conformant when every case's expected problem codes match exactly - no extras, no subset.",
   "cases": [
     {
       "name": "a well-formed handoff inside its window",

@@ -1,9 +1,9 @@
-# @gridwright/engine
+# @yashumani/gridwright-engine
 
 Query engine for Gridwright: plan compiler, star-schema joins, a columnar in-process executor and a DataSource seam for pushdown.
 
 ```bash
-pnpm add @gridwright/engine
+pnpm add @yashumani/gridwright-engine
 ```
 
 Part of [Gridwright](https://github.com/yashumani/gridwright) — a schema-driven dashboard engine. A manifest

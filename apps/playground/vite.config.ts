@@ -11,12 +11,12 @@ export default defineConfig({
   // publish step in between.
   resolve: {
     alias: {
-      "@gridwright/schema": pkg("schema"),
-      "@gridwright/expr": pkg("expr"),
-      "@gridwright/engine": pkg("engine"),
-      "@gridwright/panels": pkg("panels"),
-      "@gridwright/react": pkg("react"),
-      "@gridwright/builder": pkg("builder"),
+      "@yashumani/gridwright-schema": pkg("schema"),
+      "@yashumani/gridwright-expr": pkg("expr"),
+      "@yashumani/gridwright-engine": pkg("engine"),
+      "@yashumani/gridwright-panels": pkg("panels"),
+      "@yashumani/gridwright-react": pkg("react"),
+      "@yashumani/gridwright-builder": pkg("builder"),
     },
   },
   // The examples are served straight out of examples/ rather than copied into

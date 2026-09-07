@@ -1,5 +1,5 @@
-import type { AskResult, ContextPackResult, AnalysisResult } from "@gridwright/adapters";
-import type { ReportResult } from "@gridwright/bridge";
+import type { AskResult, ContextPackResult, AnalysisResult } from "@yashumani/gridwright-adapters";
+import type { ReportResult } from "@yashumani/gridwright-bridge";
 
 /**
  * One analysis snapshot, read by every surface (task T16, requirement R18).

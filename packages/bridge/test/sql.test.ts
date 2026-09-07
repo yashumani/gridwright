@@ -211,9 +211,9 @@ describe("the connection is read-only and bounded", () => {
 
 describe("the connector cannot reach a browser", () => {
   it("is not exported from the package index", () => {
-    // The mechanism, not a promise: `@gridwright/bridge` never imports
+    // The mechanism, not a promise: `@yashumani/gridwright-bridge` never imports
     // node:sqlite, so a browser bundle cannot pull the connector in by
-    // accident. It lives behind `@gridwright/bridge/sql`.
+    // accident. It lives behind `@yashumani/gridwright-bridge/sql`.
     const index = readFileSync(
       fileURLToPath(new URL("../src/index.ts", import.meta.url)),
       "utf8",

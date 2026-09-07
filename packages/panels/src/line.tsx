@@ -1,6 +1,6 @@
 import { useId, useState } from "react";
-import { arr, bool, described, obj, opt, str } from "@gridwright/schema";
-import type { ColumnMeta } from "@gridwright/engine";
+import { arr, bool, described, obj, opt, str } from "@yashumani/gridwright-schema";
+import type { ColumnMeta } from "@yashumani/gridwright-engine";
 import { formatCompact, formatValue } from "./format.js";
 import { axisLabel, isMonthly, niceScale, notablePoints, tickIndices } from "./marks.js";
 import { foldSeries, seriesVar } from "./theme.js";

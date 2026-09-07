@@ -1,5 +1,5 @@
 {
-  "name": "@gridwright/panels",
+  "name": "@yashumani/gridwright-panels",
   "version": "0.1.0",
   "description": "Chart components for Gridwright, each shipping a schema for its own props.",
   "license": "MIT",
@@ -39,9 +39,9 @@
     "README.md"
   ],
   "dependencies": {
-    "@gridwright/schema": "workspace:*",
-    "@gridwright/engine": "workspace:*",
-    "@gridwright/expr": "workspace:*"
+    "@yashumani/gridwright-schema": "workspace:*",
+    "@yashumani/gridwright-engine": "workspace:*",
+    "@yashumani/gridwright-expr": "workspace:*"
   },
   "peerDependencies": {
     "react": ">=18"

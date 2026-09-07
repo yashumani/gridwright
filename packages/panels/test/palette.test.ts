@@ -3,7 +3,7 @@ import {
   PRESETS, SERIES_DARK, SERIES_LIGHT, checkColour, checkPalette, contrast, derivePalette,
   INK_CANDIDATES, distance, inkFor, oklch, paletteFromBrand, parseHex, parsePalette,
   rampFrom, seriesCss, snapToPassing, toHex,
-} from "@gridwright/panels";
+} from "@yashumani/gridwright-panels";
 
 describe("reading a hex", () => {
   it("takes the shapes people actually paste", () => {

@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
   LATEST_VERSION, formatIssues, manifestJsonSchema, migrate, parseManifest, validateManifest,
-} from "@gridwright/schema";
+} from "@yashumani/gridwright-schema";
 
 const REF = fileURLToPath(new URL("../../../examples/sales-overview.gw.yaml", import.meta.url));
 const refText = readFileSync(REF, "utf8");

@@ -1,4 +1,4 @@
-import type { RelationDef } from "@gridwright/schema";
+import type { RelationDef } from "@yashumani/gridwright-schema";
 import { EngineError } from "./types.js";
 
 /**

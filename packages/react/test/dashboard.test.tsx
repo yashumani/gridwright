@@ -3,10 +3,10 @@ import { act, useState } from "react";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { parseManifest, type Manifest } from "@gridwright/schema";
-import { sourceFromText, type DataSource } from "@gridwright/engine";
+import { parseManifest, type Manifest } from "@yashumani/gridwright-schema";
+import { sourceFromText, type DataSource } from "@yashumani/gridwright-engine";
 import { PanelRegistry, defaultRegistry, formatValue, obj, str } from "./helpers.js";
-import { Dashboard, FilterStore, styles } from "@gridwright/react";
+import { Dashboard, FilterStore, styles } from "@yashumani/gridwright-react";
 
 const dir = (p: string) => fileURLToPath(new URL(p, import.meta.url));
 const refText = readFileSync(dir("../../../examples/sales-overview.gw.yaml"), "utf8");

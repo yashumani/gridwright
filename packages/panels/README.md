@@ -1,9 +1,9 @@
-# @gridwright/panels
+# @yashumani/gridwright-panels
 
 Chart components for Gridwright, each shipping a schema for its own props.
 
 ```bash
-pnpm add @gridwright/panels
+pnpm add @yashumani/gridwright-panels
 ```
 
 Part of [Gridwright](https://github.com/yashumani/gridwright) — a schema-driven dashboard engine. A manifest

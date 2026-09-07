@@ -1,9 +1,9 @@
-# @gridwright/contracts
+# @yashumani/gridwright-contracts
 
 Versioned handoff envelopes, capability descriptors and an untrusted-text scanner — the vocabulary every other package speaks across a trust boundary.
 
 ```bash
-pnpm add @gridwright/contracts
+pnpm add @yashumani/gridwright-contracts
 ```
 
 Identity comes from authenticated service context, never from the payload: an envelope carrying its own tenant, user, scope or role fields is refused as **malformed** rather than cleaned, because silently stripping a forged claim teaches a caller that sending one is harmless. Capability checks run in a fixed, tested order, and an advisor may deny but has no counterpart that grants.

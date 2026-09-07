@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { arr, described, enum_, num, obj, opt, str } from "@gridwright/schema";
-import type { Value } from "@gridwright/engine";
+import { arr, described, enum_, num, obj, opt, str } from "@yashumani/gridwright-schema";
+import type { Value } from "@yashumani/gridwright-engine";
 import { formatCompact, formatValue } from "./format.js";
 import { bandLayout } from "./marks.js";
 import { resultRow } from "./rules.js";

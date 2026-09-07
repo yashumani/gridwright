@@ -1,9 +1,9 @@
-# @gridwright/runtime
+# @yashumani/gridwright-runtime
 
 Scoped sessions, cache invalidation and approvals bound to an actor, an action and an input digest.
 
 ```bash
-pnpm add @gridwright/runtime
+pnpm add @yashumani/gridwright-runtime
 ```
 
 Authorization is rechecked on every read, not only on write, and the cache key carries the whole boundary — tenant, user, sorted scopes and all four versions — so no answer crosses a tenant. Revocation stops entries being served before they expire, and deletion is observable. An approval is single-use and read-only mode cannot publish; refusing does not spend the approval it refused.

@@ -1,5 +1,5 @@
-import { bool, described, obj, opt, str } from "@gridwright/schema";
-import type { Value } from "@gridwright/engine";
+import { bool, described, obj, opt, str } from "@yashumani/gridwright-schema";
+import type { Value } from "@yashumani/gridwright-engine";
 import { formatValue } from "./format.js";
 import { columnValues, firstMeasure, requireColumn, type PanelProps, type PanelSpec } from "./registry.js";
 

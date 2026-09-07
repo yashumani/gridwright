@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { parseManifest, type Manifest, type RelationDef } from "@gridwright/schema";
+import { parseManifest, type Manifest, type RelationDef } from "@yashumani/gridwright-schema";
 import {
   Engine, EngineError, MemorySource, compileDataset, planJoins, planToSql, sourceFromText,
   type QueryResult, type Table, type Value,
-} from "@gridwright/engine";
+} from "@yashumani/gridwright-engine";
 
 const dir = (p: string) => fileURLToPath(new URL(p, import.meta.url));
 const read = (f: string) => readFileSync(dir(`../../../examples/${f}`), "utf8");

@@ -1,4 +1,4 @@
-import type { FilledCell, FilledRow, ReportResult } from "@gridwright/bridge";
+import type { FilledCell, FilledRow, ReportResult } from "@yashumani/gridwright-bridge";
 
 /**
  * Renders a filled bridge report.

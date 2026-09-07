@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { analyzeExpression } from "@gridwright/expr";
+import { analyzeExpression } from "@yashumani/gridwright-expr";
 import type {
   Cardinality, DatasetDef, DimensionDef, FieldDef, FieldType, Filter, FilterOp,
   Grain, Manifest, MeasureDef, RelationDef, Scalar, Sort, SortDir,
-} from "@gridwright/schema";
+} from "@yashumani/gridwright-schema";
 import type { EditorAction } from "./editor.js";
 
 /**

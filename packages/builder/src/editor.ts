@@ -1,10 +1,10 @@
 import { isMap, isSeq, parseDocument, stringify, type Document } from "yaml";
 import type {
   DatasetDef, Issue, Manifest, ModelDef, PanelDef, RelationDef, ThemeDef,
-} from "@gridwright/schema";
-import { validateManifest } from "@gridwright/schema";
-import { analyzeExpression } from "@gridwright/expr";
-import { compileModel } from "@gridwright/engine";
+} from "@yashumani/gridwright-schema";
+import { validateManifest } from "@yashumani/gridwright-schema";
+import { analyzeExpression } from "@yashumani/gridwright-expr";
+import { compileModel } from "@yashumani/gridwright-engine";
 
 /**
  * Manifest editing as pure functions over an immutable document, with an undo

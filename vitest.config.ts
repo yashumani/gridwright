@@ -7,13 +7,13 @@ const pkg = (name: string) =>
 export default defineConfig({
   resolve: {
     alias: {
-      "@gridwright/schema": pkg("schema"),
-      "@gridwright/expr": pkg("expr"),
-      "@gridwright/engine": pkg("engine"),
-      "@gridwright/bridge": pkg("bridge"),
-      "@gridwright/panels": pkg("panels"),
-      "@gridwright/react": pkg("react"),
-      "@gridwright/builder": pkg("builder"),
+      "@yashumani/gridwright-schema": pkg("schema"),
+      "@yashumani/gridwright-expr": pkg("expr"),
+      "@yashumani/gridwright-engine": pkg("engine"),
+      "@yashumani/gridwright-bridge": pkg("bridge"),
+      "@yashumani/gridwright-panels": pkg("panels"),
+      "@yashumani/gridwright-react": pkg("react"),
+      "@yashumani/gridwright-builder": pkg("builder"),
       "gridwright": pkg("cli"),
     },
   },
