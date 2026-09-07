@@ -12,7 +12,11 @@ export const styles = `
   --gw-surface-2: #f5f7f6;
   --gw-ink: #15211f;
   --gw-ink-soft: #4b5b58;
-  --gw-ink-faint: #7c8c88;
+  /* Darkened to clear 4.5:1 on both surfaces. This token carries the em dash
+     that stands for a value nobody measured, and a marker for missing data has
+     to be at least as readable as the data — it is the one cell a reader most
+     needs to notice. */
+  --gw-ink-faint: #5f6d6a;
   --gw-rule: #d8e0dd;
   --gw-accent: #1e6f5c;
   --gw-accent-bg: #e4efea;

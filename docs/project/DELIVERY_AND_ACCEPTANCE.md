@@ -89,6 +89,7 @@ that were checked against the unfixed behaviour, and a green pipeline.
 | T09 | Delivered | Fill from view data, and `<Report>` in `@gridwright/react` |
 | T10 | Delivered | Revisions: revise, preview, roll back, export, reopen |
 | T03 | Delivered | `packages/contracts` — versioned envelopes, capability descriptors, and `fixtures/contracts/conformance.json` as the suite another adapter runs against itself |
+| T04 | Delivered | Six named concerns audited; three defects found and closed in `packages/builder` |
 | T11 | Delivered | `packages/adapters/src/ukb.ts` — context packs, with denied access, missing context and unpublished drafts kept as three different outcomes |
 | T12 | Delivered | `packages/adapters/src/talk2data.ts` — all ten admission verdicts, the compiled query and receipt-backed claims |
 | T13 | Delivered | `packages/adapters/src/variance.ts` and `semantics.ts` — golden reconciliation, unsupported-operation rejection, and the R07 mapping across three vocabularies |
@@ -97,6 +98,8 @@ that were checked against the unfixed behaviour, and a green pipeline.
 | T17 | Delivered | `packages/runtime/src/sessions.ts` — authorization rechecked on every read, a cache key that is the whole boundary, revocation, retention and observable deletion |
 | T18 | Delivered | `packages/runtime/src/approvals.ts` — approvals bound to actor, action and input digest, single-use, expiring, with an immutable published version and a read-only mode that cannot be argued with |
 | T16 | Delivered | `packages/workspace` — one frozen analysis snapshot behind the answer and the report, with reconciliation drawn above the numbers rather than under them |
+| T19 | Partly | Synthetic half done: same-commit CI, browser evidence at three sizes in both themes, accessibility (`scripts/verify-accessibility.mjs`, 108 checks), subpath hosting, explicit data inclusion. The private-runtime half needs an approved profile — **D04**, **D07** |
+| T20 | Partly | Reuse with a second compatible view is proven (A02) and the readiness report is published at [`READINESS.md`](READINESS.md). Final acceptance on a live domain waits on G3 |
 
 ### Acceptance scenarios, recorded against evidence
 
@@ -116,7 +119,6 @@ Section 3 lists these as specifications. This is what each one currently has.
 | A09 Approval and publication | **Passed** | Approvals bound to actor, action and input digest; expiry and replay refused; read-only cannot publish and does not spend the approval it refused; a published version is deep-copied and frozen |
 | A11 Responsive export and deployment | **Passed** | `scripts/verify-a11.mjs` drives the built demo in Chromium at 1440×900, 834×1112 and 390×844, hosted under a project subpath — 26 checks: no horizontal overflow before or after loading a dashboard, panels rendered, Tab reaches a visibly focused control, no external network requests, no page errors, and an unreadable file reported rather than swallowed. Two defects found and fixed |
 | A12 Evidence, sessions and handoff | **Passed** | Artifacts carry all four versions; a result computed against versions the session moved past is refused rather than written; deletion is observable; export and reopen remain reproducible |
-| T04 | Delivered | Six named concerns audited; three defects found and closed in `packages/builder` |
 
 **G1 is met.** It requires T02 and T04-T10, and all seven are delivered. The
 golden fixture runs end to end — workbook, bindings, definition, data, screen —
@@ -162,7 +164,11 @@ rather than rounding it. That is a change the bridge needs before a
 semi-additive metric can cross this boundary, and it is recorded here rather
 than worked around.
 
-Next: G3, which needs T19 and T20 on an approved private environment.
+Next: G3, which needs T19 and T20 on an approved private environment. The
+readiness report at [`READINESS.md`](READINESS.md) states what is ready, what is
+not, and what the difference depends on — the short version being that no
+service has been contacted, and that is an access decision rather than an
+engineering one.
 
 Record task, requirement IDs, source commit(s), fixture version, adapter/model/policy versions, commands/checks, results, evidence location, blockers and next task in each PR. Preserve source boundaries and mark mocked versus live integrations clearly.
 

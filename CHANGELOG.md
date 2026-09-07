@@ -29,6 +29,21 @@ documented types, and the internals of every package below `@gridwright/react`.
 
 ### Added
 
+- **An accessibility check** (`scripts/verify-accessibility.mjs`) over both
+  built apps, at three sizes, in both themes — 108 checks covering heading
+  order, landmarks, table header scope, control labelling, tab order, focus
+  visibility and text contrast against whatever is actually painted behind it.
+  It found five real defects on its first run, including the em dash that stands
+  for a missing value being too faint to read at 3.52:1. Deliberately reports
+  named failures rather than a score: a script that prints "0 violations"
+  invites being mistaken for an accessible page.
+
+- **A readiness report** at `docs/project/READINESS.md` (task T20), stating what
+  is ready, what is not, and what the difference depends on. The load-bearing
+  sentence is that **no service has been contacted** — the adapters are correct
+  against the contracts as published, which is not the same claim as an
+  integration that works.
+
 - **`@gridwright/adapters`** (tasks T11–T13): typed, read-only clients for the
   knowledge, conversational and variance services, built against those
   projects' **actual contracts** read from their repositories rather than
@@ -338,6 +353,15 @@ documented types, and the internals of every package below `@gridwright/react`.
 
 ### Fixed
 
+- **Faint text now clears 4.5:1 in both themes.** `--gw-ink-faint`, the
+  playground's `--pg-faint` and the workspace's `--gww-faint` were all below the
+  ratio for small text on a light ground. The one that mattered most carries the
+  em dash for a value nobody measured — a marker for missing data has to be at
+  least as readable as the data, because it is the cell a reader most needs to
+  notice.
+- **The unified workspace has a `main` landmark.** It rendered two sections
+  inside a plain div, so a screen-reader user had no way to skip to the content.
+
 - **A screen-reader label no longer widens the page.** `.gw-sr-only` is
   positioned absolutely, and with no positioned ancestor it is placed against
   the initial containing block — which means it escapes an enclosing
@@ -560,6 +584,21 @@ documented types, and the internals of every package below `@gridwright/react`.
   never has to rely on it.
 - Every workflow declares least-privilege permissions and pins actions to
   commit SHAs.
+- The file server behind the browser-evidence scripts no longer serves files
+  from outside the build directory. All three scripts pasted the same
+  `join(root, urlPath)`, which walks out of the directory as soon as the
+  request contains `..`, so the server would read and return any file the
+  process could open. CodeQL reported it as a path traversal on
+  `scripts/verify-accessibility.mjs`. The three copies are now one module,
+  `scripts/lib/serve-dist.mjs`, and the request never reaches a path
+  expression at all: the build directory is walked once at startup and the
+  request path is looked up in that index, so a file the build did not produce
+  has no entry and there is nothing to escape from. Symlinks are followed only
+  while they stay inside the build, a directory no longer throws `EISDIR`, and
+  malformed percent-encoding answers 400 instead of crashing the request
+  handler. Held by `scripts/lib/serve-dist.test.ts`, whose traversals are sent
+  as raw requests because `fetch` resolves `..` — and `%2e%2e`, which the URL
+  parser also treats as a dot segment — before a request leaves the client.
 
 ## 0.1.0
 

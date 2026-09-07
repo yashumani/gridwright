@@ -181,7 +181,7 @@ export function Workspace({ snapshot, title, locale }: WorkspaceProps) {
         </p>
       )}
 
-      <div className="gww-body">
+      <main className="gww-body">
         <section className="gww-chat" aria-label="Answer">
           <h2>Answer</h2>
           <Answer snapshot={snapshot} />
@@ -207,7 +207,7 @@ export function Workspace({ snapshot, title, locale }: WorkspaceProps) {
             </p>
           )}
         </section>
-      </div>
+      </main>
 
       {snapshot.diagnostics.length > 0 && (
         <ul className="gww-diagnostics" data-testid="diagnostics">

@@ -17,27 +17,14 @@
  * step where a browser is available.
  */
 import { chromium } from "playwright";
-import http from "node:http";
-import { existsSync, readFileSync } from "node:fs";
-import { extname, join, resolve } from "node:path";
+import { resolve } from "node:path";
+import { serveDist } from "./lib/serve-dist.mjs";
 
 const DIST = resolve(process.cwd(), "apps/playground/dist");
 /** Served under a project path, because that is where the demo actually lives. */
 const PREFIX = "/gridwright";
 const PORT = Number(process.env.A11_PORT ?? 4318);
 const ORIGIN = `http://localhost:${PORT}`;
-
-const TYPES = {
-  ".html": "text/html",
-  ".js": "text/javascript",
-  ".css": "text/css",
-  ".svg": "image/svg+xml",
-  ".json": "application/json",
-  ".csv": "text/csv",
-  ".yaml": "text/yaml",
-  ".png": "image/png",
-  ".ico": "image/x-icon",
-};
 
 const VIEWPORTS = [
   { name: "desktop", width: 1440, height: 900 },
@@ -58,22 +45,7 @@ const record = (name, passed, detail) => {
  * development and break here, which is exactly the deployment this has to
  * prove.
  */
-function serve() {
-  const server = http.createServer((req, res) => {
-    const url = decodeURIComponent((req.url ?? "/").split("?")[0]);
-    if (!url.startsWith(PREFIX)) {
-      res.writeHead(404, { "content-type": "text/plain" });
-      res.end("not found — this build is hosted under " + PREFIX);
-      return;
-    }
-    const rel = url.slice(PREFIX.length) || "/";
-    const candidate = join(DIST, rel);
-    const file = existsSync(candidate) && !candidate.endsWith("/") ? candidate : join(DIST, "index.html");
-    res.writeHead(200, { "content-type": TYPES[extname(file)] ?? "application/octet-stream" });
-    res.end(readFileSync(file));
-  });
-  return new Promise((r) => server.listen(PORT, () => r(server)));
-}
+const serve = () => serveDist({ root: DIST, port: PORT, prefix: PREFIX });
 
 const server = await serve();
 const browser = await chromium.launch({
