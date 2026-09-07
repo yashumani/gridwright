@@ -50,6 +50,7 @@ export {
   agreesWithVariance,
   reconcileMetric,
   varianceToAuthoritative,
+  type BridgeAdditivity,
   type BridgeAggregation,
   type BridgeFacts,
   type MetricFacts,

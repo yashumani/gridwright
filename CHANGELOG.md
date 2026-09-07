@@ -29,6 +29,55 @@ documented types, and the internals of every package below `@gridwright/react`.
 
 ### Added
 
+- **`@gridwright/adapters`** (tasks T11–T13): typed, read-only clients for the
+  knowledge, conversational and variance services, built against those
+  projects' **actual contracts** read from their repositories rather than
+  inferred. Each takes an injected transport, so the client is real and tested
+  while whether it points at a running service, a recorded fixture or nothing
+  is the caller's decision. **No live connector is claimed.**
+
+  Denied access, missing context and an unpublished draft stay three outcomes:
+  a client that returns an empty pack for a 403 turns "you are not allowed to
+  see this" into "there is nothing to see". All ten of Talk2Data's admission
+  verdicts stay ten answers, and a non-accepting verdict never reaches the
+  service. Receipts are copied field for field; a claim citing a receipt that
+  did not arrive is reported untraceable.
+
+- **`@gridwright/coordinator`** (tasks T14–T15): the gate every capability call
+  passes and the bounded run that spends one budget. Scope is frozen into the
+  invocation, so no specialist can widen its own; output is classified again on
+  the way back, because a descriptor is a claim about a service rather than a
+  constraint on it; and a capability needing a policy decision does not run when
+  the adviser cannot be reached. A specialist cannot start another run because
+  nothing it is given can start one.
+
+- **`@gridwright/runtime`** (tasks T17–T18): scoped sessions, artifact
+  persistence, cache invalidation and approval records. Authorization is
+  rechecked on *retrieval*, not only on write. The cache key carries tenant,
+  user, sorted scopes, domain and all four versions, so no answer crosses a
+  tenant. An approval is bound to an actor, an action and an input digest, is
+  single-use and expires; read-only refuses first and does not spend the
+  approval it refused.
+
+- **`@gridwright/workspace`** (task T16): one frozen analysis snapshot behind
+  the answer and the report. `reconcile` compares the certified claim, the
+  analysis and the bridge's total row; a value with no receipt is reported even
+  when the number is right, and a disagreement is drawn above the numbers rather
+  than under them.
+
+- **A synthetic preview of the unified surface** (`apps/workspace-demo`) and
+  `scripts/verify-a05.mjs`, which drives it in Chromium at desktop and phone
+  sizes: the answer quotes the figures the report draws, the receipt is on the
+  page rather than in a tooltip, the configured row with no data survives, and
+  nothing disagrees.
+
+- **`period_end` aggregation**, supported where the bindings declare an
+  `orderColumn`. It was refused outright before, for a good reason — a prepared
+  view arrives in whatever order the query returned, and "the last one" from an
+  unordered set is an arbitrary one. With an explicit ordering there is a real
+  answer, so the rule is supported when the configuration supplies the ordering
+  and refused when it does not.
+
 - **Detection of instructions embedded in evidence** (requirement R24), in
   `@gridwright/contracts` and wired into the bridge. Configuration text is read
   from files somebody else can write, and no length check catches a cell whose
@@ -288,6 +337,27 @@ documented types, and the internals of every package below `@gridwright/react`.
 - Documentation split out of the README into [`docs/`](docs/).
 
 ### Fixed
+
+- **A screen-reader label no longer widens the page.** `.gw-sr-only` is
+  positioned absolutely, and with no positioned ancestor it is placed against
+  the initial containing block — which means it escapes an enclosing
+  `overflow: auto` and adds its own width to the document's scrollable area. The
+  symptom was a page scrolling sideways by the width of an invisible label, on a
+  table already scrolling correctly inside its own box. Report cells are now
+  containing blocks. Found by the A05 browser journey, not by reading.
+
+### Changed
+
+- **Additivity is three-valued: `additive`, `semi_additive`, `non_additive`.**
+  Reconciling with Talk2Data's registry showed that a boolean cannot say what is
+  true of a backlog — it adds across queues and does not add across time.
+  Rounding `semi_additive` to additive lets a year-to-date total become the sum
+  of twelve month-end readings, and rounding it down refuses a total that is
+  perfectly correct across rows. A workbook or snapshot may still say `TRUE` or
+  `FALSE`, which read as `additive` and `non_additive`; saying `semi_additive`
+  needs the word. An unreadable value is refused rather than defaulted, because
+  defaulting an unknown additivity to additive is the exact failure the third
+  value exists to prevent.
 
 - **A skeleton diagnostic names the heading's own cell.** `SkeletonRow` carried
   only the key cell's reference, so a warning about a heading pointed one column

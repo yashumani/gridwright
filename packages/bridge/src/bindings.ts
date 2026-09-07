@@ -27,12 +27,95 @@ import type { Cell, CellRef, SheetRead, WorkbookRead } from "./xlsx.js";
 
 // ---------------------------------------------------------------- normalized
 
+/**
+ * Additive, semi-additive, non-additive.
+ *
+ * `semi_additive` is the one worth naming: additive across dimensions, not
+ * across time. A queue backlog totals correctly across queues within a period
+ * and is meaningless summed across periods.
+ */
+export const ADDITIVITY = ["additive", "semi_additive", "non_additive"] as const;
+export type Additivity = (typeof ADDITIVITY)[number];
+
+/**
+ * Reads an additivity from a workbook cell or a metadata field.
+ *
+ * A boolean is the older spelling and still means what it meant. Anything the
+ * vocabulary does not contain returns `undefined` and is refused by the caller
+ * rather than defaulting — defaulting an unknown additivity to `additive` is
+ * the exact failure this type exists to prevent.
+ */
+export function readAdditivity(value: unknown): Additivity | undefined {
+  if (value === true) return "additive";
+  if (value === false) return "non_additive";
+  if (typeof value !== "string") return undefined;
+  const normalised = value.trim().toLowerCase().replace(/[-\s]+/g, "_");
+  if (normalised === "true") return "additive";
+  if (normalised === "false") return "non_additive";
+  return (ADDITIVITY as readonly string[]).includes(normalised)
+    ? (normalised as Additivity)
+    : undefined;
+}
+
+/**
+ * A metric as a snapshot may still spell it, before normalisation.
+ *
+ * `additive: true` was the only spelling until the three-valued vocabulary
+ * arrived. Snapshots written against the old one keep working, because
+ * refusing them would make a vocabulary change into a migration nobody asked
+ * for — and because a boolean genuinely does mean one of the three.
+ */
+export interface RawMetricDefinition extends Omit<MetricDefinition, "additivity"> {
+  additivity?: unknown;
+  /** The older spelling. `true` reads as additive, `false` as non-additive. */
+  additive?: unknown;
+}
+
+/**
+ * Normalises a metric's additivity from whichever field the snapshot used.
+ *
+ * Returns the problem rather than a default when neither field is readable.
+ * Defaulting an unknown additivity to `additive` is precisely the failure the
+ * three-valued type exists to prevent.
+ */
+export function normaliseMetric(
+  raw: RawMetricDefinition,
+): { ok: true; metric: MetricDefinition } | { ok: false; problem: Problem } {
+  const additivity = readAdditivity(raw.additivity ?? raw.additive);
+  if (additivity === undefined) {
+    return {
+      ok: false,
+      problem: {
+        code: "additive-conflict",
+        message:
+          `metric "${raw.id}" declares additivity ${JSON.stringify(raw.additivity ?? raw.additive)}, ` +
+          `which is not one of ${ADDITIVITY.join(", ")} (or TRUE/FALSE)`,
+      },
+    };
+  }
+  const { additive: _legacy, ...rest } = raw;
+  return { ok: true, metric: { ...(rest as Omit<MetricDefinition, "additivity">), additivity } };
+}
+
 export interface MetricDefinition {
   id: string;
   label: string;
   unit: string;
   grain: string;
-  additive: boolean;
+  /**
+   * How the metric behaves under aggregation.
+   *
+   * Three values, not two, because a boolean cannot say the thing that is
+   * actually true of a backlog: it adds across queues and it does not add
+   * across time. Reconciling with Talk2Data's registry — whose `additivity` has
+   * had three values all along — is what surfaced that; a boolean forced
+   * `SEMI_ADDITIVE` to round to one of the wrong answers, and rounding it *up*
+   * lets a year-to-date total be the sum of twelve month-end readings.
+   *
+   * A workbook may still declare `TRUE` or `FALSE`, which read as `additive`
+   * and `non_additive`. Saying `semi_additive` needs the word.
+   */
+  additivity: Additivity;
   aggregation: string;
   /** "unset" is a real answer: direction belongs to approved knowledge. */
   polarity: string;
@@ -59,7 +142,15 @@ export interface MetadataSnapshot {
   source: string;
   capturedAt: string;
   version: string;
-  metrics: MetricDefinition[];
+  /**
+   * Metrics as the snapshot holds them, before normalisation.
+   *
+   * Typed loosely on purpose: a snapshot published against the older
+   * `additive: true` spelling is still a valid snapshot, and `resolveBindings`
+   * normalises it. Requiring the new field here would make a vocabulary change
+   * into a migration every publisher has to do first.
+   */
+  metrics: RawMetricDefinition[];
   views: ViewDefinition[];
 }
 
@@ -102,6 +193,15 @@ export interface BindingSpec {
   unit: string;
   rows: RowBinding[];
   periods: Record<string, string>;
+  /**
+   * The view column that orders rows within a key and period.
+   *
+   * Only needed by an aggregation that has to know which row is last, such as
+   * `period_end`. Declared here rather than guessed, because a prepared view
+   * arrives in whatever order the query returned and "the last one" from an
+   * unordered set is an arbitrary one.
+   */
+  orderColumn?: string;
 }
 
 // ------------------------------------------------------------------ problems
@@ -147,6 +247,8 @@ export interface BindingResolution {
   /** Which metadata snapshot this resolution was made against. */
   snapshot: { source: string; capturedAt: string; version: string };
   periods: Record<string, string>;
+  /** The ordering column, when the bindings declared one. */
+  orderColumn?: string;
   diagnostics: string[];
   /**
    * Configuration text that looks like an instruction rather than a label
@@ -359,10 +461,10 @@ export function resolveBindings(
   for (const finding of untrusted) diagnostics.push(describeFinding(finding));
 
   // --- the metric and the view exist, by id ---------------------------------
-  const metric = metadata.metrics.find((m) => m.id === spec.metric);
+  const rawMetric = metadata.metrics.find((m) => m.id === spec.metric);
   const view = metadata.views.find((v) => v.id === spec.view);
 
-  if (!metric) {
+  if (!rawMetric) {
     problems.push({
       code: "metric-unknown",
       message: `bindings name metric "${spec.metric}", which the metadata snapshot does not define`,
@@ -374,7 +476,16 @@ export function resolveBindings(
       message: `bindings name view "${spec.view}", which the metadata snapshot does not define`,
     });
   }
-  if (!metric || !view) return { ok: false, problems };
+  if (!rawMetric || !view) return { ok: false, problems };
+
+  // Normalised here rather than at every reader: a snapshot may still spell
+  // additivity as a boolean, and one place to accept that is one place to fix.
+  const normalised = normaliseMetric(rawMetric as RawMetricDefinition);
+  if (!normalised.ok) {
+    problems.push(normalised.problem);
+    return { ok: false, problems };
+  }
+  const metric = normalised.metric;
 
   if (!metric.definitionRef || metric.definitionRef.endsWith("unavailable")) {
     // R07 wants definitions traceable to approved knowledge. None is wired
@@ -412,7 +523,31 @@ export function resolveBindings(
 
     conflict("grain", metric.grain, "grain-conflict");
     conflict("unit", metric.unit, "unit-conflict");
-    conflict("additive", metric.additive, "additive-conflict");
+    // Normalised on both sides before comparing: a workbook saying TRUE and a
+    // snapshot saying "additive" agree, and reporting that as a conflict would
+    // be this bridge inventing a disagreement out of two spellings.
+    const declared = config.get("additive");
+    if (declared) {
+      const fromWorkbook = readAdditivity(declared.value.value);
+      if (fromWorkbook === undefined) {
+        problems.push({
+          code: "additive-conflict",
+          message:
+            `the workbook declares additive ${JSON.stringify(declared.value.value)}, which is not ` +
+            `one of ${ADDITIVITY.join(", ")} (or TRUE/FALSE)`,
+          at: declared.value.ref,
+        });
+      } else if (fromWorkbook !== metric.additivity) {
+        problems.push({
+          code: "additive-conflict",
+          message:
+            `additive disagrees: the workbook says ${JSON.stringify(fromWorkbook)}, ` +
+            `the metadata snapshot says ${JSON.stringify(metric.additivity)}. ` +
+            `Which source is authoritative is decision D01 and still open, so this is refused rather than resolved.`,
+          at: declared.value.ref,
+        });
+      }
+    }
   }
 
   // --- the bindings agree with the metric ----------------------------------
@@ -488,7 +623,7 @@ export function resolveBindings(
     }
 
     if (binding.kind === "total") {
-      if (!metric.additive) {
+      if (metric.additivity === "non_additive") {
         // R08: a non-additive metric does not become summable because a row is
         // labelled Total.
         problems.push({
@@ -581,6 +716,7 @@ export function resolveBindings(
         version: metadata.version,
       },
       periods: spec.periods,
+      ...(spec.orderColumn ? { orderColumn: spec.orderColumn } : {}),
       diagnostics,
       untrusted,
     },

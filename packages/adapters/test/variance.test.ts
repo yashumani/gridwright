@@ -182,25 +182,26 @@ describe("R07 reconciliation across the three vocabularies", () => {
     const r = reconcileMetric(mapping, facts());
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.bridge).toMatchObject({ aggregation: "sum", additive: true, unit: "COUNT" });
+    expect(r.bridge).toMatchObject({ aggregation: "sum", additivity: "additive", unit: "COUNT" });
   });
 
-  it("refuses a SEMI_ADDITIVE metric, because a boolean cannot say it", () => {
-    // The real finding. A backlog adds across queues and not across time.
-    // Rounding that to `additive: true` lets a year-to-date total become the
-    // sum of twelve month-end readings.
+  it("carries SEMI_ADDITIVE across intact, rather than rounding it", () => {
+    // The finding that changed the bridge. A backlog adds across queues and
+    // not across time; rounding that to additive lets a year-to-date total
+    // become the sum of twelve month-end readings, so the bridge's additivity
+    // is three-valued and the value survives the crossing.
     const r = reconcileMetric(mapping, facts({ additivity: "SEMI_ADDITIVE" }));
-    expect(r.ok).toBe(false);
-    if (r.ok) return;
-    expect(r.problems.map((p) => p.code)).toContain("additivity-unrepresentable");
-    expect(r.problems.map((p) => p.message).join(" ")).toContain("month-end");
+    expect(r.ok, JSON.stringify(!r.ok && r.problems)).toBe(true);
+    if (!r.ok) return;
+    expect(r.bridge.additivity).toBe("semi_additive");
   });
 
-  it("refuses LAST_VALUE and names it as the variance product's period_end", () => {
+  it("maps LAST_VALUE to period_end and names the condition", () => {
     const r = reconcileMetric(mapping, facts({ aggregation: "LAST_VALUE" }));
-    expect(r.ok).toBe(false);
-    if (r.ok) return;
-    expect(r.problems.map((p) => p.message).join(" ")).toContain("period_end");
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.bridge.aggregation).toBe("period_end");
+    expect(r.notes.join(" ")).toContain("orderColumn");
   });
 
   it("refuses AVERAGE and says why agreeing was not a coincidence", () => {
@@ -248,8 +249,9 @@ describe("R07 reconciliation across the three vocabularies", () => {
   });
 
   it("reports every conflict at once rather than the first", () => {
-    const r = reconcileMetric({ ...mapping, semanticVersion: "0" }, facts({ additivity: "SEMI_ADDITIVE" }), {
+    const r = reconcileMetric({ ...mapping, semanticVersion: "0" }, facts({ aggregation: "RATIO" }), {
       unit: "hours",
+      grain: "agent",
     });
     expect(r.ok).toBe(false);
     if (r.ok) return;
