@@ -34,7 +34,12 @@ documented types, and the internals of every package below `@gridwright/react`.
   the page loads is the one this commit built, so a deploy serving a stale
   artifact is reported with both filenames instead of looking healthy. Run
   against the local build it passes 7/7; against a deliberately stale copy the
-  same-commit check fails and the script exits 1.
+  same-commit check fails and the script exits 1. `--mirror` additionally pulls
+  every file off the live origin and compares it byte for byte before rendering
+  it, for environments where the browser cannot reach the origin but an
+  ordinary HTTP client can; the mode it ran in is printed rather than inferred.
+- **The demo is live** at <https://yashumani.github.io/gridwright/>, verified
+  8/8 against commit `026be47`.
 
 - **An accessibility check** (`scripts/verify-accessibility.mjs`) over both
   built apps, at three sizes, in both themes — 108 checks covering heading
