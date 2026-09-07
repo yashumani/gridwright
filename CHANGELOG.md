@@ -29,6 +29,21 @@ documented types, and the internals of every package below `@gridwright/react`.
 
 ### Added
 
+- **An accessibility check** (`scripts/verify-accessibility.mjs`) over both
+  built apps, at three sizes, in both themes — 108 checks covering heading
+  order, landmarks, table header scope, control labelling, tab order, focus
+  visibility and text contrast against whatever is actually painted behind it.
+  It found five real defects on its first run, including the em dash that stands
+  for a missing value being too faint to read at 3.52:1. Deliberately reports
+  named failures rather than a score: a script that prints "0 violations"
+  invites being mistaken for an accessible page.
+
+- **A readiness report** at `docs/project/READINESS.md` (task T20), stating what
+  is ready, what is not, and what the difference depends on. The load-bearing
+  sentence is that **no service has been contacted** — the adapters are correct
+  against the contracts as published, which is not the same claim as an
+  integration that works.
+
 - **`@gridwright/adapters`** (tasks T11–T13): typed, read-only clients for the
   knowledge, conversational and variance services, built against those
   projects' **actual contracts** read from their repositories rather than
@@ -337,6 +352,15 @@ documented types, and the internals of every package below `@gridwright/react`.
 - Documentation split out of the README into [`docs/`](docs/).
 
 ### Fixed
+
+- **Faint text now clears 4.5:1 in both themes.** `--gw-ink-faint`, the
+  playground's `--pg-faint` and the workspace's `--gww-faint` were all below the
+  ratio for small text on a light ground. The one that mattered most carries the
+  em dash for a value nobody measured — a marker for missing data has to be at
+  least as readable as the data, because it is the cell a reader most needs to
+  notice.
+- **The unified workspace has a `main` landmark.** It rendered two sections
+  inside a plain div, so a screen-reader user had no way to skip to the content.
 
 - **A screen-reader label no longer widens the page.** `.gw-sr-only` is
   positioned absolutely, and with no positioned ancestor it is placed against

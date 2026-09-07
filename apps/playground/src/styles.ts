@@ -4,7 +4,7 @@ html, body, #root { height: 100%; margin: 0; }
 
 .pg-root {
   --pg-surface: #ffffff; --pg-ground: #f5f7f6; --pg-ink: #15211f;
-  --pg-faint: #7c8c88; --pg-rule: #d8e0dd; --pg-accent: #1e6f5c; --pg-bad: #b3261e;
+  --pg-faint: #64736f; --pg-rule: #d8e0dd; --pg-accent: #1e6f5c; --pg-bad: #b3261e;
   display: flex; flex-direction: column; height: 100%;
   background: var(--pg-ground); color: var(--pg-ink);
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;

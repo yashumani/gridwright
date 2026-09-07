@@ -97,6 +97,8 @@ that were checked against the unfixed behaviour, and a green pipeline.
 | T17 | Delivered | `packages/runtime/src/sessions.ts` — authorization rechecked on every read, a cache key that is the whole boundary, revocation, retention and observable deletion |
 | T18 | Delivered | `packages/runtime/src/approvals.ts` — approvals bound to actor, action and input digest, single-use, expiring, with an immutable published version and a read-only mode that cannot be argued with |
 | T16 | Delivered | `packages/workspace` — one frozen analysis snapshot behind the answer and the report, with reconciliation drawn above the numbers rather than under them |
+| T19 | Partly | Synthetic half done: same-commit CI, browser evidence at three sizes in both themes, accessibility (`scripts/verify-accessibility.mjs`, 108 checks), subpath hosting, explicit data inclusion. The private-runtime half needs an approved profile — **D04**, **D07** |
+| T20 | Partly | Reuse with a second compatible view is proven (A02) and the readiness report is published at [`READINESS.md`](READINESS.md). Final acceptance on a live domain waits on G3 |
 
 ### Acceptance scenarios, recorded against evidence
 
@@ -162,7 +164,11 @@ rather than rounding it. That is a change the bridge needs before a
 semi-additive metric can cross this boundary, and it is recorded here rather
 than worked around.
 
-Next: G3, which needs T19 and T20 on an approved private environment.
+Next: G3, which needs T19 and T20 on an approved private environment. The
+readiness report at [`READINESS.md`](READINESS.md) states what is ready, what is
+not, and what the difference depends on — the short version being that no
+service has been contacted, and that is an access decision rather than an
+engineering one.
 
 Record task, requirement IDs, source commit(s), fixture version, adapter/model/policy versions, commands/checks, results, evidence location, blockers and next task in each PR. Preserve source boundaries and mark mocked versus live integrations clearly.
 

@@ -153,7 +153,12 @@ pnpm build && pnpm --filter @gridwright/playground build
 node scripts/verify-a11.mjs
 ```
 
-It is a script rather than a test because it needs a browser binary and a
+`scripts/verify-a05.mjs` does the same for the unified surface — that the
+answer quotes the figures the report draws — and
+`scripts/verify-accessibility.mjs` audits both apps at three sizes in both
+themes.
+
+They are scripts rather than tests because they need a browser binary and a
 server, and CI installs neither; a check in the pipeline that silently never
 runs is worse than no check.
 

@@ -17,7 +17,7 @@ export const styles = `
   --gww-surface: #ffffff;
   --gww-ink: #14201e;
   --gww-ink-soft: #3d4d4a;
-  --gww-faint: #6b7a77;
+  --gww-faint: #5b6a67;
   --gww-rule: #dce4e1;
   --gww-accent: #1e6f5c;
   --gww-accent-bg: #e6f0ec;
