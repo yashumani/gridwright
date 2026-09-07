@@ -590,13 +590,15 @@ documented types, and the internals of every package below `@gridwright/react`.
   request contains `..`, so the server would read and return any file the
   process could open. CodeQL reported it as a path traversal on
   `scripts/verify-accessibility.mjs`. The three copies are now one module,
-  `scripts/lib/serve-dist.mjs`, which requires the resolved path to stay under
-  the build root, resolves symlinks before reading so a link inside the build
-  cannot point outside it, refuses a directory rather than throwing `EISDIR`,
-  and answers malformed percent-encoding with 400 instead of crashing the
-  request handler. Held by `scripts/lib/serve-dist.test.ts`, whose traversals
-  are sent as raw requests because `fetch` resolves `..` — and `%2e%2e` —
-  before a request leaves the client.
+  `scripts/lib/serve-dist.mjs`, and the request never reaches a path
+  expression at all: the build directory is walked once at startup and the
+  request path is looked up in that index, so a file the build did not produce
+  has no entry and there is nothing to escape from. Symlinks are followed only
+  while they stay inside the build, a directory no longer throws `EISDIR`, and
+  malformed percent-encoding answers 400 instead of crashing the request
+  handler. Held by `scripts/lib/serve-dist.test.ts`, whose traversals are sent
+  as raw requests because `fetch` resolves `..` — and `%2e%2e`, which the URL
+  parser also treats as a dot segment — before a request leaves the client.
 
 ## 0.1.0
 

@@ -8,11 +8,11 @@
  * that the server must never return.
  */
 import { describe, expect, it, afterAll, beforeAll } from "vitest";
-import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { request } from "node:http";
-import { fileUnder, serveDist } from "./serve-dist.mjs";
+import { indexBuild, serveDist } from "./serve-dist.mjs";
 
 let home: string;
 let root: string;
@@ -30,34 +30,18 @@ beforeAll(() => {
 
 afterAll(() => rmSync(home, { recursive: true, force: true }));
 
-describe("fileUnder", () => {
-  it("resolves a file that is in the build", () => {
-    expect(fileUnder(root, "/assets/app.js")).toBe(resolve(root, "assets/app.js"));
+describe("indexBuild", () => {
+  it("holds every file the build produced, keyed by its URL path", () => {
+    const files = indexBuild(root);
+    expect([...files.keys()].sort()).toEqual(["/assets/app.js", "/index.html"]);
+    expect(files.get("/assets/app.js")).toBe(resolve(root, "assets/app.js"));
   });
 
-  it("refuses a path that climbs out of the build", () => {
-    expect(fileUnder(root, "/../secret.txt")).toBeUndefined();
-    expect(fileUnder(root, "/assets/../../secret.txt")).toBeUndefined();
-  });
-
-  it("refuses an absolute path, however many slashes it leads with", () => {
-    expect(fileUnder(root, "//etc/hosts")).toBeUndefined();
-    expect(fileUnder(root, "///etc/hosts")).toBeUndefined();
-  });
-
-  it("refuses a symlink that points out of the build", () => {
-    // The path is inside the directory; the file is not. Checking only the
-    // path would return this one.
-    expect(fileUnder(root, "/escape.txt")).toBeUndefined();
-  });
-
-  it("refuses a directory, which readFileSync would throw on", () => {
-    expect(fileUnder(root, "/assets")).toBeUndefined();
-    expect(fileUnder(root, "/")).toBeUndefined();
-  });
-
-  it("refuses a file that is not there", () => {
-    expect(fileUnder(root, "/nope.js")).toBeUndefined();
+  it("holds nothing outside the build, so there is no path to escape from", () => {
+    const files = indexBuild(root);
+    // The symlink is inside the directory; its target is not.
+    expect(files.has("/escape.txt")).toBe(false);
+    expect([...files.values()].every((f) => f.startsWith(realpathSync(root) + "/"))).toBe(true);
   });
 });
 
@@ -108,6 +92,12 @@ describe("serveDist", () => {
 
   it("answers a plain traversal with the build's own entry point", async () => {
     const res = await raw("/demo/../secret.txt");
+    expect(res.body).not.toContain("NOT A BUILD ARTIFACT");
+    expect(res.body).toBe("<title>the build</title>");
+  });
+
+  it("answers a symlink out of the build with the entry point, not the file it points at", async () => {
+    const res = await raw("/demo/escape.txt");
     expect(res.body).not.toContain("NOT A BUILD ARTIFACT");
     expect(res.body).toBe("<title>the build</title>");
   });

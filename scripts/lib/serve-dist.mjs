@@ -5,16 +5,18 @@
  * had the same defect: `join(root, urlPath)` puts whatever the request asks
  * for on the end of the build directory, so `/../../etc/passwd` walks out of
  * it and the server reads the file. CodeQL reports it as a path traversal and
- * is right to. Everything served here is a build artifact and the socket is on
- * loopback, but a repository should not contain a server that reads whatever
- * it is asked for, and the guard costs one comparison.
+ * is right to.
  *
- * `fileUnder` is the guard, and is exported so it can be tested without a
- * socket.
+ * The fix is not a check on the joined path. It is that the request never
+ * reaches a path expression at all: the build directory is walked once at
+ * startup and the request path is looked up in that index. A file the build
+ * did not produce has no entry, so there is nothing to escape from — and a
+ * later reader does not have to decide whether some `startsWith` guard is
+ * airtight, because there is no guard to get wrong.
  */
 import http from "node:http";
-import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
-import { extname, resolve, sep } from "node:path";
+import { readFileSync, readdirSync, realpathSync, statSync } from "node:fs";
+import { extname, join, resolve, sep } from "node:path";
 
 /** Content types across all three scripts; a missing one would serve a build asset as a download. */
 export const TYPES = {
@@ -30,26 +32,37 @@ export const TYPES = {
 };
 
 /**
- * Resolves a decoded URL path to a readable file inside `root`, or `undefined`.
+ * Every file the build produced, keyed by the URL path that should serve it.
  *
- * `undefined` covers every way the request does not name a file in the build:
- * it escaped the directory, it does not exist, it is a directory, or it is a
- * symlink out. The caller treats all of those the same way — serve
- * `index.html` — because a single-page build answers unknown paths with its
- * own entry point, and because a checker that distinguishes them would be
- * telling a caller which files exist outside the directory it serves.
+ * Symlinks are followed only while they stay inside the build: a path inside
+ * the directory can still name a file outside it, and a checker that reads
+ * through such a link is the same defect wearing a different hat.
  */
-export function fileUnder(root, urlPath) {
-  const base = resolve(root);
-  const candidate = resolve(base, urlPath.replace(/^\/+/, ""));
-  if (candidate !== base && !candidate.startsWith(base + sep)) return undefined;
-  if (!existsSync(candidate) || statSync(candidate).isDirectory()) return undefined;
-  // Containment of the path is not containment of the file: a symlink inside
-  // the build can still point outside it.
-  const real = realpathSync(candidate);
-  const realBase = realpathSync(base);
-  if (real !== realBase && !real.startsWith(realBase + sep)) return undefined;
-  return real;
+export function indexBuild(root) {
+  const base = realpathSync(resolve(root));
+  const files = new Map();
+  const walk = (dir, prefix) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const absolute = join(dir, entry.name);
+      const url = `${prefix}/${entry.name}`;
+      if (entry.isDirectory()) {
+        walk(absolute, url);
+      } else if (entry.isFile()) {
+        files.set(url, absolute);
+      } else {
+        let real;
+        try {
+          real = realpathSync(absolute);
+        } catch {
+          continue; // A link to nothing.
+        }
+        if (real !== base && !real.startsWith(base + sep)) continue;
+        if (statSync(real).isFile()) files.set(url, real);
+      }
+    }
+  };
+  walk(base, "");
+  return files;
 }
 
 /**
@@ -59,10 +72,16 @@ export function fileUnder(root, urlPath) {
  * point of it in `verify-a11.mjs`: an asset referenced absolutely works in
  * development and breaks under a project path, and only a server that refuses
  * the root will show it.
+ *
+ * Anything the index does not hold is answered with the build's own
+ * `index.html`, because a single-page build answers unknown paths with its
+ * entry point — and because a server that distinguished "not in this build"
+ * from "not on this disk" would be reporting what else is on the disk.
  */
 export function serveDist({ root, port, prefix = "" }) {
-  const base = resolve(root);
-  const index = resolve(base, "index.html");
+  const files = indexBuild(root);
+  const entry = files.get("/index.html");
+  if (!entry) throw new Error(`no index.html in ${resolve(root)} — build it first`);
   const server = http.createServer((req, res) => {
     let url;
     try {
@@ -77,7 +96,7 @@ export function serveDist({ root, port, prefix = "" }) {
       res.end(`not found — this build is hosted under ${prefix}`);
       return;
     }
-    const file = fileUnder(base, prefix ? url.slice(prefix.length) || "/" : url) ?? index;
+    const file = files.get(prefix ? url.slice(prefix.length) : url) ?? entry;
     res.writeHead(200, { "content-type": TYPES[extname(file)] ?? "application/octet-stream" });
     res.end(readFileSync(file));
   });
