@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
-import { formatIssues, type Issue, type Validator } from "@gridwright/schema";
-import type { ColumnMeta, QueryResult, Value } from "@gridwright/engine";
+import { formatIssues, type Issue, type Validator } from "@yashumani/gridwright-schema";
+import type { ColumnMeta, QueryResult, Value } from "@yashumani/gridwright-engine";
 
 /**
  * The panel registry. Each entry pairs a component with a schema for its own

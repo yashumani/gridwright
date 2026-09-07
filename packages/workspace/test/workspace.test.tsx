@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { readWorkbook } from "@gridwright/bridge";
+import { readWorkbook } from "@yashumani/gridwright-bridge";
 import {
   resolveBindings,
   compileReport,
@@ -10,8 +10,8 @@ import {
   type BindingSpec,
   type MetadataSnapshot,
   type ViewRow,
-} from "@gridwright/bridge";
-import type { AnalysisResult, AskResult } from "@gridwright/adapters";
+} from "@yashumani/gridwright-bridge";
+import type { AnalysisResult, AskResult } from "@yashumani/gridwright-adapters";
 import {
   Workspace,
   buildSnapshot,

@@ -1,4 +1,4 @@
-import type { CapabilityRequest, EnforcementContext, Finding } from "@gridwright/contracts";
+import type { CapabilityRequest, EnforcementContext, Finding } from "@yashumani/gridwright-contracts";
 import { CapabilityGate, type Budget, type GateOutcome, type RunStatus } from "./gate.js";
 
 /**

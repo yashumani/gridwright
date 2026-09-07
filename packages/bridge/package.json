@@ -1,5 +1,5 @@
 {
-  "name": "@gridwright/bridge",
+  "name": "@yashumani/gridwright-bridge",
   "version": "0.1.0",
   "description": "The deterministic metadata bridge: reads bounded Excel and SQL configuration into a validated report definition with provenance.",
   "license": "MIT",
@@ -41,9 +41,9 @@
     "README.md"
   ],
   "dependencies": {
-    "@gridwright/contracts": "workspace:*",
-    "@gridwright/expr": "workspace:*",
-    "@gridwright/schema": "workspace:*"
+    "@yashumani/gridwright-contracts": "workspace:*",
+    "@yashumani/gridwright-expr": "workspace:*",
+    "@yashumani/gridwright-schema": "workspace:*"
   },
   "publishConfig": {
     "access": "public"

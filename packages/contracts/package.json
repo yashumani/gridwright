@@ -1,5 +1,5 @@
 {
-  "name": "@gridwright/contracts",
+  "name": "@yashumani/gridwright-contracts",
   "version": "0.1.0",
   "description": "Versioned integration envelopes, capability descriptors and the conformance suite two products check each other against.",
   "license": "MIT",

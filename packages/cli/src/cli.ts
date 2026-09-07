@@ -1,11 +1,11 @@
 import { writeFile } from "node:fs/promises";
-import { manifestJsonSchema } from "@gridwright/schema";
-import { FUNCTIONS, FUNCTION_NAMES, describeArity } from "@gridwright/expr";
-import { Engine, planToSql, sourceFromText } from "@gridwright/engine";
-import { defaultRegistry } from "@gridwright/panels";
+import { manifestJsonSchema } from "@yashumani/gridwright-schema";
+import { FUNCTIONS, FUNCTION_NAMES, describeArity } from "@yashumani/gridwright-expr";
+import { Engine, planToSql, sourceFromText } from "@yashumani/gridwright-engine";
+import { defaultRegistry } from "@yashumani/gridwright-panels";
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import { parseManifest } from "@gridwright/schema";
+import { parseManifest } from "@yashumani/gridwright-schema";
 import { renderReport, validateFile } from "./validate.js";
 
 export interface CliResult {

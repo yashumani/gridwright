@@ -34,8 +34,8 @@ function loadSqlite(): SqliteModule {
  * A read-only connector for SQL configuration metadata and prepared views.
  *
  * **This module is deliberately not reachable from the package index.** It is
- * exported as `@gridwright/bridge/sql` and loads `node:sqlite`, so a browser
- * bundle that imports `@gridwright/bridge` cannot pull it in even by accident —
+ * exported as `@yashumani/gridwright-bridge/sql` and loads `node:sqlite`, so a browser
+ * bundle that imports `@yashumani/gridwright-bridge` cannot pull it in even by accident —
  * which is how "no browser credentials" is enforced rather than promised. A
  * connection is opened by server-side code from a handle it already holds; no
  * connection string, path or credential is ever accepted from a request.

@@ -1,9 +1,9 @@
-# @gridwright/schema
+# @yashumani/gridwright-schema
 
 Manifest types, validator and JSON Schema for Gridwright dashboards.
 
 ```bash
-pnpm add @gridwright/schema
+pnpm add @yashumani/gridwright-schema
 ```
 
 Part of [Gridwright](https://github.com/yashumani/gridwright) — a schema-driven dashboard engine. A manifest

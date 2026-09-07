@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { formatIssues, type Issue, type Manifest } from "@gridwright/schema";
+import { formatIssues, type Issue, type Manifest } from "@yashumani/gridwright-schema";
 import {
   inferManifest, loadBlob, loadBundleFromBlobs, MemorySource,
   type BundleBlob, type DataSource,
-} from "@gridwright/engine";
+} from "@yashumani/gridwright-engine";
 import { stringify } from "yaml";
-import { Dashboard, injectStyles, styles } from "@gridwright/react";
-import { Builder, builderStyles } from "@gridwright/builder";
+import { Dashboard, injectStyles, styles } from "@yashumani/gridwright-react";
+import { Builder, builderStyles } from "@yashumani/gridwright-builder";
 import { appStyles } from "./styles.js";
 
 /**

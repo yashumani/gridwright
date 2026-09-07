@@ -12,7 +12,7 @@ export * from "./bundle.js";
 import { loadDelimited, typesForTable, verifyColumns } from "./csv.js";
 import { loadJson } from "./json.js";
 import { MemorySource } from "./memory-source.js";
-import type { Manifest } from "@gridwright/schema";
+import type { Manifest } from "@yashumani/gridwright-schema";
 import type { Table } from "./types.js";
 
 /** Text for each table id named in `source.files`. */

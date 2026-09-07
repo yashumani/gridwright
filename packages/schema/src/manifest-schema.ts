@@ -118,7 +118,7 @@ const panel = obj({
     w: num({ integer: true, min: 1, max: 64 }),
     h: num({ integer: true, min: 1, max: 256 }),
   }),
-  // Validated against the panel's own schema by @gridwright/panels, not here.
+  // Validated against the panel's own schema by @yashumani/gridwright-panels, not here.
   props: opt(rec(json())),
 });
 

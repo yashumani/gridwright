@@ -7,12 +7,12 @@ import {
   type Decision,
   type EnforcementContext,
   type Finding,
-} from "@gridwright/contracts";
+} from "@yashumani/gridwright-contracts";
 
 /**
  * The gate every tool call goes through (task T14).
  *
- * `@gridwright/contracts` already decides whether a call is permitted. What was
+ * `@yashumani/gridwright-contracts` already decides whether a call is permitted. What was
  * missing is the part that has to sit *around* the call: propagating the scope
  * that was authorised, checking what comes back, and failing closed when the
  * policy that would decide is not there.

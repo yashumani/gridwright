@@ -4,7 +4,7 @@ import {
   type CapabilityDescriptor,
   type CapabilityRequest,
   type EnforcementContext,
-} from "@gridwright/contracts";
+} from "@yashumani/gridwright-contracts";
 import { CapabilityGate, Run, describeCompleteness, type SpecialistSpec } from "../src/index.js";
 
 /**

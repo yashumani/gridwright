@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type { PanelDef } from "@gridwright/schema";
+import type { PanelDef } from "@yashumani/gridwright-schema";
 import {
   cells, compact, dragTo, overlaps, pitchFromPanel, resizeTo, resolveCollisions,
   type Rect,
-} from "@gridwright/builder";
+} from "@yashumani/gridwright-builder";
 
 const panel = (id: string, x: number, y: number, w: number, h: number): PanelDef => ({
   id, type: "kpi", dataset: "d", layout: { x, y, w, h }, props: {},

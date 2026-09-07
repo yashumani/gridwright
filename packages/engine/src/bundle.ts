@@ -1,5 +1,5 @@
-import { parseManifest, type Issue, type Manifest } from "@gridwright/schema";
-import { analyzeExpression } from "@gridwright/expr";
+import { parseManifest, type Issue, type Manifest } from "@yashumani/gridwright-schema";
+import { analyzeExpression } from "@yashumani/gridwright-expr";
 import { Engine } from "./engine.js";
 import { sourceFromText, type TableText } from "./index.js";
 import { loadBlob, typesForTable, verifyColumns, type LoadOptions } from "./csv.js";

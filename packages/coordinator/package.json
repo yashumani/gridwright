@@ -1,5 +1,5 @@
 {
-  "name": "@gridwright/coordinator",
+  "name": "@yashumani/gridwright-coordinator",
   "version": "0.1.0",
   "description": "One bounded run per question: capability enforcement, scope propagation, budgets, cancellation and typed results.",
   "license": "MIT",
@@ -14,7 +14,7 @@
   "types": "./dist/index.d.ts",
   "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
   "files": ["dist", "LICENSE", "README.md"],
-  "dependencies": { "@gridwright/adapters": "workspace:*", "@gridwright/contracts": "workspace:*" },
+  "dependencies": { "@yashumani/gridwright-adapters": "workspace:*", "@yashumani/gridwright-contracts": "workspace:*" },
   "publishConfig": { "access": "public" },
   "engines": { "node": ">=20" }
 }

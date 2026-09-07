@@ -1,5 +1,5 @@
 {
-  "name": "@gridwright/workspace",
+  "name": "@yashumani/gridwright-workspace",
   "version": "0.1.0",
   "description": "One analysis snapshot behind a chat and a report, so the numbers on both cannot disagree.",
   "license": "MIT",
@@ -15,10 +15,10 @@
   "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
   "files": ["dist", "LICENSE", "README.md"],
   "dependencies": {
-    "@gridwright/adapters": "workspace:*",
-    "@gridwright/bridge": "workspace:*",
-    "@gridwright/contracts": "workspace:*",
-    "@gridwright/react": "workspace:*"
+    "@yashumani/gridwright-adapters": "workspace:*",
+    "@yashumani/gridwright-bridge": "workspace:*",
+    "@yashumani/gridwright-contracts": "workspace:*",
+    "@yashumani/gridwright-react": "workspace:*"
   },
   "peerDependencies": { "react": "^18.2.0" },
   "publishConfig": { "access": "public" },

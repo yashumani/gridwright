@@ -13,8 +13,8 @@
  * sense, whether a label says something useful, whether a chart's meaning
  * survives without colour. Those need a person.
  *
- *   pnpm build && pnpm --filter @gridwright/playground build \
- *     && pnpm --filter @gridwright/workspace-demo build
+ *   pnpm build && pnpm --filter @yashumani/gridwright-playground build \
+ *     && pnpm --filter @yashumani/gridwright-workspace-demo build
  *   node scripts/verify-accessibility.mjs
  */
 import { chromium } from "playwright";

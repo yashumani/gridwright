@@ -65,7 +65,7 @@ right.
 ## What is not ready, and why
 
 **No service has been contacted.** This is the single most important sentence in
-this document. `@gridwright/adapters` holds real clients for UKB, Talk2Data and
+this document. `@yashumani/gridwright-adapters` holds real clients for UKB, Talk2Data and
 the variance product, built from those repositories' own contracts. Each takes
 an injected transport. The conformance evidence is against fixtures shaped from
 those contracts. A running deployment could differ — in its paths, its error
@@ -101,6 +101,13 @@ ordinary HTTP client gets through. So the browser drives bytes pulled from the
 live origin rather than the live origin itself. **That is two claims joined, not
 one: the origin serves exactly this, and exactly this renders.** A live-origin
 redirect, header or CSP difference would not be caught by it.
+
+**The scope changed before anything was published.** `@gridwright` on npm
+belongs to someone else — the scope resolves, this account owns no organizations,
+and a valid token is refused on it. The packages are `@yashumani/gridwright-*`
+now. This was caught by the release preflight rather than by a failed publish,
+which matters: the CLI depends on four of the scoped packages, so publishing
+under the old names would have pointed every install at a stranger's scope.
 
 **Nothing is published to npm, and the release path is now proven anyway.**
 The `Release` workflow's dry-run ran green against `4c71a60`: it builds, runs

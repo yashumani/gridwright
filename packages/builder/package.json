@@ -1,5 +1,5 @@
 {
-  "name": "@gridwright/builder",
+  "name": "@yashumani/gridwright-builder",
   "version": "0.1.0",
   "description": "Visual editor for Gridwright manifests \u2014 model and panels \u2014 with comment-preserving YAML export.",
   "license": "MIT",
@@ -39,11 +39,11 @@
     "README.md"
   ],
   "dependencies": {
-    "@gridwright/schema": "workspace:*",
-    "@gridwright/expr": "workspace:*",
-    "@gridwright/engine": "workspace:*",
-    "@gridwright/panels": "workspace:*",
-    "@gridwright/react": "workspace:*",
+    "@yashumani/gridwright-schema": "workspace:*",
+    "@yashumani/gridwright-expr": "workspace:*",
+    "@yashumani/gridwright-engine": "workspace:*",
+    "@yashumani/gridwright-panels": "workspace:*",
+    "@yashumani/gridwright-react": "workspace:*",
     "yaml": "^2.6.1"
   },
   "peerDependencies": {

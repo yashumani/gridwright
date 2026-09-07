@@ -1,9 +1,9 @@
-# @gridwright/expr
+# @yashumani/gridwright-expr
 
 The Gridwright expression language: parser, AST, stage analysis, SQL compiler and sandboxed evaluator.
 
 ```bash
-pnpm add @gridwright/expr
+pnpm add @yashumani/gridwright-expr
 ```
 
 Part of [Gridwright](https://github.com/yashumani/gridwright) — a schema-driven dashboard engine. A manifest

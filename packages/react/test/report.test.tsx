@@ -11,8 +11,8 @@ import {
   type MetadataSnapshot,
   type ReportResult,
   type ViewRow,
-} from "@gridwright/bridge";
-import { Report } from "@gridwright/react";
+} from "@yashumani/gridwright-bridge";
+import { Report } from "@yashumani/gridwright-react";
 
 // Resolved from the working directory rather than import.meta.url: this file
 // runs under jsdom, where that URL is not the module's path on disk.

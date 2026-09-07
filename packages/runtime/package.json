@@ -1,5 +1,5 @@
 {
-  "name": "@gridwright/runtime",
+  "name": "@yashumani/gridwright-runtime",
   "version": "0.1.0",
   "description": "Scoped sessions, artifact persistence, cache invalidation and action-bound approval records.",
   "license": "MIT",
@@ -14,7 +14,7 @@
   "types": "./dist/index.d.ts",
   "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
   "files": ["dist", "LICENSE", "README.md"],
-  "dependencies": { "@gridwright/contracts": "workspace:*" },
+  "dependencies": { "@yashumani/gridwright-contracts": "workspace:*" },
   "publishConfig": { "access": "public" },
   "engines": { "node": ">=20" }
 }

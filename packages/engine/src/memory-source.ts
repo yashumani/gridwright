@@ -1,8 +1,8 @@
-import { LIMITS, type Filter, type Sort } from "@gridwright/schema";
+import { LIMITS, type Filter, type Sort } from "@yashumani/gridwright-schema";
 import {
   FUNCTIONS, evalAggregateIndexed, evalPostColumn, makeReducer, truncateDate,
   type Node, type Row, type RowCursor, type Value,
-} from "@gridwright/expr";
+} from "@yashumani/gridwright-expr";
 import {
   EngineError, dimKey, measureKey,
   type ColumnMeta, type DataSource, type QueryPlan, type QueryResult,

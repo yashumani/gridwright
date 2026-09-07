@@ -1,9 +1,9 @@
-# @gridwright/workspace
+# @yashumani/gridwright-workspace
 
 One frozen analysis snapshot behind a chat answer and a report, with reconciliation drawn above the numbers.
 
 ```bash
-pnpm add @gridwright/workspace
+pnpm add @yashumani/gridwright-workspace
 ```
 
 `reconcile` compares the certified claim, the analysis and the report's total row, and reports a value that has no receipt **even when the number is right** — an unsourced figure that happens to agree is the one that gets screenshotted. Disagreement renders above the figures rather than beneath them, for the same reason.

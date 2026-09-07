@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { formatIssues, parseManifest, validateManifest, type Manifest } from "@gridwright/schema";
-import { analyzeExpression } from "@gridwright/expr";
+import { formatIssues, parseManifest, validateManifest, type Manifest } from "@yashumani/gridwright-schema";
+import { analyzeExpression } from "@yashumani/gridwright-expr";
 import {
   Engine, EngineError, MemorySource, QueryCache,
   compileDataset, hashPlan, loadDelimited, parseDelimited, planToSql, projectFields,
   inferManifest, loadBundle, planToSqlParams, sniffType, sourceFromText, typesForTable,
   type QueryResult, type Table, type Value,
-} from "@gridwright/engine";
+} from "@yashumani/gridwright-engine";
 
 const dir = (p: string) => fileURLToPath(new URL(p, import.meta.url));
 const refText = readFileSync(dir("../../../examples/sales-overview.gw.yaml"), "utf8");

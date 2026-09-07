@@ -1,4 +1,4 @@
-import { IDENTIFIER } from "@gridwright/schema";
+import { IDENTIFIER } from "@yashumani/gridwright-schema";
 import type { Node } from "./ast.js";
 import { FUNCTIONS } from "./functions.js";
 

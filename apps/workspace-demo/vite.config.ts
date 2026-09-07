@@ -11,14 +11,14 @@ export default defineConfig({
   // between — the same arrangement the playground uses.
   resolve: {
     alias: {
-      "@gridwright/schema": pkg("schema"),
-      "@gridwright/expr": pkg("expr"),
-      "@gridwright/engine": pkg("engine"),
-      "@gridwright/panels": pkg("panels"),
-      "@gridwright/react": pkg("react"),
-      "@gridwright/contracts": pkg("contracts"),
-      "@gridwright/adapters": pkg("adapters"),
-      "@gridwright/workspace": pkg("workspace"),
+      "@yashumani/gridwright-schema": pkg("schema"),
+      "@yashumani/gridwright-expr": pkg("expr"),
+      "@yashumani/gridwright-engine": pkg("engine"),
+      "@yashumani/gridwright-panels": pkg("panels"),
+      "@yashumani/gridwright-react": pkg("react"),
+      "@yashumani/gridwright-contracts": pkg("contracts"),
+      "@yashumani/gridwright-adapters": pkg("adapters"),
+      "@yashumani/gridwright-workspace": pkg("workspace"),
     },
   },
   // Relative asset URLs, so one build runs at a domain root, under a project

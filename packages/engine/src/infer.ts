@@ -1,7 +1,7 @@
 import type {
   DatasetDef, FieldType, Manifest, MeasureDef, PanelDef,
-} from "@gridwright/schema";
-import { IDENTIFIER, isReservedName } from "@gridwright/schema";
+} from "@yashumani/gridwright-schema";
+import { IDENTIFIER, isReservedName } from "@yashumani/gridwright-schema";
 import type { Table, Value } from "./types.js";
 
 /**

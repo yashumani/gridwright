@@ -1,7 +1,7 @@
 import {
   LIMITS, type Filter, type Manifest, type Sort,
-} from "@gridwright/schema";
-import { analyzeModel, type ExprAnalysis } from "@gridwright/expr";
+} from "@yashumani/gridwright-schema";
+import { analyzeModel, type ExprAnalysis } from "@yashumani/gridwright-expr";
 import { EngineError, type FieldOrigin, type PlanDimension, type PlanMeasure, type QueryPlan } from "./types.js";
 import { planJoins } from "./join.js";
 

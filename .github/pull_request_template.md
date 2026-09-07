@@ -22,7 +22,7 @@ pnpm build
 pnpm test
 node packages/cli/dist/bin.js validate examples/sales-overview.gw.yaml --data
 node packages/cli/dist/bin.js validate examples/orders-star.gw.yaml --data
-pnpm --filter @gridwright/playground build
+pnpm --filter @yashumani/gridwright-playground build
 ```
 
 - [ ] All of the above pass

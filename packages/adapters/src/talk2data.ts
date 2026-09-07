@@ -1,4 +1,4 @@
-import { describeFinding, scanText, type Finding } from "@gridwright/contracts";
+import { describeFinding, scanText, type Finding } from "@yashumani/gridwright-contracts";
 import { AdapterError, classify, type Transport } from "./transport.js";
 
 /**

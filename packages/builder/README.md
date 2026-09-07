@@ -1,9 +1,9 @@
-# @gridwright/builder
+# @yashumani/gridwright-builder
 
 Visual editor for Gridwright manifests — model and panels — with comment-preserving YAML export.
 
 ```bash
-pnpm add @gridwright/builder
+pnpm add @yashumani/gridwright-builder
 ```
 
 Part of [Gridwright](https://github.com/yashumani/gridwright) — a schema-driven dashboard engine. A manifest

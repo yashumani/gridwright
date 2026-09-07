@@ -1,5 +1,5 @@
-import type { Filter, Manifest } from "@gridwright/schema";
-import type { Value } from "@gridwright/engine";
+import type { Filter, Manifest } from "@yashumani/gridwright-schema";
+import type { Value } from "@yashumani/gridwright-engine";
 
 /**
  * Cross-filter state: which values are selected per dimension.

@@ -68,7 +68,7 @@ jobs:
         run: pnpm build
 
       - name: Build the playground
-        run: pnpm --filter @gridwright/playground build
+        run: pnpm --filter @yashumani/gridwright-playground build
 
       # Pages must already be switched on for this repository, once, by hand:
       #   Settings -> Pages -> Build and deployment -> Source: GitHub Actions

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { Manifest } from "@gridwright/schema";
-import { Engine, MemorySource, type QueryResult, type Value } from "@gridwright/engine";
+import type { Manifest } from "@yashumani/gridwright-schema";
+import { Engine, MemorySource, type QueryResult, type Value } from "@yashumani/gridwright-engine";
 
 /**
  * Scale and cache-correctness.

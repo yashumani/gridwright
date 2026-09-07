@@ -1,4 +1,4 @@
-import type { Value } from "@gridwright/engine";
+import type { Value } from "@yashumani/gridwright-engine";
 
 /**
  * Excel-style number patterns, because that is the notation the people writing

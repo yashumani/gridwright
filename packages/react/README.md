@@ -1,9 +1,9 @@
-# @gridwright/react
+# @yashumani/gridwright-react
 
 React renderer for Gridwright: <Dashboard>, grid layout and the cross-filter store.
 
 ```bash
-pnpm add @gridwright/react
+pnpm add @yashumani/gridwright-react
 ```
 
 Part of [Gridwright](https://github.com/yashumani/gridwright) — a schema-driven dashboard engine. A manifest

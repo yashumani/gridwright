@@ -74,18 +74,18 @@ Dependencies only ever point right to left in that list.
 
 | Package | Owns |
 |---|---|
-| `@gridwright/schema` | Manifest types, the validator, JSON Schema, migrations |
-| `@gridwright/expr` | Tokenizer, Pratt parser, AST, stage analysis, SQL compiler, evaluator |
-| `@gridwright/engine` | Plan compiler, joins, the `DataSource` seam, executor, cache, loaders |
-| `@gridwright/panels` | Panel components, each with a schema for its own props |
-| `@gridwright/react` | `<Dashboard>`, grid layout, filter store, stylesheet |
-| `@gridwright/builder` | Model and panel editors, comment-preserving YAML export |
-| `@gridwright/bridge` | Bounded `.xlsx` and read-only SQL configuration into a validated report definition, with provenance |
-| `@gridwright/contracts` | Integration envelopes, capability descriptors, untrusted-text detection and the conformance suite |
-| `@gridwright/adapters` | Read-only clients for the knowledge, conversational and variance services, and the cross-product metric mapping |
-| `@gridwright/coordinator` | The capability gate and the bounded run that spends one budget |
-| `@gridwright/runtime` | Scoped sessions, artifact persistence, cache invalidation and approval records |
-| `@gridwright/workspace` | One analysis snapshot behind the answer and the report |
+| `@yashumani/gridwright-schema` | Manifest types, the validator, JSON Schema, migrations |
+| `@yashumani/gridwright-expr` | Tokenizer, Pratt parser, AST, stage analysis, SQL compiler, evaluator |
+| `@yashumani/gridwright-engine` | Plan compiler, joins, the `DataSource` seam, executor, cache, loaders |
+| `@yashumani/gridwright-panels` | Panel components, each with a schema for its own props |
+| `@yashumani/gridwright-react` | `<Dashboard>`, grid layout, filter store, stylesheet |
+| `@yashumani/gridwright-builder` | Model and panel editors, comment-preserving YAML export |
+| `@yashumani/gridwright-bridge` | Bounded `.xlsx` and read-only SQL configuration into a validated report definition, with provenance |
+| `@yashumani/gridwright-contracts` | Integration envelopes, capability descriptors, untrusted-text detection and the conformance suite |
+| `@yashumani/gridwright-adapters` | Read-only clients for the knowledge, conversational and variance services, and the cross-product metric mapping |
+| `@yashumani/gridwright-coordinator` | The capability gate and the bounded run that spends one budget |
+| `@yashumani/gridwright-runtime` | Scoped sessions, artifact persistence, cache invalidation and approval records |
+| `@yashumani/gridwright-workspace` | One analysis snapshot behind the answer and the report |
 | `gridwright` | The CLI |
 
 ### One decision worth calling out
@@ -95,7 +95,7 @@ against it and the builder generates its editing form from it. That is why
 adding a panel type needs no plumbing, and why nobody hand-writes a config UI —
 one definition serves validation, documentation and editing.
 
-The same trick appears a level down: the validator in `@gridwright/schema` is a
+The same trick appears a level down: the validator in `@yashumani/gridwright-schema` is a
 combinator library where every validator can also emit its JSON Schema. Human
 error messages and editor tooling come from one definition, so they cannot
 drift apart.
@@ -149,7 +149,7 @@ itself — run it against a fresh build — and drives the demo in Chromium at
 Pages serves it:
 
 ```bash
-pnpm build && pnpm --filter @gridwright/playground build
+pnpm build && pnpm --filter @yashumani/gridwright-playground build
 node scripts/verify-a11.mjs
 ```
 

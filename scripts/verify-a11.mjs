@@ -10,7 +10,7 @@
  * server, and CI installs neither; pretending otherwise would put a check in
  * the pipeline that silently never runs. Run it against a fresh build:
  *
- *   pnpm build && pnpm --filter @gridwright/playground build
+ *   pnpm build && pnpm --filter @yashumani/gridwright-playground build
  *   node scripts/verify-a11.mjs
  *
  * Exits non-zero if any check fails, so it can be wired into a release runbook

@@ -1,7 +1,7 @@
 import { AST_LIMITS, countNodes, depth, type BinaryOp, type Node, type UnaryOp } from "./ast.js";
 import { ExprSyntaxError, tokenize, type Token } from "./tokenize.js";
 import { MEASURE_REF } from "./functions.js";
-import { isReservedName } from "@gridwright/schema";
+import { isReservedName } from "@yashumani/gridwright-schema";
 
 /**
  * A Pratt parser. Every path from source text to a runnable expression goes

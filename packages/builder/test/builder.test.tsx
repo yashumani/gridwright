@@ -3,13 +3,13 @@ import { act } from "react";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { parseManifest, type Manifest, type PanelDef } from "@gridwright/schema";
-import { sourceFromText } from "@gridwright/engine";
-import { defaultRegistry } from "@gridwright/panels";
+import { parseManifest, type Manifest, type PanelDef } from "@yashumani/gridwright-schema";
+import { sourceFromText } from "@yashumani/gridwright-engine";
+import { defaultRegistry } from "@yashumani/gridwright-panels";
 import {
   Builder, PropertyForm, blankFor, checkManifest, exportManifest, initialState,
   nextPanelId, overlaps, placePanel, reduce, toYaml, type EditorState, type JsonSchema,
-} from "@gridwright/builder";
+} from "@yashumani/gridwright-builder";
 
 const dir = (p: string) => fileURLToPath(new URL(p, import.meta.url));
 const refText = readFileSync(dir("../../../examples/sales-overview.gw.yaml"), "utf8");

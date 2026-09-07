@@ -270,8 +270,8 @@ finding the palette validator exists to produce.
 Register a panel and it gains manifest validation and a builder form for free:
 
 ```tsx
-import { defaultRegistry } from "@gridwright/panels";
-import { obj, str, opt, bool } from "@gridwright/schema";
+import { defaultRegistry } from "@yashumani/gridwright-panels";
+import { obj, str, opt, bool } from "@yashumani/gridwright-schema";
 
 const registry = defaultRegistry().register({
   type: "gauge",

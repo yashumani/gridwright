@@ -1,5 +1,5 @@
-import { quoteIdent, sqlLiteral, toSql, walk, type Node } from "@gridwright/expr";
-import type { Filter, Scalar, Sort } from "@gridwright/schema";
+import { quoteIdent, sqlLiteral, toSql, walk, type Node } from "@yashumani/gridwright-expr";
+import type { Filter, Scalar, Sort } from "@yashumani/gridwright-schema";
 import { dimKey, measureKey, type PlanMeasure, type QueryPlan } from "./types.js";
 
 /**

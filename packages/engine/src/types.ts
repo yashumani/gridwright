@@ -1,6 +1,6 @@
-import type { Filter, Grain, Sort } from "@gridwright/schema";
+import type { Filter, Grain, Sort } from "@yashumani/gridwright-schema";
 import type { JoinStep } from "./join.js";
-import type { Node, Value } from "@gridwright/expr";
+import type { Node, Value } from "@yashumani/gridwright-expr";
 
 export type { Value };
 export type { JoinStep, JoinPlan } from "./join.js";

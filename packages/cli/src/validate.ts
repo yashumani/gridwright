@@ -2,10 +2,10 @@ import { readFile } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import {
   formatIssues, parseManifest, type Issue, type Manifest,
-} from "@gridwright/schema";
-import { analyzeExpression } from "@gridwright/expr";
-import { Engine, sourceFromText, type TableText } from "@gridwright/engine";
-import { defaultRegistry } from "@gridwright/panels";
+} from "@yashumani/gridwright-schema";
+import { analyzeExpression } from "@yashumani/gridwright-expr";
+import { Engine, sourceFromText, type TableText } from "@yashumani/gridwright-engine";
+import { defaultRegistry } from "@yashumani/gridwright-panels";
 
 /**
  * Full validation, in the order that gives the most useful first error: shape,

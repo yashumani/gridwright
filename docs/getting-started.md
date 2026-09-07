@@ -5,7 +5,7 @@
 ```bash
 pnpm install
 pnpm build
-pnpm --filter @gridwright/playground dev
+pnpm --filter @yashumani/gridwright-playground dev
 ```
 
 Open the playground and drag a file onto it — a `.csv` on its own, or a
@@ -58,7 +58,7 @@ are named in the banner so you know they were skipped.
 Programmatically, this is `inferManifest`:
 
 ```ts
-import { inferManifest, loadBlob } from "@gridwright/engine";
+import { inferManifest, loadBlob } from "@yashumani/gridwright-engine";
 
 const table = await loadBlob("sales", file);          // a File or Blob
 const { manifest, notes } = inferManifest(table, { path: file.name });
@@ -170,8 +170,8 @@ other's work.
 ## Embedding it in your own app
 
 ```tsx
-import { loadBundle } from "@gridwright/engine";
-import { Dashboard, injectStyles } from "@gridwright/react";
+import { loadBundle } from "@yashumani/gridwright-engine";
+import { Dashboard, injectStyles } from "@yashumani/gridwright-react";
 
 injectStyles();
 

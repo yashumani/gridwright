@@ -1,7 +1,7 @@
 /**
  * The workspace's own stylesheet.
  *
- * Kept with the demo rather than in `@gridwright/workspace` for the same reason
+ * Kept with the demo rather than in `@yashumani/gridwright-workspace` for the same reason
  * the dashboard's styles are injectable: a consumer embedding the workspace in
  * their own product has a design system already, and a package that ships
  * opinionated chrome makes that a fight rather than a choice.

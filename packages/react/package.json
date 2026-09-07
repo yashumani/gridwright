@@ -1,5 +1,5 @@
 {
-  "name": "@gridwright/react",
+  "name": "@yashumani/gridwright-react",
   "version": "0.1.0",
   "description": "React renderer for Gridwright: <Dashboard>, grid layout and the cross-filter store.",
   "license": "MIT",
@@ -38,10 +38,10 @@
     "README.md"
   ],
   "dependencies": {
-    "@gridwright/bridge": "workspace:*",
-    "@gridwright/schema": "workspace:*",
-    "@gridwright/engine": "workspace:*",
-    "@gridwright/panels": "workspace:*"
+    "@yashumani/gridwright-bridge": "workspace:*",
+    "@yashumani/gridwright-schema": "workspace:*",
+    "@yashumani/gridwright-engine": "workspace:*",
+    "@yashumani/gridwright-panels": "workspace:*"
   },
   "peerDependencies": {
     "react": ">=18",
