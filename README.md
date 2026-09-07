@@ -156,9 +156,15 @@ if (r.ok) return <Dashboard manifest={r.manifest} source={r.source} />;
 
 ## Status
 
-**Pre-1.0, and honest about it.** 1044 tests, three worked examples, and a
-[changelog](CHANGELOG.md) that says what you can rely on. What is deliberately
-not here:
+**Pre-1.0, and honest about it.** 1052 tests, three worked examples, and a
+[changelog](CHANGELOG.md) that says what you can rely on. For the unified
+platform work specifically — the metadata bridge, the governance layer and the
+clients for the knowledge, conversational and variance services — the
+[readiness report](docs/project/READINESS.md) says what is proven, what is
+merely built, and which of the two every integration claim is. Its headline is
+that **no service has been contacted**.
+
+What is deliberately not here:
 
 - **The associative model.** Cross-filtering works; Qlik's grey "excluded
   values" behaviour does not. That needs an inverted index across the whole
