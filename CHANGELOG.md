@@ -584,6 +584,19 @@ documented types, and the internals of every package below `@gridwright/react`.
   never has to rely on it.
 - Every workflow declares least-privilege permissions and pins actions to
   commit SHAs.
+- The file server behind the browser-evidence scripts no longer serves files
+  from outside the build directory. All three scripts pasted the same
+  `join(root, urlPath)`, which walks out of the directory as soon as the
+  request contains `..`, so the server would read and return any file the
+  process could open. CodeQL reported it as a path traversal on
+  `scripts/verify-accessibility.mjs`. The three copies are now one module,
+  `scripts/lib/serve-dist.mjs`, which requires the resolved path to stay under
+  the build root, resolves symlinks before reading so a link inside the build
+  cannot point outside it, refuses a directory rather than throwing `EISDIR`,
+  and answers malformed percent-encoding with 400 instead of crashing the
+  request handler. Held by `scripts/lib/serve-dist.test.ts`, whose traversals
+  are sent as raw requests because `fetch` resolves `..` — and `%2e%2e` —
+  before a request leaves the client.
 
 ## 0.1.0
 

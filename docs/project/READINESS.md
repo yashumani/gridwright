@@ -1,6 +1,6 @@
 # Readiness report
 
-2026-09-07 · against `main` · 1,044 passing tests, CI green
+2026-09-07 · against `main` · 1,055 passing tests, CI green
 
 [Requirements](UNIFIED_PLATFORM_REQUIREMENTS.md) · [Delivery](DELIVERY_AND_ACCEPTANCE.md) · [Architecture](ARCHITECTURE_AND_CONTRACTS.md) · [Sources and decisions](SOURCE_MAP_AND_DECISIONS.md)
 
@@ -105,7 +105,7 @@ behaviour once it is made.
 
 ```
 pnpm build                     clean
-pnpm test                      1044 passed (1044)
+pnpm test                      1055 passed (1055)
 CI on main                     check, review, Analyze, CodeQL — green
 
 scripts/verify-a05.mjs         18/18   answer and report agree, in a browser

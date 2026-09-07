@@ -18,7 +18,7 @@ export default defineConfig({
     },
   },
   test: {
-    include: ["packages/*/test/**/*.test.ts", "packages/*/test/**/*.test.tsx"],
+    include: ["packages/*/test/**/*.test.ts", "packages/*/test/**/*.test.tsx", "scripts/**/*.test.ts"],
     environment: "node",
     setupFiles: ["./vitest.setup.ts"],
     // Component tests opt into a DOM; everything else stays on node, which is

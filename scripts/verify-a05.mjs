@@ -15,9 +15,9 @@
  *   node scripts/verify-a05.mjs
  */
 import { chromium } from "playwright";
-import http from "node:http";
-import { existsSync, readFileSync } from "node:fs";
-import { extname, join, resolve } from "node:path";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { serveDist } from "./lib/serve-dist.mjs";
 
 const DIST = resolve(process.cwd(), "apps/workspace-demo/dist");
 const SNAPSHOT = resolve(process.cwd(), "fixtures/support-ops/snapshot.json");
@@ -25,7 +25,6 @@ const PREFIX = "/gridwright-answer";
 const PORT = Number(process.env.A05_PORT ?? 4344);
 const ORIGIN = `http://localhost:${PORT}`;
 
-const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".svg": "image/svg+xml" };
 const VIEWPORTS = [
   { name: "desktop", width: 1440, height: 900 },
   { name: "phone", width: 390, height: 844 },
@@ -37,22 +36,7 @@ const record = (name, passed, detail) => {
   console.log(`${passed ? "PASS" : "FAIL"}  ${name}${detail ? ` — ${detail}` : ""}`);
 };
 
-function serve() {
-  const server = http.createServer((req, res) => {
-    const url = decodeURIComponent((req.url ?? "/").split("?")[0]);
-    if (!url.startsWith(PREFIX)) {
-      res.writeHead(404, { "content-type": "text/plain" });
-      res.end(`not found — this build is hosted under ${PREFIX}`);
-      return;
-    }
-    const rel = url.slice(PREFIX.length) || "/";
-    const candidate = join(DIST, rel);
-    const file = existsSync(candidate) && !candidate.endsWith("/") ? candidate : join(DIST, "index.html");
-    res.writeHead(200, { "content-type": TYPES[extname(file)] ?? "application/octet-stream" });
-    res.end(readFileSync(file));
-  });
-  return new Promise((r) => server.listen(PORT, () => r(server)));
-}
+const serve = () => serveDist({ root: DIST, port: PORT, prefix: PREFIX });
 
 const snapshot = JSON.parse(readFileSync(SNAPSHOT, "utf8"));
 const total = snapshot.report.rows.find((r) => r.kind === "total");

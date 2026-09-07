@@ -18,9 +18,8 @@
  *   node scripts/verify-accessibility.mjs
  */
 import { chromium } from "playwright";
-import http from "node:http";
-import { existsSync, readFileSync } from "node:fs";
-import { extname, join, resolve } from "node:path";
+import { resolve } from "node:path";
+import { serveDist } from "./lib/serve-dist.mjs";
 
 const TARGETS = [
   { name: "workspace", dist: "apps/workspace-demo/dist", port: 4360, open: null },
@@ -47,24 +46,13 @@ const SIZES = [
  */
 const SCHEMES = ["light", "dark"];
 
-const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".csv": "text/csv", ".yaml": "text/yaml", ".svg": "image/svg+xml" };
-
 const results = [];
 const record = (name, passed, detail) => {
   results.push({ name, passed, detail });
   console.log(`${passed ? "PASS" : "FAIL"}  ${name}${detail ? ` — ${detail}` : ""}`);
 };
 
-function serve(dist, port) {
-  const root = resolve(process.cwd(), dist);
-  const server = http.createServer((req, res) => {
-    const p = join(root, decodeURIComponent((req.url ?? "/").split("?")[0]));
-    const file = existsSync(p) && !p.endsWith("/") ? p : join(root, "index.html");
-    res.writeHead(200, { "content-type": TYPES[extname(file)] ?? "application/octet-stream" });
-    res.end(readFileSync(file));
-  });
-  return new Promise((r) => server.listen(port, () => r(server)));
-}
+const serve = (dist, port) => serveDist({ root: resolve(process.cwd(), dist), port });
 
 /** Runs in the page. Returns findings, not a score. */
 const AUDIT = () => {
