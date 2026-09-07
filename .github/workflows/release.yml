@@ -52,6 +52,35 @@ jobs:
           node packages/cli/dist/bin.js validate examples/orders-star.gw.yaml --data
           node packages/cli/dist/bin.js validate examples/chart-types.gw.yaml --data
 
+      # Read-only, and it runs before every publish for one reason: a recursive
+      # publish is not atomic. If the token cannot write the scope, some
+      # packages land and the rest 403, leaving a half-released version that
+      # cannot be taken back -- a version is immutable and a name is claimed
+      # permanently. Better to fail here, having published nothing.
+      #
+      # `npm whoami` is the hard gate: a bad or expired token stops the job.
+      # The scope check only reports, because a scope with no packages yet
+      # answers differently from one that already has some, and a user-owned
+      # scope is not an organization at all.
+      - name: Preflight — is the token valid, and can it write the scope?
+        run: |
+          echo "authenticated as: $(npm whoami)"
+          for scope in $(node -e "
+            const fs = require('node:fs');
+            const scopes = new Set();
+            for (const dir of fs.readdirSync('packages')) {
+              const { name } = JSON.parse(fs.readFileSync('packages/' + dir + '/package.json'));
+              if (name.startsWith('@')) scopes.add(name.split('/')[0]);
+            }
+            console.log([...scopes].join(' '));
+          "); do
+            echo "--- $scope ---"
+            npm access list packages "$scope" 2>&1 | head -5 || true
+            npm org ls "${scope#@}" 2>&1 | head -5 || true
+          done
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Publish
         run: |
           if [ "${{ inputs.dry-run }}" = "true" ]; then
