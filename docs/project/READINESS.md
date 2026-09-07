@@ -80,12 +80,25 @@ explicit data-inclusion choice. The half that needs an authenticated private
 profile is not started, because there is no such profile. That is **D04** and
 **D07**.
 
-**The demo is not deployed.** GitHub Pages fails on every merge at
-`configure-pages` with `Get Pages site failed… Error: Not Found`. Everything
-before it succeeds. A repository administrator has to set Settings → Pages →
-Build and deployment → Source: **GitHub Actions**, once. A workflow token is
-never a repository administrator, which is why an earlier `enablement: true`
-attempt was wrong and was removed.
+**The demo is not deployed.** The blocker has moved once and is still a
+settings one. Until 2026-09-07 every run stopped at `configure-pages` with
+`Get Pages site failed… Error: Not Found`, meaning Pages was not enabled.
+After the owner enabled it, the job stopped reaching a runner at all: it fails
+in about two seconds with no steps, which is what an environment protection
+rule looks like, because those are evaluated before a runner is assigned. Two
+dispatched runs behaved identically, so it is not a flake. What to check, in
+order: that the Pages source is **GitHub Actions** rather than **Deploy from a
+branch** — the latter creates the `github-pages` environment and then refuses
+Actions deployments to it — and then that environment's deployment branch
+policy allows `main`. A workflow token is never a repository administrator,
+which is why an earlier `enablement: true` attempt was wrong and was removed.
+
+`scripts/verify-deploy.mjs` is ready for the moment it does deploy: it drives
+the published URL in Chromium, checks the bundle the live page loads is the one
+this commit built, and fails on a stale deploy naming both. It has been run
+against the local build (7/7) and against a deliberately stale copy, where the
+same-commit check fails and the script exits 1. **It has never been run against
+a live URL, because there is not one.**
 
 **Nothing is published to npm.** Package metadata is complete; no publish has
 been attempted. A version is immutable and a name is claimed permanently, so

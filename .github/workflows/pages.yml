@@ -7,8 +7,19 @@
 #
 # One-time setup, by a repository administrator:
 #   Settings -> Pages -> Build and deployment -> Source: GitHub Actions
-# Until that is set, every run here stops at configure-pages with
-# "Get Pages site failed: Not Found". See the note on that step.
+#
+# There are two distinct failures, and they look nothing alike:
+#
+#  * Pages not enabled at all -> the job runs, builds, and stops at
+#    configure-pages with "Get Pages site failed: Not Found".
+#  * The github-pages environment refuses the deployment -> the job fails in
+#    about two seconds with no runner assigned and no steps at all, because
+#    environment protection rules are evaluated before a runner is handed
+#    out. Nothing is wrong with this file when that happens; check the
+#    environment's deployment branch policy, and check that the Pages source
+#    really is "GitHub Actions" rather than "Deploy from a branch" -- the
+#    latter creates the environment and then rejects Actions deployments to
+#    it.
 name: Pages
 
 on:
