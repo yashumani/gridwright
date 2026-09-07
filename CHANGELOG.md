@@ -29,6 +29,10 @@ documented types, and the internals of every package below `@gridwright/react`.
 
 ### Added
 
+- READMEs for `@gridwright/contracts`, `adapters`, `coordinator`, `runtime`,
+  `bridge` and `workspace`. A release dry-run found all six would have been
+  published to npm as blank pages.
+
 - `scripts/verify-deploy.mjs` — a smoke test for the published demo rather than
   a local build. It drives the live URL in Chromium and checks that the bundle
   the page loads is the one this commit built, so a deploy serving a stale

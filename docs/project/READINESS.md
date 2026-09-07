@@ -102,9 +102,19 @@ live origin rather than the live origin itself. **That is two claims joined, not
 one: the origin serves exactly this, and exactly this renders.** A live-origin
 redirect, header or CSP difference would not be caught by it.
 
-**Nothing is published to npm.** Package metadata is complete; no publish has
-been attempted. A version is immutable and a name is claimed permanently, so
-this waits for an explicit decision and a token.
+**Nothing is published to npm, and the release path is now proven anyway.**
+The `Release` workflow's dry-run ran green against `4c71a60`: it builds, runs
+the suite, validates the reference manifests against real data, and packs all
+thirteen packages at `0.1.0`. Every name is still free on the registry. Nothing
+was published — a version is immutable and a name is claimed permanently, so
+that step waits for an explicit decision and an `NPM_TOKEN` repository secret,
+which no workflow token can supply.
+
+The dry-run earned its keep: six of the thirteen packages — `contracts`,
+`adapters`, `coordinator`, `runtime`, `bridge` and `workspace`, exactly the six
+built during this work — had no README and would have landed on npm as blank
+pages. They have one now. Packing was also checked for anything that should not
+ship, and nothing was flagged.
 
 **No Qlik or Vizlib compatibility is claimed.** None was attempted, none is
 tested, and **D09** governs whether any ever is. The SQLite work establishes
