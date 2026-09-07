@@ -84,7 +84,12 @@ jobs:
       - name: Publish
         run: |
           if [ "${{ inputs.dry-run }}" = "true" ]; then
-            pnpm -r --filter "./packages/*" exec npm pack --dry-run
+            # Keep the tarball list and drop the twelve hundred lines of file
+            # manifest around it: a dry run nobody can read is a dry run nobody
+            # checks. pipefail so a pack failure still fails the step.
+            set -o pipefail
+            pnpm -r --filter "./packages/*" exec npm pack --dry-run 2>&1 \
+              | grep -E "^(npm notice (name|version|package size|total files):|[a-z0-9@/-]+\.tgz$)|ERR!"
           else
             pnpm -r --filter "./packages/*" publish --access public --no-git-checks --provenance
           fi
