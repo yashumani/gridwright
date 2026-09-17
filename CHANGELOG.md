@@ -388,7 +388,20 @@ documented types, and the internals of every package below `@yashumani/gridwrigh
 
 ### Changed
 
-- **The packages are now published under `@yashumani/gridwright-*`, not
+- - **React 18 → 19**, with `@vitejs/plugin-react` 5, `@types/node` 26.5.1,
+  `playwright` 1.63 and `yaml` 2.9.1. Two corrections to what the automated
+  bumps proposed: `@types/react-dom` was left at 18 beside `@types/react` 19, a
+  mismatch its own peer range forbids; and the libraries' `>=18` peer ranges
+  first resolved React 18 while the apps resolved 19, putting two copies of
+  React in one graph — every component test failed with "A React Element from
+  an older version of React was rendered" until the lockfile was deduped.
+  `@yashumani/gridwright-workspace` also declared `^18.2.0` where its three
+  siblings say `>=18`; it now says `>=18` too, so React 18 consumers keep
+  working rather than being cut off by a range that was narrow by accident.
+- `pnpm/action-setup` stays at v5 and Dependabot is told to stop proposing v6,
+  for the measured reason already recorded beside the pin.
+
+**The packages are now published under `@yashumani/gridwright-*`, not
   `@gridwright/*`.** The `@gridwright` scope on npm belongs to someone else — the
   scope exists, this account owns no organizations, and a valid token is refused
   on it. That is not only a naming problem: the CLI depends on
