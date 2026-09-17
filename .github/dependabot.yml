@@ -8,6 +8,15 @@ updates:
       interval: weekly
     commit-message:
       prefix: "ci"
+    ignore:
+      # pnpm/action-setup is held at v5 on purpose, and the reason is measured
+      # rather than a preference: v6 spends ~85s npm-installing the latest pnpm
+      # and then downgrading to the version `packageManager` already pins, and
+      # `standalone: true` came in over 2m46s. v5 does the same job in ~2s.
+      # Dependabot's bump kept the "held at v5" comment while changing the SHA
+      # underneath it, which is worse than either choice on its own.
+      - dependency-name: "pnpm/action-setup"
+        versions: [">=6"]
 
   - package-ecosystem: npm
     directory: "/"

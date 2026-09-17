@@ -20,7 +20,7 @@
     "@yashumani/gridwright-contracts": "workspace:*",
     "@yashumani/gridwright-react": "workspace:*"
   },
-  "peerDependencies": { "react": "^18.2.0" },
+  "peerDependencies": { "react": ">=18" },
   "publishConfig": { "access": "public" },
   "engines": { "node": ">=20" }
 }
