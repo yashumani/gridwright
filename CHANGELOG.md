@@ -27,6 +27,21 @@ documented types, and the internals of every package below `@yashumani/gridwrigh
 
 ## Unreleased
 
+### Standalone distribution qualification (0.1.0)
+
+- Downloadable package bundle, offline playground, source/hash manifest and
+  a tag-triggered GitHub release workflow. npm publication remains separate.
+- Actual packed-package acceptance outside the workspace: install, all public
+  imports, numerical query, CLI, strict TypeScript declarations and React browser
+  rendering. This exposed and removed a Node `Buffer` type leaking into browser
+  consumer declarations; ZIP bytes are typed as `Uint8Array`.
+- Windows fixture/path checks and SQLite test-handle cleanup, with the original
+  large-data budgets retained under two test workers.
+- Paired CodeQL v4.38.2 pins and grouped future updates; credential-free npm
+  release qualification; portable Chromium discovery.
+- UKB rejects unknown/missing access decisions and discards content attached
+  to a denial (eight failing-then-passing regression cases, R06/R24).
+
 ### Added
 
 - READMEs for `@yashumani/gridwright-contracts`, `adapters`, `coordinator`, `runtime`,
@@ -401,8 +416,8 @@ documented types, and the internals of every package below `@yashumani/gridwrigh
 - `pnpm/action-setup` stays at v5 and Dependabot is told to stop proposing v6,
   for the measured reason already recorded beside the pin.
 
-**The packages are now published under `@yashumani/gridwright-*`, not
-  `@gridwright/*`.** The `@gridwright` scope on npm belongs to someone else — the
+**The packages are now named `@yashumani/gridwright-*`, not
+  `@gridwright/*`; they have not been published to npm.** The `@gridwright` scope on npm belongs to someone else - the
   scope exists, this account owns no organizations, and a valid token is refused
   on it. That is not only a naming problem: the CLI depends on
   `@gridwright/schema`, `expr`, `engine` and `panels`, so publishing as-is would

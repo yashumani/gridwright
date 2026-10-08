@@ -15,14 +15,14 @@ permissions:
   contents: read
 
 jobs:
-  publish:
+  qualification:
     runs-on: ubuntu-latest
-    environment: npm        # gate the real publish behind an environment approval
     permissions:
       contents: read
-      id-token: write       # npm provenance: proves the tarball came from this workflow
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
 
       # Held at v5. v6 spends ~85s npm-installing the latest pnpm and then
       # downgrading to the version `packageManager` pins, and `standalone: true`
@@ -33,7 +33,6 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-          registry-url: https://registry.npmjs.org
 
       - name: Install
         run: pnpm install --frozen-lockfile
@@ -51,6 +50,40 @@ jobs:
           node packages/cli/dist/bin.js validate examples/sales-overview.gw.yaml --data
           node packages/cli/dist/bin.js validate examples/orders-star.gw.yaml --data
           node packages/cli/dist/bin.js validate examples/chart-types.gw.yaml --data
+
+      # Packing and consumer qualification need neither npm credentials nor a
+      # protected environment. The same checks gate a real publish below.
+      - name: Verify distributables in a clean consumer
+        run: pnpm verify:consumer --no-browser
+
+  publish:
+    if: ${{ !inputs.dry-run }}
+    needs: qualification
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write       # npm provenance: proves the tarball came from this workflow
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0 == v5.0.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # Both jobs check out the event's immutable commit, so this rebuild
+      # publishes the source that passed qualification even if the branch moves.
+      - name: Build
+        run: pnpm build
 
       # Read-only, and it runs before every publish for one reason: a recursive
       # publish is not atomic. If the token cannot write the scope, some
@@ -82,16 +115,6 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish
-        run: |
-          if [ "${{ inputs.dry-run }}" = "true" ]; then
-            # Keep the tarball list and drop the twelve hundred lines of file
-            # manifest around it: a dry run nobody can read is a dry run nobody
-            # checks. pipefail so a pack failure still fails the step.
-            set -o pipefail
-            pnpm -r --filter "./packages/*" exec npm pack --dry-run 2>&1 \
-              | grep -E "^(npm notice (name|version|package size|total files):|[a-z0-9@/-]+\.tgz$)|ERR!"
-          else
-            pnpm -r --filter "./packages/*" publish --access public --no-git-checks --provenance
-          fi
+        run: pnpm -r --filter "./packages/*" publish --access public --no-git-checks --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

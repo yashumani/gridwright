@@ -18,6 +18,10 @@ export default defineConfig({
     },
   },
   test: {
+    // The 5M-row acceptance check needs a bounded number of competing workers,
+    // especially on developer machines with many logical CPUs and little RAM.
+    maxWorkers: 2,
+    minWorkers: 1,
     include: ["packages/*/test/**/*.test.ts", "packages/*/test/**/*.test.tsx", "scripts/**/*.test.ts"],
     environment: "node",
     setupFiles: ["./vitest.setup.ts"],

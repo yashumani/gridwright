@@ -8,6 +8,9 @@ updates:
       interval: weekly
     commit-message:
       prefix: "ci"
+    groups:
+      codeql:
+        patterns: ["github/codeql-action/*"]
     ignore:
       # pnpm/action-setup is held at v5 on purpose, and the reason is measured
       # rather than a preference: v6 spends ~85s npm-installing the latest pnpm

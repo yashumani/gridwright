@@ -54,3 +54,6 @@ jobs:
 
       - name: Build the playground
         run: pnpm --filter @yashumani/gridwright-playground build
+
+      - name: Verify packed packages in a clean consumer
+        run: pnpm verify:consumer --no-browser

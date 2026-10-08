@@ -170,7 +170,7 @@ export class ZipArchive {
   }
 
   /** Inflates one entry, or throws saying which entry and which limit. */
-  read(name: string): Buffer {
+  read(name: string): Uint8Array {
     const entry = this.entries.get(name);
     if (!entry) throw new ZipError(`archive has no entry "${name}"`);
 
@@ -221,7 +221,9 @@ export class ZipArchive {
 
   /** Inflates an entry and decodes it as UTF-8. */
   readText(name: string): string {
-    return this.read(name).toString("utf8");
+    // Keep Node's private buffer implementation out of declarations imported
+    // by a browser-only React consumer. Preserve a leading BOM like Buffer did.
+    return new TextDecoder("utf-8", { ignoreBOM: true }).decode(this.read(name));
   }
 
   /**

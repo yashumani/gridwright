@@ -18,6 +18,8 @@
  */
 import { chromium } from "playwright";
 import { resolve } from "node:path";
+import { readFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 import { serveDist } from "./lib/serve-dist.mjs";
 
 const DIST = resolve(process.cwd(), "apps/playground/dist");
@@ -49,7 +51,7 @@ const serve = () => serveDist({ root: DIST, port: PORT, prefix: PREFIX });
 
 const server = await serve();
 const browser = await chromium.launch({
-  executablePath: process.env.CHROMIUM ?? "/opt/pw-browsers/chromium",
+  executablePath: process.env.CHROMIUM,
 });
 
 try {
@@ -144,6 +146,35 @@ try {
   );
   record("error flow: the app did not crash", errors.length === 0, errors[0] ?? "none");
   await page.close();
+
+  // The downloadable HTML must work from disk, not only from a dev server.
+  // A new offline context also proves examples do not depend on a warm cache.
+  const offline = await browser.newContext({ offline: true });
+  const filePage = await offline.newPage();
+  const offlineErrors = [];
+  const network = [];
+  filePage.on("pageerror", (e) => offlineErrors.push(e.message));
+  filePage.on("request", (r) => { if (/^https?:/.test(r.url())) network.push(r.url()); });
+  await filePage.goto(pathToFileURL(resolve(DIST, "standalone.html")).href);
+  await filePage.getByRole("button", { name: /Sales overview/ }).click();
+  await filePage.waitForSelector("[data-panel]");
+  record("offline HTML: bundled example renders", await filePage.locator("[data-panel]").count() === 7);
+  await filePage.getByRole("button", { name: "Build", exact: true }).click();
+  await filePage.getByRole("button", { name: "Export", exact: true }).click();
+  const exported = await filePage.getByRole("dialog", { name: "Exported manifest" }).locator("textarea").inputValue();
+  record("offline HTML: exports an actual manifest", exported.includes("gridwright: 1") && exported.includes("sales.csv"));
+  await filePage.keyboard.press("Escape");
+  record("offline HTML: Escape closes export", !(await filePage.getByRole("dialog").isVisible()));
+  await filePage.getByRole("button", { name: "Start over", exact: true }).click();
+  await filePage.locator("input[type=file]").first().setInputFiles([
+    { name: "dashboard.gw.yaml", mimeType: "text/yaml", buffer: Buffer.from(exported) },
+    { name: "sales.csv", mimeType: "text/csv", buffer: readFileSync(resolve("examples/sales.csv")) },
+  ]);
+  await filePage.waitForSelector("[data-panel]");
+  record("offline HTML: exported manifest and CSV reopen", await filePage.locator("[data-panel]").count() === 7);
+  record("offline HTML: no HTTP requests", network.length === 0, network.join(" | ") || "none");
+  record("offline HTML: no page errors", offlineErrors.length === 0, offlineErrors.join(" | ") || "none");
+  await offline.close();
 } finally {
   await browser.close();
   server.close();

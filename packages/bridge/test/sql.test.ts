@@ -181,11 +181,12 @@ describe("the connection is read-only and bounded", () => {
   it("refuses a write even though the table exists", () => {
     const src = SqlConfigurationSource.openReadOnly(dbPath);
     // Reach the handle the way a careless change to this file might.
-    expect(() =>
-      new DatabaseSync(dbPath, { readOnly: true }).exec(
-        "INSERT INTO vw_closed_cases_by_queue VALUES ('x','actual',1)",
-      ),
-    ).toThrow();
+    const db = new DatabaseSync(dbPath, { readOnly: true });
+    try {
+      expect(() => db.exec("INSERT INTO vw_closed_cases_by_queue VALUES ('x','actual',1)")).toThrow();
+    } finally {
+      db.close();
+    }
     src.close();
   });
 

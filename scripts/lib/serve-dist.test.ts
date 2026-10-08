@@ -10,7 +10,7 @@
 import { describe, expect, it, afterAll, beforeAll } from "vitest";
 import { mkdtempSync, mkdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join, resolve, sep } from "node:path";
 import { request } from "node:http";
 import { indexBuild, serveDist } from "./serve-dist.mjs";
 
@@ -41,7 +41,7 @@ describe("indexBuild", () => {
     const files = indexBuild(root);
     // The symlink is inside the directory; its target is not.
     expect(files.has("/escape.txt")).toBe(false);
-    expect([...files.values()].every((f) => f.startsWith(realpathSync(root) + "/"))).toBe(true);
+    expect([...files.values()].every((f) => f.startsWith(realpathSync(root) + sep))).toBe(true);
   });
 });
 

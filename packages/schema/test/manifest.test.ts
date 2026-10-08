@@ -6,7 +6,9 @@ import {
 } from "@yashumani/gridwright-schema";
 
 const REF = fileURLToPath(new URL("../../../examples/sales-overview.gw.yaml", import.meta.url));
-const refText = readFileSync(REF, "utf8");
+// Mutations below use LF snippets; Windows checkout conversion must not turn
+// a rejection test into an unchanged, valid fixture.
+const refText = readFileSync(REF, "utf8").replaceAll("\r\n", "\n");
 
 /** Deep clone of the reference manifest, for mutation in the rejection corpus. */
 function good(): any {

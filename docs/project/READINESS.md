@@ -1,6 +1,27 @@
 # Readiness report
 
-2026-09-07 · against `main` · 1,052 passing tests, CI green
+Historical integration evidence: 2026-09-07. Standalone release reconciliation: 2026-10-08.
+
+## Standalone 0.1.0 release
+
+The owner's October 8 request selects a standalone library/playground release.
+This is separate from the private G3/G4 integration gates below. The existing
+G0–G2 behavior is retained; current external-service contracts remain unqualified.
+
+Completion checklist (T20/R25/R28, A03/A11/A12):
+
+| Usable outcome | Acceptance | Status |
+|---|---|---|
+| Reusable library and CLI | Frozen install/build, full suite, three synthetic manifests | Verified locally: 1060 tests and all three manifests; remote Node 22 pending |
+| Packages work outside this repository | 13 tarballs, exports/licenses, no workspace dependencies; clean install, numerical query, CLI, strict TypeScript and React browser consumer | Verified locally on Windows/Node 24; remote Node 22 pending |
+| Browser and offline playground | Built apps, responsive/keyboard/export/reopen/accessibility checks; offline HTML | Verified locally: A05 18/18, A11 32/32, accessibility 108/108 |
+| Public download and demo | Exact-head CI/CodeQL/dependency review; tagged assets with hashes and Pages byte/browser readback | Pending publication |
+| Truthful limits | npm unavailable; synthetic evidence and private-service/API limitations stated | Documented |
+
+The tagged release workflow produces the package bundle, offline HTML, source
+manifest and hashes only after qualification. npm publication is separate and
+still requires valid credentials and the existing npm environment approval.
+See [release notes](../release-notes-0.1.0.md).
 
 [Requirements](UNIFIED_PLATFORM_REQUIREMENTS.md) · [Delivery](DELIVERY_AND_ACCEPTANCE.md) · [Architecture](ARCHITECTURE_AND_CONTRACTS.md) · [Sources and decisions](SOURCE_MAP_AND_DECISIONS.md)
 
@@ -18,8 +39,10 @@ approvals — is built and tested. The clients for the knowledge, conversational
 and variance services are built against those projects' real contracts and pass
 a conformance suite. **No service has been contacted.** Every adapter takes an
 injected transport, and the evidence is against fixtures shaped from those
-contracts, so what is established is that the clients speak the contracts as
-written — not that any deployment answers. Gates G0, G1 and G2 are met. G3 needs
+contracts from that historical snapshot. Current Talk2Data endpoints, response
+shape and identity differ. UKB unknown access decisions now fail closed with
+synthetic regression evidence, but its actual identity/deployment remains
+unqualified. These clients are not ready for private activation. Gates G0, G1 and G2 are met. G3 needs
 a private environment that does not exist yet, and that is an access decision
 rather than an engineering one.
 
@@ -80,7 +103,7 @@ explicit data-inclusion choice. The half that needs an authenticated private
 profile is not started, because there is no such profile. That is **D04** and
 **D07**.
 
-**The demo is deployed and checked.** It is live at
+**The demo has historical deployment acceptance.** It is live at
 <https://yashumani.github.io/gridwright/>, serving commit `026be47`. Getting
 there took two settings changes, and the failures looked nothing alike: first
 every run stopped at `configure-pages` with `Get Pages site failed… Error: Not
@@ -112,7 +135,7 @@ under the old names would have pointed every install at a stranger's scope.
 **Nothing is published to npm, and the release path is now proven anyway.**
 The `Release` workflow's dry-run ran green against `4c71a60`: it builds, runs
 the suite, validates the reference manifests against real data, and packs all
-thirteen packages at `0.1.0`. Every name is still free on the registry. Nothing
+thirteen packages at `0.1.0`. Registry availability was checked then, not guaranteed today. Nothing
 was published — a version is immutable and a name is claimed permanently, so
 that step waits for an explicit decision and an `NPM_TOKEN` repository secret,
 which no workflow token can supply.
@@ -160,20 +183,14 @@ reading order makes sense, whether a label says something useful, or whether a
 chart's meaning survives without colour. Those need a person, and no person has
 done that pass.
 
-## Recommended next steps, in order
+## Next boundaries
 
-1. **Set the Pages source.** One setting, and the demo the README points at
-   becomes real. Nothing else is blocked on it, but it is the cheapest thing on
-   this list.
-2. **Decide D04 and D07** — shared identity and the runtime profile. Everything
-   in G3 waits on them, and no amount of further engineering here moves them.
-3. **Stand up one service and point a transport at it.** The first real call is
-   worth more than any further fixture work; it is the only way to learn what
-   the contracts got wrong.
-4. **Have someone use the workspace.** The reading-order and label-quality pass
-   that no script can do.
-5. **Decide about npm.** Only if the packages are meant to be consumed outside
-   this repository.
+Finish the standalone checklist above. Pages is already configured; no settings
+change is required. For a future private integration, resolve D04/D07, repair
+and qualify the selected adapter against actual identity/API behavior, then run
+G3 acceptance. A human reading-order/chart-meaning pass remains useful.
+Registry publishing needs valid npm credentials; GitHub downloads can be used
+without it. These are separate completion boundaries.
 
 ## Gate status
 

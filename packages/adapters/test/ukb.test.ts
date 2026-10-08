@@ -95,6 +95,22 @@ describe("retrieval", () => {
 describe("denied access is not missing context", () => {
   // R06 in one line, and the easiest thing in this file to get wrong.
 
+  it.each([undefined, null, "unknown", "ALLOW", true, 1, {}])(
+    "rejects an unrecognized access decision: %s",
+    async (decision) => {
+      const body = { ...pack(), access_decision: decision };
+      await expect(ask(replies(200, body))).rejects.toMatchObject({ kind: "malformed" });
+    },
+  );
+
+  it("does not return objects or evidence attached to a denial", async () => {
+    const r = await ask(replies(200, pack({ access_decision: "denied" })));
+    expect(r.usable).toBe(false);
+    expect(r.objects).toEqual([]);
+    expect(r.citations).toEqual([]);
+    expect(r.evidence).toEqual([]);
+  });
+
   it("reports a forbidden response as a denial, not as an empty answer", async () => {
     const r = await ask(replies(403, { detail: "forbidden" }));
     expect(r.decision).toBe("denied");
