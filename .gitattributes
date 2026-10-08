@@ -1,0 +1,2 @@
+# Fixtures and bundled assets must have identical bytes on Windows and CI.
+* text=auto eol=lf

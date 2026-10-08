@@ -103,7 +103,7 @@ if (MIRROR) {
 }
 
 const browser = await chromium.launch({
-  executablePath: process.env.CHROMIUM ?? "/opt/pw-browsers/chromium",
+  executablePath: process.env.CHROMIUM,
   // The session reaches the internet through a policy proxy whose CA is
   // already in the browser's trust store. Verification stays on.
   ...(process.env.HTTPS_PROXY ? { proxy: { server: process.env.HTTPS_PROXY, bypass: "localhost,127.0.0.1" } } : {}),

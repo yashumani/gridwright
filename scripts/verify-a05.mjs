@@ -45,7 +45,7 @@ const expectedComparison = total.cells[snapshot.report.periods[1]].value;
 const expectedReceipt = snapshot.claims[0].receiptId;
 
 const server = await serve();
-const browser = await chromium.launch({ executablePath: process.env.CHROMIUM ?? "/opt/pw-browsers/chromium" });
+const browser = await chromium.launch({ executablePath: process.env.CHROMIUM });
 
 try {
   for (const vp of VIEWPORTS) {

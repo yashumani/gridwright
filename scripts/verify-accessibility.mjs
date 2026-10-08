@@ -182,7 +182,7 @@ const FOCUS = async (page) => {
 
 for (const target of TARGETS) {
   const server = await serve(target.dist, target.port);
-  const browser = await chromium.launch({ executablePath: process.env.CHROMIUM ?? "/opt/pw-browsers/chromium" });
+  const browser = await chromium.launch({ executablePath: process.env.CHROMIUM });
   try {
     for (const size of SIZES) {
      for (const scheme of SCHEMES) {

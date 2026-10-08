@@ -128,10 +128,11 @@ rather than implied. → [Data sources](docs/data-sources.md#measured-scale)
 
 ## Install
 
-> **Not on npm yet.** The packages are prepared for publishing and the names are
-> unclaimed, so the command below does not work today. Use the repository
-> directly until a release is cut — this note comes first because the caveat
-> under a copy-pasteable command is a caveat nobody reads.
+> **Not on npm yet.** The standalone preview is distributed through
+> [GitHub Releases](https://github.com/yashumani/gridwright/releases).
+> Download the offline playground HTML to open locally, or install all packed
+> packages together using the [release instructions](docs/getting-started.md#install-the-standalone-release).
+> Registry commands below apply only after a separate npm publication.
 
 ```bash
 git clone https://github.com/yashumani/gridwright.git
@@ -156,13 +157,20 @@ if (r.ok) return <Dashboard manifest={r.manifest} source={r.source} />;
 
 ## Status
 
-**Pre-1.0, and honest about it.** 1052 tests, three worked examples, and a
+**Pre-1.0, and honest about it.** 1060 tests, three worked examples, and a
 [changelog](CHANGELOG.md) that says what you can rely on. For the unified
 platform work specifically — the metadata bridge, the governance layer and the
 clients for the knowledge, conversational and variance services — the
 [readiness report](docs/project/READINESS.md) says what is proven, what is
 merely built, and which of the two every integration claim is. Its headline is
 that **no service has been contacted**.
+
+The `0.1.0` standalone release covers the library, CLI and playground using
+synthetic data. It adds packed-package installation, TypeScript/React consumer
+acceptance and downloadable artifacts. It does **not** close the private
+integration gates G3/G4; the Talk2Data/UKB clients require current API and
+identity qualification before use with a service. See the
+[release notes](docs/release-notes-0.1.0.md).
 
 What is deliberately not here:
 

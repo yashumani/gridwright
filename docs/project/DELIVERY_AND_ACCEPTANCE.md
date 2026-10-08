@@ -159,11 +159,11 @@ fixtures shaped from those contracts.
 D03 — who owns the capability broker and hosts the integration — stays open.
 The gate and the run define the shape; they do not choose the host.
 
-One finding worth carrying forward: the bridge's boolean additivity cannot
-express Talk2Data's `SEMI_ADDITIVE`, and the mapping refuses such a metric
-rather than rounding it. That is a change the bridge needs before a
-semi-additive metric can cross this boundary, and it is recorded here rather
-than worked around.
+That historical additivity gap is resolved in current source: the bridge uses
+`additive`, `semi_additive` and `non_additive`, with explicit ordering required
+for `period_end`. The additivity tests qualify this synthetic semantic mapping;
+they do not establish a current live Talk2Data integration. Its endpoint,
+response and identity contracts still need separate qualification.
 
 Next: G3, which needs T19 and T20 on an approved private environment. The
 readiness report at [`READINESS.md`](READINESS.md) states what is ready, what is

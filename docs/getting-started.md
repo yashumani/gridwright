@@ -2,6 +2,13 @@
 
 ## Try it without installing anything
 
+Use the [public playground](https://yashumani.github.io/gridwright/), or download
+`gridwright-playground-0.1.0.html` from the [standalone release](https://github.com/yashumani/gridwright/releases/tag/v0.1.0)
+and open it locally. The HTML includes the app and synthetic examples; it needs
+no server, account or network connection.
+
+To develop from source:
+
 ```bash
 pnpm install
 pnpm build
@@ -210,6 +217,45 @@ while writing a manifest:
 ```bash
 gridwright schema --out gridwright.schema.json
 ```
+
+## Install the standalone release
+
+The packages are not on npm. Download `gridwright-packages-0.1.0.tgz` and
+`SHA256SUMS` from the [release](https://github.com/yashumani/gridwright/releases/tag/v0.1.0).
+Check the downloaded bundle's SHA-256 against `SHA256SUMS`, then extract it
+outside your application. It contains 13 package tarballs and a manifest with
+the source commit and each package's hash.
+
+In a new or existing Node/React application, install **all 13 tarballs together**
+so their internal dependencies resolve without an unpublished registry package:
+
+```bash
+tar -xzf gridwright-packages-0.1.0.tgz -C ./gridwright-download
+cd my-app
+npm install ../gridwright-download/packages/*.tgz react@19.3.0 react-dom@19.3.0
+```
+
+Create `gridwright-download` before extraction. On PowerShell, expand the files
+explicitly instead of passing a wildcard to npm:
+
+```powershell
+$gridwrightTarballs = (Get-ChildItem ../gridwright-download/packages/*.tgz).FullName
+npm install $gridwrightTarballs react@19.3.0 react-dom@19.3.0
+```
+
+The imports shown above now resolve from installed packages, and
+`npx --no-install gridwright validate dashboard.gw.yaml --data` runs the installed
+CLI. These tarballs are an npm installation path; pnpm consumers need
+`pnpm.overrides` pointing every internal package to its corresponding tarball
+until registry publication. Node 22 is the release verification environment;
+the optional `@yashumani/gridwright-bridge/sql` connector uses `node:sqlite` and
+requires Node 22 or newer. React is provided by the consuming application.
+
+Contributors can reproduce the package acceptance with `pnpm verify:consumer`.
+It retains a fresh consumer under the system temporary directory, with no
+workspace links or source aliases. `--no-browser` checks install/imports,
+numerical results, CLI, type declarations and bundling; the release uses the
+full Chromium check as well.
 
 ## Where to next
 

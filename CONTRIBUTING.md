@@ -6,7 +6,7 @@ everyone a rewrite.
 
 ## Getting set up
 
-Node 20 or newer, and pnpm through corepack:
+Node 22 or newer for the full suite (including `node:sqlite`), and pnpm through corepack:
 
 ```bash
 corepack enable
@@ -33,7 +33,14 @@ pnpm test
 node packages/cli/dist/bin.js validate examples/sales-overview.gw.yaml --data
 node packages/cli/dist/bin.js validate examples/orders-star.gw.yaml --data
 pnpm --filter @yashumani/gridwright-playground build
+pnpm verify:consumer --no-browser
 ```
+
+Before a standalone release, install Chromium with `pnpm exec playwright install chromium`
+and run `pnpm verify:consumer` plus the existing `verify-a05`, `verify-a11` and
+`verify-accessibility` scripts against freshly built apps. `CHROMIUM` may point
+to a locally installed Chrome/Chromium executable. Pack using **pnpm pack**;
+plain npm pack does not rewrite `workspace:*` dependencies.
 
 Two habits the codebase already keeps, and which reviews will ask about:
 

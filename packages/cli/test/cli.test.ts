@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { resolveDataPath, runCli, validateFile } from "gridwright";
 
@@ -192,10 +192,10 @@ describe("a manifest cannot read outside its own directory", () => {
   });
 
   it("still allows a sibling file and a subdirectory", () => {
-    expect(resolveDataPath("/srv/dash", "./sales.csv")).toBe("/srv/dash/sales.csv");
-    expect(resolveDataPath("/srv/dash", "data/sales.csv")).toBe("/srv/dash/data/sales.csv");
+    expect(resolveDataPath("/srv/dash", "./sales.csv")).toBe(resolve("/srv/dash/sales.csv"));
+    expect(resolveDataPath("/srv/dash", "data/sales.csv")).toBe(resolve("/srv/dash/data/sales.csv"));
     // Climbing out and back in lands inside, so it is allowed.
-    expect(resolveDataPath("/srv/dash", "sub/../sales.csv")).toBe("/srv/dash/sales.csv");
+    expect(resolveDataPath("/srv/dash", "sub/../sales.csv")).toBe(resolve("/srv/dash/sales.csv"));
   });
 
   it("reports the refusal as an issue rather than throwing at the caller", async () => {

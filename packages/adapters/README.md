@@ -8,6 +8,14 @@ pnpm add @yashumani/gridwright-adapters
 
 **No service has been contacted.** Every client takes an injected transport and the evidence is against fixtures shaped from the contracts, so what is established is that these speak the contracts as written — not that any deployment answers. Read that as a limit, not a formality. The clients keep distinctions their sources make and callers tend to collapse: denied access, missing context and an unpublished draft are three outcomes, not one error; all ten admission verdicts stay ten answers.
 
+**Experimental; do not activate against private data.** The fixtures reflect a
+historical contract snapshot. Current Talk2Data endpoint/response/identity
+contracts differ. Unknown UKB access decisions are now rejected, and denied
+responses return no objects/evidence; those are synthetic regression proofs.
+The standalone 0.1.0 release does not establish a live integration
+or close private gates G3/G4. Install from the GitHub package bundle while npm
+publication remains unavailable.
+
 - [Documentation](https://github.com/yashumani/gridwright/tree/main/docs)
 - [Readiness report](https://github.com/yashumani/gridwright/blob/main/docs/project/READINESS.md) — what is proven and what is merely built
 - [Contributing](https://github.com/yashumani/gridwright/blob/main/CONTRIBUTING.md)

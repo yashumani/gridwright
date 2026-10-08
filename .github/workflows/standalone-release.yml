@@ -1,0 +1,52 @@
+name: Standalone release
+
+on:
+  push:
+    tags: ["v0.1.0"]
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Require the versioned tag on current main
+        run: |
+          test "$GITHUB_REF_NAME" = "v$(node -p "require('./package.json').version")"
+          test "$GITHUB_SHA" = "$(git ls-remote origin refs/heads/main | cut -f1)"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm test
+      - name: Validate synthetic reference data
+        run: |
+          node packages/cli/dist/bin.js validate examples/sales-overview.gw.yaml --data
+          node packages/cli/dist/bin.js validate examples/orders-star.gw.yaml --data
+          node packages/cli/dist/bin.js validate examples/chart-types.gw.yaml --data
+      - run: pnpm --filter @yashumani/gridwright-playground bundle
+      - run: pnpm --filter @yashumani/gridwright-workspace-demo build
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm verify:consumer
+      - run: node scripts/verify-a05.mjs
+      - run: node scripts/verify-a11.mjs
+      - run: node scripts/verify-accessibility.mjs
+      - name: Assemble immutable download assets
+        run: |
+          tar -czf .release/gridwright-packages-0.1.0.tgz -C .release packages manifest.json
+          cp apps/playground/dist/standalone.html .release/gridwright-playground-0.1.0.html
+          cd .release
+          sha256sum gridwright-packages-0.1.0.tgz gridwright-playground-0.1.0.html manifest.json > SHA256SUMS
+      - name: Create release after qualification
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" .release/gridwright-packages-0.1.0.tgz .release/gridwright-playground-0.1.0.html .release/manifest.json .release/SHA256SUMS --verify-tag --draft --title "Gridwright 0.1.0: standalone preview" --notes-file docs/release-notes-0.1.0.md
+          gh release edit "$GITHUB_REF_NAME" --draft=false

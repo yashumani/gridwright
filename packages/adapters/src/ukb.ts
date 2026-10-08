@@ -214,7 +214,13 @@ export class UkbClient {
   }
 
   private read(pack: RawContextPack, question: string): ContextPackResult {
-    const decision: AccessDecision = pack.access_decision === "denied" ? "denied" : "allowed";
+    if (pack.access_decision !== "allowed" && pack.access_decision !== "denied") {
+      throw new AdapterError("malformed", "the knowledge base omitted a recognized access decision", "unified-knowledge-base");
+    }
+    if (pack.access_decision === "denied") {
+      return this.denied(question, "access denied by the knowledge base");
+    }
+    const decision: AccessDecision = pack.access_decision;
 
     const all = pack.knowledge_objects ?? [];
     const objects = all.filter((o) => o.status === "published");

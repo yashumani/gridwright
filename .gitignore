@@ -3,6 +3,7 @@ dist/
 *.tsbuildinfo
 .DS_Store
 coverage/
+.release/
 
 # Design canvas working files: seeded output is 2.5 MB of editor payload.
 .design/
